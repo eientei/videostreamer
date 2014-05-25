@@ -21,12 +21,12 @@ class extends lapis.Application
           { "password", exists: true }
         }
 
-        @user = UserManager\get_user_by_name @params.login
+        user = UserManager\get_user_by_name @params.login
         
-        if not @user or @user.passwordhash != ngx.md5(@params.password)
+        if not user or user.passwordhash != ngx.md5(@params.password)
           yield_error "wrong login or password"
 
-        @session.username = @user.name
+        @session.username = user.name
 
         redirect_to: @url_for("user_profile"), status: 302, render: false
     }
@@ -121,7 +121,6 @@ class extends lapis.Application
             if stream
               @user.streams[k] = nil
               StreamManager\remove_stream k, stream.app
-              table.sort @user.streams
 
         if @params.add
           host_app = StreamManager\get_app config.default_app, true
@@ -141,7 +140,6 @@ class extends lapis.Application
           
           stream = host_app\create_token (@user.name\lower! .. rad), @user.id, @user.name
           @user.streams[stream.id] = stream
-          table.sort @user.streams
 
         render: true
     }

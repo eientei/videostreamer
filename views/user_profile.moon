@@ -37,11 +37,18 @@ class extends Widget
             input type: "hidden", name: "csrf_token", value: @csrf_token
             element "table", ->
               tr ->
+                rawemail = @params.email or @user.email
                 td ->
                   input { type: "text", name: "email",
-                          value: @params.email or @user.email }
+                          value: rawemail }
                 td ->
                   label for: "email", "email"
+                  hashedemail = ngx.md5 rawemail
+                  image_source = "http://www.gravatar.com/avatar/"
+                  image_source ..= hashedemail .. "?d=identicon&s=32"
+                  text " ( "
+                  img src: image_source, alt: hashedmail
+                  text " ) "
             input type: "submit", name: "update_email", value: "Update"
           if @user.streams
             form method: "POST", action: @url_for("user_profile"), ->

@@ -2,7 +2,7 @@ import Widget from require "lapis.html"
 
 class extends Widget
   content: =>
-    @content_for "title", "Login"
+    @content_for "title", "Signup"
     div class: "root-container", ->
       div class: "inner-container", ->
         div class: "fancybox", ->

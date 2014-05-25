@@ -1,6 +1,8 @@
 export *
 
-import UserManager, StreamManager from require "app.model"
+import UserManager from require "model.user"
+import StreamManager from require "model.stream"
+import ChatManager from require "model.chat"
 import rprint from require "app.helper"
 import respond_to, yield_error, capture_errors from require "lapis.application"
 

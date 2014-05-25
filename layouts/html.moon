@@ -5,7 +5,10 @@ class HtmlLayout extends Widget
     html_5 ->
       head ->
         title ->
-          text "Yukkuri Video Streamer - #{@title}"
+          if @title
+            text @title .. " - Yukkuri Video Streamer"
+          else
+            text "Yukkuri Video Streamer"
         link rel: "stylesheet", href: "/css/style.css"
         if @has_content_for "script"
           script type: "application/javascript", src: "/js/jquery-1.11.0.js"

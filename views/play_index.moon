@@ -29,7 +29,7 @@ class extends Widget
                     text " ] author: " .. stream.username .. " ( "
                     image_source = "http://www.gravatar.com/avatar/"
                     image_source ..= stream.hash .. "?d=identicon&s=32"
-                    img src: image_source, alt: "gravatar"
+                    img src: image_source, alt: stream.hash
                     text " )"
 
 

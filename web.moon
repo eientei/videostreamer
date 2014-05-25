@@ -3,6 +3,7 @@ lapis.serve class extends lapis.Application
   views_prefix: "views"
 
   @include require("app.streamer")
+  @include require("app.chat")
   @include require("app.user")
 
   @before_filter =>

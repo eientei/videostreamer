@@ -12,9 +12,15 @@ class extends lapis.Application
 
   [play_stream: "/:rtmp_app/:rtmp_stream"]: =>
     @host_app = StreamManager\get_app @params.rtmp_app, false
-    @info = nil
+    @stream = nil
     if @host_app
-      @info = @host_app\get_stream_by_name @params.rtmp_stream
+      @stream = @host_app\get_stream_by_name @params.rtmp_stream
+      user = UserManager\get_user_by_id @stream.user_id
+      @stream.hash = ngx.md5 @stream.addr
+      if user.email
+        @stream.hash = ngx.md5 @user.email
+    rprint @stream
+    @rtmp_pair = @params.rtmp_app .. "/" .. @params.rtmp_stream
     render: true
 
   [play_check_publish_access: "/check_access"]: =>

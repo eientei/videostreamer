@@ -6,10 +6,9 @@ import insert, raw from require "lapis.db"
     create_table "users", {
       { "id", types.serial primary_key: true }
       { "name", types.text unique: true }
-      { "passwordhash", types.text }
+      { "passwordhash", types.text null: true }
       { "email", types.text null: true }
-      { "created_at", types.time default: raw "now()" }
-      { "updated_at", types.time default: raw "now()" }
+      { "joined", types.time default: raw "now()" }
     }
 
     create_table "groups", {
@@ -22,21 +21,15 @@ import insert, raw from require "lapis.db"
       { "name", types.text }
     }
 
-    create_table "rooms", {
-      { "id", types.serial primary_key: true }
-      { "name", types.text }
-    }
-
     create_table "messages", {
       { "id", types.serial primary_key: true }
       { "remote", types.text }
-      { "room", types.foreign_key }
-      { "avatar", types.text }
       { "author", types.foreign_key }
-      { "created_at", types.time default: raw "now()" }
-      { "updated_at", types.time default: raw "now()" }
+      { "app", types.text }
+      { "name", types.text }
+      { "posted", types.time default: raw "now()" }
+      { "message", types.text }
       "FOREIGN KEY (author) REFERENCES users(id)"
-      "FOREIGN KEY (room) REFERENCES rooms(id)"
     }
 
     create_table "users_groups", {
@@ -61,8 +54,6 @@ import insert, raw from require "lapis.db"
       { "user_id", types.foreign_key }
       { "app", types.text }
       { "name", types.text }
-      { "created_at", types.time default: raw "now()" }
-      { "updated_at", types.time default: raw "now()" }
       "FOREIGN KEY (user_id) REFERENCES users(id)"
       "UNIQUE (app, name)"
     }
@@ -70,7 +61,6 @@ import insert, raw from require "lapis.db"
   [2]: =>
       anon_user = insert "users", {
         name: "Anonymous"
-        passwordhash: ""
       }, "id"
       
       anon_group = insert "groups", {

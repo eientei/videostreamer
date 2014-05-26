@@ -43,4 +43,4 @@ lapis.serve class extends lapis.Application
       @user = UserManager\get_user_by_name "Anonymous"
 
   handle_error: (r,t) =>
-    rprint r
+    rprint {r,t}

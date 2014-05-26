@@ -8,10 +8,11 @@ class extends lapis.Application
                                     ngx.var.remote_addr,
                                     @user.id,
                                     body
-      rprint msg
+      
     render: false
     
 
   [chat_history: "/history/:app/:name"]: =>
+    
     render: false
 

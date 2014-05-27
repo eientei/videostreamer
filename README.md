@@ -12,7 +12,7 @@ Required nginx modules:
 * https://github.com/FRiCKLE/ngx_postgres
 * https://github.com/wandenberg/nginx-push-stream-module
 
-Require Lua libraries:
+Required Lua libraries:
 
 * http://www.inf.puc-rio.br/~roberto/lpeg
 
@@ -28,6 +28,13 @@ Build
 ```
 moonc .
 lapis build
+```
+
+Initialize database
+===================
+
+```
+lapis migrate
 ```
 
 Run

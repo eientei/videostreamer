@@ -1,7 +1,6 @@
 import
   UsersGroups,
   GroupsRoles,
-  Streams,
   Users,
   Groups,
   Roles
@@ -22,14 +21,9 @@ class UserManager
       Roles\include_in rolesmap, "role_id"
       for k,v in pairs(rolesmap)
         roles[v.role.name] = true
-    streams_data = Streams\select "where user_id = ?", user.id
-    streams = {}
-    for stream in *streams_data
-      streams[stream.id] = stream
- 
     user.groups = groups
     user.roles = roles
-    user.streams = streams
+    user.streams = StreamManager\get_all_user_streams user.id
     @users[user.name\lower!] = user
     user
 

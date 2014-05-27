@@ -141,7 +141,7 @@ class extends lapis.Application
           stream = host_app\create_token (@user.name\lower! .. rad), @user.id, @user.name
           @user.streams[stream.id] = stream
 
-        render: true
+        redirect_to: @url_for("user_profile"), status: 302, render: false
     }
   }
 

@@ -1,0 +1,254 @@
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  text-decoration: none;
+}
+
+a:hover {
+  color: #aaa;
+  cursor: pointer;
+}
+
+a:visited:hover {
+  color: #aaa;
+  cursor: pointer;
+}
+
+a:visited {
+  color: #00c;
+}
+
+.header {
+  height: 1.5em;
+  background: #000;
+  z-index: 1;
+}
+
+.header .right {
+  line-height: 1.5em;
+  float: right;
+}
+
+.header > div > a {
+  margin-right: 1ex;
+  color: #fff;
+}
+
+.header > div > a:hover {
+  color: #eee;
+}
+
+.root-container {
+  width: auto;
+  height: auto;
+  position: absolute;
+  top: 1.5em;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+
+.inner-container {
+  padding: 1em;
+}
+
+.fancybox {
+  border-radius: 1em;
+  padding: 1em;
+  background: #eee;
+}
+
+.player-container {
+  width: auto;
+  height: auto;
+  position: absolute;
+  top: 1.5em;
+  left: 0;
+  right: 20%;
+  bottom: 0;
+  background:#000;
+}
+.player-wrapper {
+  width: auto;
+  height: auto;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 5px; /* chrome scroll fix */
+  background: #000
+}
+
+.chat-container {
+  width: auto;
+  height: auto;
+  position: absolute;
+  top: 1.5em;
+  left: 80%;
+  right: 0;
+  bottom: 0;
+}
+
+.chat-wrapper {
+  display: block;
+  height:100%;
+  width:100%;
+}
+
+.chat-area {
+  width: 100%;
+  height:80%;
+  overflow-y: auto;
+}
+
+.botbar {
+  width: 100%;
+  position: absolute;
+  left: 0;
+  top: 80%;
+  right: 0;
+  bottom: 0;
+}
+
+.botbar .info {
+  height: 1em;
+  line-height: 1em;
+  width:100%;
+  background:#000;
+}
+
+.botbar .info > * {
+  font-size: 10px;
+  color: #fff;
+}
+
+.botbar .info > .charleft {
+  float: right;
+  padding-right: 5px;
+}
+
+.botbar .textareawrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 1em;
+  bottom: 0;
+}
+
+.botbar .textareawrap textarea {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  resize: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+form {
+  padding: 1ex;
+  margin: 1ex;
+  border-radius: 1ex;
+  background: #ddd;
+}
+
+form table tr {
+  height: 32px;
+  line-height: 32px;
+}
+
+form table tr * {
+  vertical-align: middle;
+}
+
+.footer {
+  text-align: center;
+}
+
+
+
+.message {
+  background: #fff;
+  border-top: 1px solid #ddd;
+  padding: 0.5ex;
+}
+
+.message img {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.message .datetime {
+  display: table;
+  line-height: 16px;
+  float:right;
+}
+
+.message .datetime span {
+  display: table-cell;
+  font-size: 8pt;
+  vertical-align: middle;
+}
+
+.message .ordinal {
+  float:right;
+  display: block;
+  font-size: 8pt;
+}
+
+.message > img {
+  float: left;
+  display: inline-block;
+}
+
+.msgtext .quote {
+  color: #0a0;
+}
+
+.histbutt {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.history {
+  background: #eee;
+}
+
+.clearfix {
+  clear: both;
+}
+
+
+.main li {
+  list-style: none;
+}
+
+.main li div {
+  line-height: 32px;
+  display: table;
+}
+
+.main li div > * {
+  vertical-align: middle;
+}
+
+.ui-tooltip {
+    position: fixed;
+    z-index: 9999;
+    width: 20%;
+    -webkit-box-shadow: 0 0 5px #aaa;
+    box-shadow: 0 0 5px #aaa;
+}
+
+.ui-dialog  {
+    background: #fff;
+}

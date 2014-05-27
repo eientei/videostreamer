@@ -4,8 +4,8 @@ import
 from require "model.dao"
 
 class StreamInfo
-  new: (name, user_id, username) =>
-    @active = false
+  new: (id, name, user_id, username) =>
+    @id = id
     @name = name
     @user_id = user_id
     @username = username
@@ -33,7 +33,7 @@ class StreamAppManager
 
     user = Users\find data.user_id
 
-    stream = StreamInfo data.name, user.id, user.name
+    stream = StreamInfo data.id, data.name, user.id, user.name
     
     @streams[data.token] = stream
     stream
@@ -54,6 +54,13 @@ class StreamAppManager
 
     data = Streams\select "where app = ? and id = ?", @appname, id
     @make_and_cache data
+
+  check_stream_active: (name) =>
+    for k, stream in pairs(@streams)
+      if stream.name == name
+        return stream
+    nil
+
 
   get_stream_by_name: (name) =>
     for k, stream in pairs(@streams)
@@ -101,10 +108,11 @@ class StreamAppManager
       user_id: user_id
     }
 
-    stream = StreamInfo name, user_id, username
+    stream = StreamInfo stream_id.id, name, user_id, username
     table.insert @streams, stream
 
-    Streams\find stream_id.id
+    stream_data = Streams\find stream_id.id
+    stream_data
 
 class StreamManager
   apps: {}
@@ -139,11 +147,22 @@ class StreamManager
     if next(streams) == nil
       return nil
     streams
+
+  get_all_user_streams: (user_id) =>
+    streams_data = Streams\select "where user_id = ?", user_id
+    streams = {}
+    for stream in *streams_data
+      streams[stream.id] = stream
+    streams
   
   check_stream_exists: (name, app_name) =>
     app = @get_app app_name, true
     
     app\get_stream_by_name name
+
+  check_stream_active: (name, app_name) =>
+    app = @get_app app_name, true
+    app\check_stream_active name
 
 
   update_app: (id, oldapp_name, newapp_name) =>

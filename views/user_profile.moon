@@ -105,5 +105,12 @@ class extends Widget
                       text "Web player url: "
                       a href: "#{@http_base}/#{stream.app}/#{stream.name}", ->
                         text "#{@http_base}/#{stream.app}/#{stream.name}"
+                    inf = StreamManager\check_stream_active stream.name, stream.app
+                    div class: "status", ->
+                      text "Status: "
+                      if inf and inf.active
+                        text "Online, running by " .. inf.addr
+                      else
+                        text "Offline"
               input type: "submit", name: "add", value: "Add"
 

@@ -9,10 +9,13 @@ class extends lapis.Application
                                     @user.id,
                                     @user.email,
                                     body
-      url = "/realpub/" .. @params.app .. "/" .. @params.name
-      rprint to_json(msg)
-      ngx.location.capture(url, { method: ngx.HTTP_POST, body: to_json(msg) })
-      render: false, json: msg
+      url = "/realpub/" .. @params.app .. "_" .. @params.name
+      submsg = {
+        type: "message"
+        data: msg
+      }
+      ngx.location.capture(url, { method: ngx.HTTP_POST, body: to_json(submsg) })
+      render: false, json: submsg
     render: false
     
 

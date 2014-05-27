@@ -5,6 +5,7 @@ import StreamManager from require "model.stream"
 import ChatManager from require "model.chat"
 import rprint from require "app.helper"
 import respond_to, yield_error, capture_errors from require "lapis.application"
+import to_json from require "lapis.util"
 
 lapis = require "lapis"
 config = require("lapis.config").get!

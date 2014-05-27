@@ -9,28 +9,25 @@ class extends lapis.Application
                                     @user.id,
                                     @user.email,
                                     body
-      rprint msg
+      url = "/realpub/" .. @params.app .. "/" .. @params.name
+      rprint to_json(msg)
+      ngx.location.capture(url, { method: ngx.HTTP_POST, body: to_json(msg) })
+      render: false, json: msg
     render: false
     
 
   [chat_history: "/history/:app/:name"]: =>
     msgs = ChatManager\get_last_history @params.app, @params.name
-    ids = {}
-    if msgs
-      for v in *msgs
-       table.insert ids, v.id
-    rprint ids
-    render: false
+    render: false, json: msgs
 
-  [chat_prev_history: "/history/:app/:name/:postid"]: =>
+  [chat_prev_history: "/history/:app/:name/:postid/before"]: =>
     msgs = ChatManager\get_previous_history @params.app,
                                             @params.name,
                                             tonumber(@params.postid)
-    ids = {}
-    if msgs
-      for v in *msgs
-       table.insert ids, v.id
-    rprint ids
-    render: false
-
-
+    render: false, json: msgs
+  
+  [chat_prev_history_signle: "/history/:app/:name/:postid"]: =>
+    msg = ChatManager\get_previous_single @params.app,
+                                          @params.name,
+                                          tonumber(@params.postid)
+    render: false, json: msg

@@ -66,6 +66,7 @@ format_msg = (message) ->
     mark: concatrules({ "longestpair", "inplace", "html_escape" })
 
     longestpair: concatpats({
+      markuphelper("%%", "<span class=\"spoiler\">", "</span>")
       markuphelper("**", "strong")
       markuphelper("__", "strong")
       markuphelper("*", "em")
@@ -73,26 +74,37 @@ format_msg = (message) ->
       markuphelper("`", "pre")
     })
 
+    marksyms: concatpats({
+      lpeg.P("%%")
+      lpeg.P("**")
+      lpeg.P("__")
+      lpeg.P("*")
+      lpeg.P("_")
+      lpeg.P("`")
+    })
+
     inplace: concatrules({ "url", "postref" })
       
     postref: (lpeg.P(">>") / "") * lpeg.V("postrefnum")
     postrefnum: (lpeg.R("09")^1 / "<a href=\"#%0\">&gt;&gt;%0</a>")
 
-    url: lpeg.Cs(unionrules({
+    url: (lpeg.Cs(unionrules({
       "url_prepat"
       "url_scheme"
       "url_token"
       "url_postpat"
-    })) / "<a href=\"%1\">%1</a>"
-    url_prepat: termleft("%*_` ")
+    })) / "<a href=\"%1\">%1</a>")
+    url_prepat: lpeg.S("%*_`")^1 + termleft("%*_` ")
     url_scheme: (lpeg.V("escorpass") - (lpeg.P("://") + lpeg.S("%*_` ")))^1
     url_token: lpeg.P("://")
-    url_postpat: (lpeg.V("escorpass") - termright(" "))^1
+    url_postpat: (lpeg.V("escorpass") - lpeg.V("url_term"))^1
+    url_term: termright(" ") + (lpeg.V("marksyms") * termright(" "))
 
     escorpass: lpeg.V("html_escape") + lpeg.P(1)
     markorpass: lpeg.V("mark") + lpeg.P(1)
 
     html_escape: concatpats({
+      lpeg.P("&") / "&amp;"
       lpeg.P(">") / "&gt;"
       lpeg.P("<") / "&lt;"
       lpeg.P("\"") / "&quot;"
@@ -238,8 +250,24 @@ class ChatRoom
     
     msgs
 
-  fetch_previous_chunk: (limit, fromid) =>
-    if not @bottomhit
+  get_single: (postid) =>
+    msg = @messages[postid]
+    
+    if msg
+      return msg
+
+    msgs = query @make_query!, @app, @name, postid+1, postid+1, 1
+
+    if #msgs != 1
+      return nil
+
+    msg = msgs[1]
+    msg.message = format_msg msg.message
+
+    msg
+
+
+  make_query: =>
       stmt = "select "
       stmt ..= "messages.id, md5(messages.remote) as remote, "
       stmt ..= "coalesce(md5(users.email), md5(messages.remote)) as author, "
@@ -249,11 +277,15 @@ class ChatRoom
       stmt ..= "from messages left join users on messages.author = users.id "
       stmt ..= "where messages.app = ? and messages.name = ? and "
       stmt ..= "(? = 0 or messages.id < ?) order by messages.id desc limit ?"
+      stmt
+
+  fetch_previous_chunk: (limit, fromid) =>
+    if not @bottomhit
       
       if not fromid
         fromid = @lowest
 
-      msgs = query stmt, @app, @name, fromid, fromid, limit
+      msgs = query @make_query!, @app, @name, fromid, fromid, limit
       
       count = #msgs
  
@@ -270,7 +302,7 @@ class ChatManager
   get_room_by_name: (app, name) =>
     roomname = app .. "/" .. name
     room = @rooms[roomname]
-    if not room and ((StreamManager\check_stream_exists name, app) or true)
+    if not room and (StreamManager\check_stream_exists name, app)
       room = ChatRoom app, name
       @rooms[roomname] = room
     room
@@ -291,6 +323,13 @@ class ChatManager
 
     room\get_fromid_messages last, 32
 
+  get_previous_single: (app, name, postid) =>
+    room = @get_room_by_name app, name
+
+    if not room
+      return nil
+
+    room\get_single postid
 
   add_message: (app, name, remote, user_id, email, message) =>
     room = @get_room_by_name app, name

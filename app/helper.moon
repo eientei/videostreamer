@@ -33,21 +33,6 @@ rprint = (t) ->
     out = "nil"
   print "\n" .. out .. "\n\n"
 
-dectobase = (inp, base) ->
-  alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVW"
-  if not base
-    base = 10
-  r = ""
-  
-  while (inp > 0)
-    d = math.mod(inp, base)+1
-    inp = math.floor(inp/base)
-    r = string.sub(alphabet, d, d) .. r
-  r
-
-
-
 {
   :rprint 
-  :dectobase
 }

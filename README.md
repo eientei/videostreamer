@@ -11,6 +11,7 @@ Required nginx modules:
 * https://github.com/openresty/lua-nginx-module
 * https://github.com/FRiCKLE/ngx_postgres
 * https://github.com/wandenberg/nginx-push-stream-module
+* https://github.com/openresty/set-misc-nginx-module
 
 Required Lua libraries:
 

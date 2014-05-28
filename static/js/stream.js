@@ -6,6 +6,7 @@ $(document).ready(function(){
   var maxchars = 256;
   var firstmessage = 0;
   var messagelim = 32;
+  var fetched = {};
 
   function sendMessage(message) {
     $.post('/pub/' + pair, message);
@@ -74,6 +75,40 @@ $(document).ready(function(){
       .append('<div class="msgtext">' + msgdata.message + '</div>')
       .append('<div class="clearfix"/>');
 
+    function makeTooltip(el, parenttip, parent) {
+      processTooltip(parent, el);
+      if (parenttip) {
+        parenttip.childtip = el;
+      }
+      parent.mouseleave(function(){
+        $(el).tooltip('close');
+      });
+      parent.find(".ordinal").click(ordinalClick);
+      $(el).tooltip({
+        content: function() {
+          return parent;
+        },
+        items: '*',
+        position: {
+          my: 'left top',
+        at: 'left top',
+        collision: 'fit fit'
+        },
+        open: function() {
+          $(el).attr('tooltiped', true);
+        },
+        close: function() {
+          $(el).attr('tooltiped', false);
+          if(el.childtip) {
+            $(el.childtip).tooltip().tooltip('close');
+          }
+        }
+      }).on('mouseout focusout', function(event) {
+        event.stopImmediatePropagation();
+      });
+      $(el).tooltip('open');
+    }
+
     function processTooltip(m, parenttip) {
       m.find('a[href^="#"]').filter(function(){
         return $(this).attr('href').match(/^#\d+$/);
@@ -82,42 +117,23 @@ $(document).ready(function(){
         ex = $('a[name=' + id + ']');
         if (ex.length > 0) {
           var parent = ex.parent().clone();
-          processTooltip(parent, this);
+          makeTooltip(this, parenttip, parent);
+        } else if (fetched[id]) {
+            makeTooltip(that, parenttip, fetched[id]);
+        } else {
           var that = this;
-          if (parenttip) {
-            parenttip.childtip = this;
-          }
-          parent.mouseleave(function(){
-            $(that).tooltip('close');
+          $.post('/history/' + pair + '/' + id, function(data) {
+            var pnt = makeMessage(data, true, true);
+            fetched[id] = pnt;
+            makeTooltip(that, parenttip, pnt);
           });
-          $(this).tooltip({
-            content: function() {
-              return parent;
-            },
-            items: '*',
-            position: {
-              my: 'left top',
-              at: 'left top',
-              collision: 'fit fit'
-            },
-            open: function() {
-              $(this).attr('tooltiped', true);
-            },
-            close: function() {
-              $(this).attr('tooltiped', false);
-              if(this.childtip) {
-                $(this.childtip).tooltip().tooltip('close');
-              }
-            }
-          }).on('mouseout focusout', function(event) {
-            event.stopImmediatePropagation();
-          });
-          $(this).tooltip('open');
         }
       });
     }
 
-    processTooltip(msg);
+    if (!pseudo) {
+      processTooltip(msg);
+    }
 
     return msg;
   }
@@ -155,11 +171,11 @@ $(document).ready(function(){
     }
     if (e.keyCode >= 48) {
       var len = $(this).val().length;
-        if(len >= 256) {
-          e.preventDefault();
-          return false;
-        }
+      if(len >= 256) {
+        e.preventDefault();
+        return false;
       }
+    }
     return true;
   });
 
@@ -204,9 +220,9 @@ $(document).ready(function(){
     }, dataType: 'json'});
   };
 
-    $('.chat-area').mouseenter(function() {
-      $('a[tooltiped=true]').tooltip('close');   
-    });
+  $('.chat-container').mouseenter(function() {
+    $('a[tooltiped=true]').tooltip('close');   
+  });
 
 
   statupdate();

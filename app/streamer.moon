@@ -23,8 +23,8 @@ class extends lapis.Application
         @rtmp_pair = @params.rtmp_app .. "/" .. @params.rtmp_stream
         return render: true
       else
-        status: 404, render: false
-    status: 404, render: false
+        status: 404, render: "error"
+    status: 404, render: "error"
 
   [play_check_publish_access: "/check_access"]: =>
     @host_app = StreamManager\get_app @params.app, true
@@ -34,7 +34,7 @@ class extends lapis.Application
       @info\activate @params.addr
       return redirect_to: @info.name, status: 301, render: false
     else
-      return status: 403, render: false
+      return status: 403, render: "false"
   
   [play_check_publish_access: "/finish_stream"]: =>
     @host_app = StreamManager\get_app @params.app, true

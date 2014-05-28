@@ -252,3 +252,7 @@ form table tr * {
 .ui-dialog  {
     background: #fff;
 }
+
+.counter, .charleft {
+  display: inline-block;
+}

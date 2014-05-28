@@ -1,5 +1,6 @@
 import validate_functions, assert_valid from require "lapis.validate"
 csrf = require "lapis.csrf"
+http = require "lapis.nginx.http"
 
 class extends lapis.Application
   @before_filter =>
@@ -156,6 +157,7 @@ class extends lapis.Application
         render: true
       =>
         csrf.assert_token @
+
         assert_valid @params, {
           { "login", exists: true, min_length: 3, max_length: 64 }
           { "password", exists: true, min_length: 3, max_length: 64 }
@@ -163,7 +165,21 @@ class extends lapis.Application
             "password confirmation must be provided" }
           { "repeat_password", equals: @params.password,
             "passwords do not match" }
+          { "recaptcha_response_field", exists: true,
+            "CAPTCHA must be provided"
+          }
         }
+
+        body = http.simple "http://www.google.com/recaptcha/api/verify", {
+          privatekey: config.recaptcha_private
+          remoteip: ngx.var.remote_addr
+          challenge: @params.recaptcha_challenge_field
+          response: @params.recaptcha_response_field
+        }
+
+        if body != "true"
+          yield_error "Invalid CAPTCHA"
+
         if UserManager\check_user_exists @params.login
           yield_error "user with such login already exists"
 

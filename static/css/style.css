@@ -160,12 +160,12 @@ form {
   background: #ddd;
 }
 
-form table tr {
+form > table > tr {
   height: 32px;
   line-height: 32px;
 }
 
-form table tr * {
+form > table > tr > * {
   vertical-align: middle;
 }
 

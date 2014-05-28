@@ -3,9 +3,10 @@ import Widget from require "lapis.html"
 class extends Widget
   content: =>
     @content_for "title", "Signup"
-    @content_for "script", ->
-      script type: "application/javascript", src: "http://www.google.com/recaptcha/api/js/recaptcha_ajax.js"
-      script type: "application/javascript", src: "/dynamic/js/signup.js"
+    if config.captcha
+      @content_for "script", ->
+        script type: "application/javascript", src: "http://www.google.com/recaptcha/api/js/recaptcha_ajax.js"
+        script type: "application/javascript", src: "/dynamic/js/signup.js"
     div class: "root-container", ->
       div class: "inner-container", ->
         div class: "fancybox", ->
@@ -42,9 +43,10 @@ class extends Widget
                           value: @params.email }
                 td ->
                   label for: "email", "email (optional)"
-              tr ->
-                td colspan: "2", ->
-                  div id: "captcha"
+              if config.captcha
+                tr ->
+                  td colspan: "2", ->
+                    div id: "captcha"
             input type: "submit"
 
     

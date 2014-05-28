@@ -33,6 +33,10 @@ rprint = (t) ->
     out = "nil"
   print "\n" .. out .. "\n\n"
 
+string_starts = (s, st) ->
+  string.sub(s,1,string.len(st)) == st
+
 {
   :rprint 
+  :string_starts
 }

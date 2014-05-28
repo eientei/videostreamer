@@ -214,7 +214,6 @@ $(document).ready(function(){
 
   function statupdate(){
     $.ajax({url: '/stat/' + underpair, success: function(data) {
-      console.log(data);
       $('.counter').text('online: ' + data.subscribers);
       setTimeout(statupdate, 5000);
     }, dataType: 'json'});

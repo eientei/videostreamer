@@ -6,8 +6,8 @@ class extends lapis.Application
   @before_filter =>
     @csrf_token = csrf.generate_token @
 
-  [jsc_signup: "/jsc/signup.js"]: =>
-    render: "jsc_signup", layout: false
+  [jsc_signup: "/dynamic/js/signup.js"]: =>
+    render: "jsc_signup", layout: false, content_type: "application/javascript"
 
   [user_login: "/login"]: respond_to {
     GET: =>

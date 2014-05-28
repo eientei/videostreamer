@@ -2,6 +2,6 @@ import Widget from require "lapis.html"
 
 class extends Widget
   content: =>
-    text "$(document).ready(function(){"
-    text "Recaptcha.create('" .. config.recaptcha_public .. "',"
-    text "'captcha', { theme: 'red' } ); });"
+    raw "$(document).ready(function(){"
+    raw "Recaptcha.create(\"" .. config.recaptcha_public .. "\","
+    raw "\"captcha\", { theme: \"red\" } ); });"

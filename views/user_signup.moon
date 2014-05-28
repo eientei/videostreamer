@@ -5,7 +5,7 @@ class extends Widget
     @content_for "title", "Signup"
     @content_for "script", ->
       script type: "application/javascript", src: "http://www.google.com/recaptcha/api/js/recaptcha_ajax.js"
-      script type: "application/javascript", src: "/jsc/signup.js"
+      script type: "application/javascript", src: "/dynamic/js/signup.js"
     div class: "root-container", ->
       div class: "inner-container", ->
         div class: "fancybox", ->

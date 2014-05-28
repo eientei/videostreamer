@@ -8,6 +8,7 @@ config "development", ->
   secret "shla sobaka po royalyu"
   session_name "rememberme"
 
+  recaptcha_public "your-recaptcha-public-key"
   recaptcha_private "your-recaptcha-private-key"
 
   apps {

@@ -6,6 +6,9 @@ class extends lapis.Application
   @before_filter =>
     @csrf_token = csrf.generate_token @
 
+  [jsc_signup: "/jsc/signup.js"]: =>
+    render: "jsc_signup", layout: false
+
   [user_login: "/login"]: respond_to {
     GET: =>
       if @user.name != "Anonymous"

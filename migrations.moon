@@ -8,7 +8,7 @@ import insert, raw from require "lapis.db"
       { "name", types.text unique: true }
       { "passwordhash", types.text null: true }
       { "email", types.text null: true }
-      { "joined", types.time default: raw "now()" }
+      { "joined", types.time default: raw "(now() at time zone 'UTC')" }
     }
 
     create_table "groups", {
@@ -27,7 +27,7 @@ import insert, raw from require "lapis.db"
       { "author", types.foreign_key }
       { "app", types.text }
       { "name", types.text }
-      { "posted", types.time default: raw "now()" }
+      { "posted", types.time default: raw "(now() at time zone 'UTC')" }
       { "message", types.text }
       "FOREIGN KEY (author) REFERENCES users(id)"
     }

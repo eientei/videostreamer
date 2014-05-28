@@ -42,6 +42,9 @@ lapis.serve class extends lapis.Application
     else
       @user = UserManager\get_user_by_name "Anonymous"
 
+  [info: "/info"]: =>
+    render: "info"
+
   handle_404: =>
     render: "error", status: 404
 

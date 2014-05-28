@@ -18,7 +18,9 @@ class HtmlLayout extends Widget
         div class: "header", ->
           div class: "right", ->
             a href: @url_for("play_index"), ->
-              text "Home"
+              text "home"
+            a href: @url_for("info"), ->
+              text "Info"
             if @user.name == "Anonymous"
               a href: @url_for("user_login"), ->
                 text "Login"
@@ -28,6 +30,6 @@ class HtmlLayout extends Widget
               a href: @url_for("user_profile"), ->
                 text "Profile"
               a href: @url_for("user_logout"), ->
-                text "Logout"
+                text "logout"
         @content_for "inner"
 

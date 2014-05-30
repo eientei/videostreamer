@@ -341,16 +341,26 @@ class VideoPlayer extends EventDispatcher {
         m_muted = false;
         m_volumeIcon.setNormalColor(0xffffff);
         m_volumeIcon.setHoverColor(0x4c4c4c);
-        if (pos < 6) {
+        if (pos < 4) {
             pos = 0;
             m_volumeIcon.setHoverColor(0xffaaaa);
             m_volumeIcon.setNormalColor(0xff4c4c);
             m_muted = true;
-        } else if (pos > 56) {
+        } else if (pos > 60) {
             pos = 64;
         }
         var vol = pos / 64;
+
         m_volumeSlider.setFilled(vol);
+
+        if (vol < 0.3) {
+          vol /= 4.0;
+        } else if (vol < 0.5) {
+          vol /= 3.0;
+        } else if (vol < 0.7) {
+          vol /= 2.0;
+        }
+
         m_stream.soundTransform = new SoundTransform(vol);
     }
 }

@@ -30,6 +30,6 @@ class HtmlLayout extends Widget
               a href: @url_for("user_profile"), ->
                 text "Profile"
               a href: @url_for("user_logout"), ->
-                text "logout"
+                text "Logout"
         @content_for "inner"
 

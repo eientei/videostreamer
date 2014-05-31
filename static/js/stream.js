@@ -91,10 +91,11 @@ $(document).ready(function(){
         items: '*',
         position: {
           my: 'left top',
-        at: 'left top',
-        collision: 'fit fit'
+          at: 'left top',
+          collision: 'fit fit'
         },
         open: function() {
+          $('#' + $(this).attr('aria-describedby')).addClass('messagePreview');
           $(el).attr('tooltiped', true);
         },
         close: function() {
@@ -205,24 +206,66 @@ $(document).ready(function(){
   });
 
   (function poll() {
+    $('textarea').removeAttr('disabled');
     $.ajax({url: '/sub/' + underpair, success: function(data) {
-      if (data.type == 'message') {
-        addMessage(data.data, false, false, false);
+      if (data) {
+        addMessage(data, false, false, false);
       }
-    }, dataType: 'json', complete: poll, timeout: 30000});
+      poll();
+    }, dataType: 'json', error: function() {
+      $('textarea').attr('disabled', 'disabled');
+      setTimeout(poll, 1000);
+    }, timeout: 30000});
   })();
 
-  function statupdate(){
-    $.ajax({url: '/stat/' + underpair, success: function(data) {
-      $('.counter').text('online: ' + data.subscribers);
-      setTimeout(statupdate, 5000);
-    }, dataType: 'json'});
-  };
+
+  (function() { 
+    var dt = [];
+    $('.counter').tooltip({
+      content: function() {
+        div = $('<div class="avatars"/>');
+        for (var i = 0; i < dt.length; i++) {
+          div.append('<img width="16" height="16" src="http://www.gravatar.com/avatar/' + dt[i].author + '?d=identicon&s=16" />');
+        }
+        
+        div.mouseleave(function(){
+          $('.counter').tooltip('close');
+        });
+        return div;
+      },
+      items: '*',
+      position: {
+        my: 'left top',
+        at: 'right top',
+        collision: 'fit fit'
+      }
+    }).on('mouseout focusout', function(event) {
+      event.stopImmediatePropagation();
+    });
+
+   
+    function poll() {
+      $.ajax({url: '/status/' + pair, success: function(data) {
+        var count = 0;
+        if (data && data.length) {
+          dt = data;
+          count = data.length;
+        } else {
+          count = 0;
+        }
+        $('.counter').text('online: ' + count);
+      }, dataType: 'json', error: function() {
+        dt = [];
+        $('.counter').text('offline');
+      }});
+      setTimeout(poll, 5000);
+    }
+
+    poll();
+  })();
+
 
   $('.chat-container').mouseenter(function() {
     $('a[tooltiped=true]').tooltip('close');   
   });
-
-
-  statupdate();
 });

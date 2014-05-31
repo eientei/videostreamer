@@ -140,6 +140,7 @@ binarysearch = (list, value, reverse) ->
 
 class ChatRoom
   new: (app, name) =>
+    @users = {}
     @messages = {}
     @newerkeys = {}
     @olderkeys = {}
@@ -162,6 +163,15 @@ class ChatRoom
       msg.message = format_msg msg.message
       table.insert @olderkeys, msg.id
     @totalmessages += #msgs
+
+  get_active_users: (author) =>
+    @users[author] = ngx.now!
+    res = {}
+    time = ngx.now!
+    for h,t in pairs(@users)
+      if (time - t) < 5.0
+        table.insert res, { author: h }
+    res
 
   get_fromid_messages: (fromid, n) =>
     if n > 128
@@ -306,6 +316,14 @@ class ChatManager
       room = ChatRoom app, name
       @rooms[roomname] = room
     room
+
+  get_active_users: (app, name, author) =>
+    room = @get_room_by_name app, name
+
+    if not room
+      return nil
+
+    room\get_active_users author
 
   get_last_history: (app, name) =>
     room = @get_room_by_name app, name

@@ -89,6 +89,8 @@ a:visited {
   position: absolute;
   top: 1.5em;
   left: 80%;
+  width: 20% !important;
+  word-break: break-all;
   right: 0;
   bottom: 0;
 }
@@ -115,15 +117,20 @@ a:visited {
 }
 
 .botbar .info {
-  height: 1em;
-  line-height: 1em;
+  height: 15px;
   width:100%;
   background:#000;
 }
 
 .botbar .info > * {
+  line-height: 15px;
   font-size: 10px;
   color: #fff;
+}
+
+.botbar .info > .counter {
+  float: left;
+  padding-left: 5px;
 }
 
 .botbar .info > .charleft {
@@ -242,17 +249,24 @@ form > table > tr > * {
 }
 
 .ui-tooltip {
-    position: fixed;
-    z-index: 9999;
-    width: 20%;
-    -webkit-box-shadow: 0 0 5px #aaa;
-    box-shadow: 0 0 5px #aaa;
+  left: 80%;
+  width: 20%;
+  position: fixed;
+  z-index: 99999;
+  -webkit-box-shadow: 0 0 5px #aaa;
+  box-shadow: 0 0 5px #aaa;
 }
 
 .ui-dialog  {
-    background: #fff;
+  background: #fff;
 }
 
 .counter, .charleft {
   display: inline-block;
+  vertical-align: middle;
+}
+
+.avatars {
+  background: #fff;
+  padding:5px;
 }

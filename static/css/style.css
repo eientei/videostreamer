@@ -93,6 +93,11 @@ a:visited {
   word-break: break-all;
   right: 0;
   bottom: 0;
+  word-wrap: break-word; /* IE>=5.5 */
+  white-space: -moz-pre-wrap; /* For Fx<=2 */   
+  white-space: pre-wrap; /* Fx>3, Opera>8, Safari>3 */
+  white-space: -o-pre-wrap; /* Opera 7 */
+  white-space: pre-line;
 }
 
 .chat-wrapper {

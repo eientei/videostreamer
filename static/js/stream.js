@@ -205,17 +205,22 @@ $(document).ready(function(){
     }
   });
 
-  (function poll() {
-    $('textarea').removeAttr('disabled');
-    $.ajax({url: '/sub/' + underpair, success: function(data) {
-      if (data) {
-        addMessage(data, false, false, false);
-      }
-      poll();
-    }, dataType: 'json', error: function() {
-      $('textarea').attr('disabled', 'disabled');
-      setTimeout(poll, 1000);
-    }, timeout: 30000});
+  (function() {
+    function poll() {
+      $.ajax({url: '/sub/' + underpair, success: function(data) {
+        if (data) {
+          addMessage(data, false, false, false);
+        }
+        poll();
+      }, dataType: 'json', error: function(a,err,b) {
+        if (err != 'timeout') {
+          $('.counter').text('offline');
+          $('textarea').attr('disabled', 'disabled');
+        }
+        setTimeout(poll, 250);
+      }, timeout: 30000});
+    }
+    poll();
   })();
 
 
@@ -223,6 +228,9 @@ $(document).ready(function(){
     var dt = [];
     $('.counter').tooltip({
       content: function() {
+        if (!dt || dt.length == 0) {
+          return null;
+        }
         div = $('<div class="avatars"/>');
         for (var i = 0; i < dt.length; i++) {
           div.append('<img width="16" height="16" src="http://www.gravatar.com/avatar/' + dt[i].author + '?d=identicon&s=16" />');
@@ -247,6 +255,7 @@ $(document).ready(function(){
     function poll() {
       $.ajax({url: '/status/' + pair, success: function(data) {
         var count = 0;
+        $('textarea').removeAttr('disabled');
         if (data && data.length) {
           dt = data;
           count = data.length;
@@ -256,7 +265,6 @@ $(document).ready(function(){
         $('.counter').text('online: ' + count);
       }, dataType: 'json', error: function() {
         dt = [];
-        $('.counter').text('offline');
       }});
       setTimeout(poll, 5000);
     }

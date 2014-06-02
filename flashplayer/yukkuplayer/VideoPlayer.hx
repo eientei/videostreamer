@@ -23,6 +23,7 @@ import flash.media.SoundTransform;
 import flash.geom.Rectangle;
 import flash.display.StageDisplayState;
 import flash.system.Capabilities;
+import flash.net.SharedObject;
 
 import yukkuplayer.controls.VolumeSlider;
 import yukkuplayer.controls.VolumeIcon;
@@ -30,6 +31,7 @@ import yukkuplayer.controls.PauseIcon;
 import yukkuplayer.controls.FullscreenIcon;
 
 class VideoPlayer extends EventDispatcher {
+    private var m_persist : SharedObject;
     private var m_buffer : Float;
     private var m_stage : Stage;
     private var m_movieClip : MovieClip;
@@ -42,6 +44,7 @@ class VideoPlayer extends EventDispatcher {
     private var m_height : Float;
     private var m_oldwidth : Float;
     private var m_oldheight : Float;
+    private var m_volume : Float;
 
     private var m_muted : Bool;
     private var m_paused : Bool;
@@ -71,13 +74,27 @@ class VideoPlayer extends EventDispatcher {
         m_paused = false;
         m_playing = false;
 
+        m_persist = null;
+        m_volume = 1.0;
+        
         initUrls(videoUrl);
         initNet();
-
 
         m_stage.addEventListener(StageVideoAvailabilityEvent.STAGE_VIDEO_AVAILABILITY, onStageVideoState);
         m_stage.addEventListener(Event.RESIZE, onResize);
         m_stage.addEventListener(MouseEvent.MOUSE_MOVE, onMouseMove);
+
+    }
+
+    private function initPersist() {
+        m_persist = SharedObject.getLocal("yukkuplayer");
+        var vol:Float = m_persist.data.volume;
+
+        if (Math.isNaN(vol)) {
+            vol = m_volume;
+        }
+
+        setVolume(vol);
     }
 
     private function initUrls(videoUrl : String) {
@@ -114,6 +131,7 @@ class VideoPlayer extends EventDispatcher {
         m_stream.audioReliable = true;
         m_stream.videoReliable = false;
         m_stream.client = this;
+        initPersist();
     }
 
     private function initGUI() {
@@ -187,7 +205,7 @@ class VideoPlayer extends EventDispatcher {
         }
 
         if (m_muted) {
-            m_stream.soundTransform = new SoundTransform(0);
+          setVolume(0.0);
         }
 
         if (!m_paused) {
@@ -320,47 +338,47 @@ class VideoPlayer extends EventDispatcher {
         positionGui();
     }
     private function onVolumeClick(event : MouseEvent) {
-        var vol;
         if (m_muted) {
-            m_volumeSlider.setFilled(1.0);
-            m_volumeIcon.setNormalColor(0xffffff);
-            m_volumeIcon.setHoverColor(0x4c4c4c);
-            m_muted = false;
-            vol = 1.0;
+            setVolume(1.0);
         } else {
-            m_volumeSlider.setFilled(0.0);
-            m_volumeIcon.setHoverColor(0xffaaaa);
-            m_volumeIcon.setNormalColor(0xff4c4c);
-            m_muted = true;
-            vol = 0;
+            setVolume(0.0);
         }
-        m_stream.soundTransform = new SoundTransform(vol);
     }
     private function onVolumeSliderClick(event : MouseEvent) {
         var pos = event.localX;
-        m_muted = false;
-        m_volumeIcon.setNormalColor(0xffffff);
-        m_volumeIcon.setHoverColor(0x4c4c4c);
         if (pos < 4) {
             pos = 0;
-            m_volumeIcon.setHoverColor(0xffaaaa);
-            m_volumeIcon.setNormalColor(0xff4c4c);
-            m_muted = true;
         } else if (pos > 60) {
             pos = 64;
         }
         var vol = pos / 64;
 
-        m_volumeSlider.setFilled(vol);
+        setVolume(vol);
+    }
 
-        if (vol < 0.3) {
-          vol /= 4.0;
-        } else if (vol < 0.5) {
-          vol /= 3.0;
-        } else if (vol < 0.7) {
-          vol /= 2.0;
+    private function setVolume(vol : Float) {
+        if (vol == 0.0) {
+            m_volumeIcon.setHoverColor(0xffaaaa);
+            m_volumeIcon.setNormalColor(0xff4c4c);
+            m_muted = true;
+        } else {
+            m_volumeIcon.setNormalColor(0xffffff);
+            m_volumeIcon.setHoverColor(0x4c4c4c);
+            m_muted = false;
         }
 
+        m_persist.data.volume = vol;
+        m_volumeSlider.setFilled(vol);
+
+        if (vol > 0.0) {
+          if (vol < 0.3) {
+            vol /= 4.0;
+          } else if (vol < 0.5) {
+            vol /= 3.0;
+          } else if (vol < 0.7) {
+            vol /= 2.0;
+          }
+        }
         m_stream.soundTransform = new SoundTransform(vol);
     }
 }

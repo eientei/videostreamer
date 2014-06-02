@@ -6,7 +6,7 @@ class extends lapis.Application
         for stream in *v
           user = UserManager\get_user_by_id stream.user_id
           stream.hash = ngx.md5 stream.addr
-          if user.email
+          if user.email and (not email\find("^%s*$"))
             stream.hash = ngx.md5 user.email
     render: true
 

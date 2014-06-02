@@ -363,7 +363,7 @@ class ChatManager
     
     entry = row[1]
     entry.remote = ngx.md5(remote)
-    if email
+    if email and (not email\find("^%s*$"))
       entry.author = ngx.md5(email)
     else
       entry.author = entry.remote

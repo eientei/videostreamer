@@ -58,6 +58,8 @@ class extends lapis.Application
         @notices = nil
 
         if @params.email
+          if @params.email\find("^%s*$")
+            @params.email = nil
           @user.email = @params.email
           UserManager\update_email @user.id, @params.email
           

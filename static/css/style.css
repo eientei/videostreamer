@@ -199,21 +199,31 @@ form > table > tr > * {
 }
 
 .message .datetime {
-  display: table;
   line-height: 16px;
-  float:right;
+  float: right;
+  display: table;
+  width: 100%;
 }
 
 .message .datetime span {
-  display: table-cell;
-  font-size: 8pt;
   vertical-align: middle;
+  line-height: 16px;
+  font-size: 8pt;
+  width: 100%;
+  display: table-cell;
+  text-align: right;
+}
+
+.message .datetime img {
+  width: 16px;
+  display: table-cell;
 }
 
 .message .ordinal {
   float:right;
   display: block;
   font-size: 8pt;
+  padding-right: 5px;
 }
 
 .message > img {

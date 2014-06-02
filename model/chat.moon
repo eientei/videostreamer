@@ -280,7 +280,7 @@ class ChatRoom
   make_query: =>
       stmt = "select "
       stmt ..= "messages.id, md5(messages.remote) as remote, "
-      stmt ..= "coalesce(md5(users.email), md5(messages.remote)) as author, "
+      stmt ..= "md5(coalesce(nullif(users.email, ''), messages.remote)) as author, "
       stmt ..= "messages.app, messages.name, "
       stmt ..= "round(extract(epoch from messages.posted)*1000) as posted, "
       stmt ..= "messages.message "

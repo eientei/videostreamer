@@ -14,7 +14,8 @@ lapis.serve class extends lapis.Application
     expires ..= (tonumber os.date("!%Y"))+1
     expires ..= os.date("! %H:%M:%S GMT")
     @app.cookie_attributes = { expires }
-  
+    StreamManager\init_streams!
+
   @before_filter =>
     @host = @req.parsed_url["host"]
     @rtmp_base = "rtmp://"

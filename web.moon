@@ -55,6 +55,7 @@ lapis.serve class extends lapis.Application
       if action
         if action == "reset_streams"
           StreamManager\reset_streams!
+          StreamManager\init_streams!
   }
 
   handle_404: =>

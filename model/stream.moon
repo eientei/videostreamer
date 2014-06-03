@@ -3,6 +3,8 @@ import
   Streams
 from require "model.dao"
 
+db = require "lapis.db"
+
 class StreamInfo
   new: (id, name, user_id, username) =>
     @id = id
@@ -15,15 +17,15 @@ class StreamInfo
     @addr = addr
     @active = true
     data = Streams\find @id
-    data.running = true
-    data\update "running"
+    data.remote = addr
+    data\update "remote"
 
   deactivate: =>
     @addr = nil
     @active = false
     data = Streams\find @id
-    data.running = false
-    data\update "running"
+    data.remote = db.NULL
+    data\update "remote"
 
 class StreamAppManager
   new: (appname) =>
@@ -31,12 +33,15 @@ class StreamAppManager
     @streams = {}
     @messages = {}
 
+    data = Streams\select "where app = ? and remote is not null", @appname
+    if next(data) != nil
+      for d in *data
+        stream = @make_and_cache d
+        stream.active = true
+        stream.addr = d.remote
+    
+
   make_and_cache: (data) =>
-    if next(data) == nil
-      return nil
-
-    data = data[1]
-
     user = Users\find data.user_id
 
     stream = StreamInfo data.id, data.name, user.id, user.name
@@ -53,20 +58,21 @@ class StreamAppManager
           data\delete!
         return stream
 
-  get_stream_by_id: (id) =>
-    for k, stream in pairs(@streams)
-      if stream.id == id
-        return stream
-
-    data = Streams\select "where app = ? and id = ?", @appname, id
-    @make_and_cache data
-
   check_stream_active: (name) =>
     for k, stream in pairs(@streams)
       if stream.name == name
         return stream
     nil
 
+  get_stream_by_id: (id) =>
+    for k, stream in pairs(@streams)
+      if stream.id == id
+        return stream
+
+    data = Streams\select "where app = ? and id = ?", @appname, id
+    if next(data) == nil
+      return nil
+    @make_and_cache data[1]
 
   get_stream_by_name: (name) =>
     for k, stream in pairs(@streams)
@@ -74,7 +80,9 @@ class StreamAppManager
         return stream
 
     data = Streams\select "where app = ? and name = ?", @appname, name
-    @make_and_cache data
+    if next(data) == nil
+      return nil
+    @make_and_cache data[1]
 
   get_stream_by_token: (token) =>
     for k, stream in pairs(@streams)
@@ -82,7 +90,9 @@ class StreamAppManager
         return stream
 
     data = Streams\select "where app = ? and token = ?", @appname, token
-    @make_and_cache data
+    if next(data) == nil
+      return nil
+    @make_and_cache data[1]
 
   get_active_streams: =>
     ss = {}
@@ -122,6 +132,7 @@ class StreamAppManager
 
 class StreamManager
   apps: {}
+  inited: false
 
   get_app: (name, okcreate) =>
     app = @apps[name]
@@ -144,6 +155,12 @@ class StreamManager
 
   get_all_active_streams: =>
     streams = {}
+    if not @inited
+      for app, b in pairs(config.apps)
+        if b
+          @get_app app, true
+      @inited = true
+
     for name, app in pairs(@apps)
       appstreams = app\get_active_streams!
       for stream in *appstreams

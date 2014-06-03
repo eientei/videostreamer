@@ -54,7 +54,7 @@ import insert, raw from require "lapis.db"
       { "user_id", types.foreign_key }
       { "app", types.text }
       { "name", types.text }
-      { "running", types.boolean }
+      { "remote", types.text null: true }
       "FOREIGN KEY (user_id) REFERENCES users(id)"
       "UNIQUE (app, name)"
     }

@@ -27,6 +27,12 @@ class extends Widget
                       text " ] [ "
                       a href: "#{rtmpbase}", ->
                         text "direct rtmp url"
+                      text " ] [ "
+                      a href: "#{base}?novideo=1", ->
+                        text "chatonly"
+                      text " ] [ "
+                      a href: "#{base}?nochat=1", ->
+                        text "videoonly"
                       text " ] author: " .. stream.username .. " ( "
                       image_source = "http://www.gravatar.com/avatar/"
                       image_source ..= stream.hash .. "?d=identicon&s=32"

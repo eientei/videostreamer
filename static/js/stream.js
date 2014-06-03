@@ -120,7 +120,7 @@ $(document).ready(function(){
           var parent = ex.parent().clone();
           makeTooltip(this, parenttip, parent);
         } else if (fetched[id]) {
-            makeTooltip(that, parenttip, fetched[id]);
+            makeTooltip(this, parenttip, fetched[id]);
         } else {
           var that = this;
           $.post('/history/' + pair + '/' + id, function(data) {

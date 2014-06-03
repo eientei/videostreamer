@@ -285,3 +285,8 @@ form > table > tr > * {
   background: #fff;
   padding:5px;
 }
+
+.fullwidth, .fullwidth .chat-container, .fullwidth .player-container {
+  width: 100% !important;
+  left: 0;
+}

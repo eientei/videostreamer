@@ -1,5 +1,3 @@
-encoding = require "lapis.util.encoding"
-
 lapis.serve class extends lapis.Application
   layout: require "layouts.html"
   views_prefix: "views"

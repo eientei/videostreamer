@@ -11,3 +11,4 @@ lapis = require "lapis"
 config = require("lapis.config").get!
 encoding = require "lapis.util.encoding"
 
+StreamManager\init_streams!

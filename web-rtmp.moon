@@ -4,3 +4,4 @@ lapis.serve class extends lapis.Application
     http.simple url, {
       action: encoding.encode_with_secret("reset_streams")
     }
+    render: false

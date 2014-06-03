@@ -29,5 +29,5 @@ config "development", ->
   rtmp_port 1935
 
   rtmp_sup_host "127.0.0.1"
-  rtmp_sup_port 8080
+  rtmp_sup_port 8081
 

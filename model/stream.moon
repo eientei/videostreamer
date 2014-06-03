@@ -14,10 +14,16 @@ class StreamInfo
   activate: (addr) =>
     @addr = addr
     @active = true
+    data = Streams\find @id
+    data.running = true
+    data\update "running"
 
   deactivate: =>
     @addr = nil
     @active = false
+    data = Streams\find @id
+    data.running = false
+    data\update "running"
 
 class StreamAppManager
   new: (appname) =>

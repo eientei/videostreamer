@@ -1,3 +1,5 @@
+encoding = require "lapis.util.encoding"
+
 lapis.serve class extends lapis.Application
   layout: require "layouts.html"
   views_prefix: "views"
@@ -44,6 +46,16 @@ lapis.serve class extends lapis.Application
 
   [info: "/info"]: =>
     render: "info"
+
+  [remote_control: "/remote_control"]: respond_to {
+    GET: =>
+      render: "error", status: 401
+    POST: =>
+      action = encoding.decode_with_secret(@params.action)
+      if action
+        if action == "reset_streams"
+          StreamManager\reset_streams!
+  }
 
   handle_404: =>
     render: "error", status: 404

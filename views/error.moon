@@ -4,6 +4,7 @@ class extends Widget
   content: =>
     code = @res.status
     messages = {
+      [401]: "Unauthorized"
       [404]: "Not Found"
       [403]: "Access Denied"
       [401]: "Not Authorized"

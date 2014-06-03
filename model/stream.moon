@@ -153,14 +153,23 @@ class StreamManager
     stream_data = Streams\find id
     stream_data\delete!
 
-  get_all_active_streams: =>
-    streams = {}
+  reset_streams: =>
+    for app,b in pairs(config.apps)
+      if b
+        db.query "update streams set remote = ? where app = ?", db.NULL, app
+    @apps = {}
+    @inited = false
+
+  init_streams: =>
     if not @inited
       for app, b in pairs(config.apps)
         if b
           @get_app app, true
       @inited = true
 
+  get_all_active_streams: =>
+    streams = {}
+    
     for name, app in pairs(@apps)
       appstreams = app\get_active_streams!
       for stream in *appstreams

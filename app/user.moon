@@ -44,9 +44,7 @@ class extends lapis.Application
   [user_profile: "/profile"]: respond_to {
     GET: =>
       if not @user.roles["see_profile"]
-        @code = 401
-        @message = "Unauthorized"
-        render: "error", status: 401
+        return render: "error", status: 401
       else
         render: true
     POST: capture_errors {

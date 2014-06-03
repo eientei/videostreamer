@@ -1,14 +1,16 @@
 import config from require "lapis.config"
 
 config "development", ->
+  host "127.0.0.1"
   port 8080
+
   lua_code_cache "on"
   postgresql_url "postgres://video:video@127.0.0.1/video"
 
   secret "shla sobaka po royalyu"
   session_name "rememberme"
 
-  captcha true
+  captcha false
   recaptcha_public "your-recaptcha-public-key"
   recaptcha_private "your-recaptcha-private-key"
 

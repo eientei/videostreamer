@@ -8,6 +8,7 @@ class extends lapis.Application
           stream.hash = ngx.md5 stream.addr
           if user.email and (not user.email\find("^%s*$"))
             stream.hash = ngx.md5 user.email
+          stream.users = ChatManager\get_active_users k, stream.name, nil
     render: true
 
   [play_stream: "/:rtmp_app/:rtmp_stream"]: =>

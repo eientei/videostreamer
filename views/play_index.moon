@@ -37,7 +37,7 @@ class extends Widget
                       image_source = "http://www.gravatar.com/avatar/"
                       image_source ..= stream.hash .. "?d=identicon&s=32"
                       img src: image_source, alt: stream.hash
-                      text " )"
+                      text " ) watching: " .. stream.users
 
           else
             div ->

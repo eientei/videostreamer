@@ -164,8 +164,9 @@ class ChatRoom
       table.insert @olderkeys, msg.id
     @totalmessages += #msgs
 
-  get_active_users: (author) =>
-    @users[author] = ngx.now!
+  get_active_users: (remote_user) =>
+    if remote_user
+      @users[remote_user] = ngx.now!
     res = {}
     time = ngx.now!
     for h,t in pairs(@users)

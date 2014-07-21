@@ -290,3 +290,12 @@ form > table > tr > * {
   width: 100% !important;
   left: 0;
 }
+
+.spoiler:hover {
+  color: #000;
+}
+
+.spoiler {
+  background: #F0D0B6;
+  color: #F0D0B6;
+}

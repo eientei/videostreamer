@@ -304,8 +304,8 @@ form > table > tr > * {
     position: absolute;
     cursor: e-resize;
     height: 100%;
-    width: 4px;
-    right: -2px;
+    width: 16px;
+    right: -8px;
     top: 0;
     bottom: 0;
 }

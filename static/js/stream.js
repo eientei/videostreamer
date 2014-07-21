@@ -19,6 +19,7 @@ $(document).ready(function(){
         $('.chat-container').removeClass('fullwidth').show();
         $('.player-container').removeClass('fullwidth').show();
         $(this).text('[video+chat]');
+        resizeIcons(32);
         cswitch = 0;
         break;
       case 1:

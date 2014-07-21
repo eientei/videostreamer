@@ -13,6 +13,7 @@ class HtmlLayout extends Widget
         if @has_content_for "script"
           script type: "application/javascript", src: "/js/jquery-1.11.0.js"
           script type: "application/javascript", src: "/js/jquery-ui-1.10.4.custom.js"
+          script type: "application/javascript", src: "/js/jquery.cookie.js"
           @content_for "script"
       body ->
         div class: "header", ->

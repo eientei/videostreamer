@@ -8,6 +8,7 @@ $(document).ready(function(){
   var messagelim = 32;
   var fetched = {};
   var cswitch = 0;
+  var avatarSize = 32;
 
   function fcswitch() {
     cswitch++;
@@ -33,6 +34,29 @@ $(document).ready(function(){
     }
   }
 
+  function resizeIcons(t) {
+    $('.message img.avatar').attr('width', t).attr('height', t);
+    avatarSize = t;
+  }
+
+  function clamp(n, min, max) {
+    return Math.min(Math.max(n, min), max);
+  };
+
+  function resizeChat(v) {
+    var parent = v.parent();
+    var remain = parent.width() - v.outerWidth();
+    var npanel = v.next();
+    var npanelWidth = (remain - (npanel.outerWidth() - npanel.width())) / parent.width() * 100;
+    var n = 128 / 100 * (clamp(npanelWidth, 20, 90) - 8) * 2;
+    $.cookie('vidwidth', v.width() / (parent.width() / 100), { expires: 365, path: '/' });
+    npanel.css({ width: npanelWidth + '%', left: (100 - npanelWidth) + '%' });
+    resizeIcons(clamp(n,32,80));
+  }
+
+  $('.player-container').css({width: $.cookie("vidwidth") + '%'});
+  resizeChat($('.player-container'));
+
   $('#cswitch').click(fcswitch);
 
   $('.player-container').resizable({
@@ -44,11 +68,7 @@ $(document).ready(function(){
       $('.player-container').resizable( "option", "minWidth", parent.width() / 100 * 10);
     },
     resize: function(e, ui) {
-      var parent = ui.element.parent();
-      var remain = parent.width() - ui.element.outerWidth();
-      var npanel = ui.element.next();
-      var npanelWidth = (remain - (npanel.outerWidth() - npanel.width())) / parent.width() * 100;
-      npanel.css({ width: npanelWidth + '%', left: (100 - npanelWidth) + '%' });
+      resizeChat(ui.element);
     }
   });
 
@@ -115,7 +135,7 @@ $(document).ready(function(){
       .append('<div class="clearfix"/>')
       .append('<div class="datetime"><span>' + postTime + '</span><img width="16" height="16" src="http://www.gravatar.com/avatar/' + msgdata.remote + '?d=identicon&s=16" class="hash"></img></div>')
       .append('<div class="clearfix"/>')
-      .append('<img width="32" height="32" src="http://www.gravatar.com/avatar/' + msgdata.author + '?d=identicon&s=32" class="hash"></img>')
+      .append('<img width="' + avatarSize + '" height="' + avatarSize + '" src="http://www.gravatar.com/avatar/' + msgdata.author + '?d=identicon&s=32" class="hash avatar"></img>')
       .append('<div class="msgtext">' + msgdata.message + '</div>')
       .append('<div class="clearfix"/>');
 

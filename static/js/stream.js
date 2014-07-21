@@ -7,6 +7,50 @@ $(document).ready(function(){
   var firstmessage = 0;
   var messagelim = 32;
   var fetched = {};
+  var cswitch = 0;
+
+  function fcswitch() {
+    cswitch++;
+    $('.chat-container').removeAttr('style');
+    $('.player-container').removeAttr('style');
+    switch (cswitch) {
+      default:
+        $('.chat-container').removeClass('fullwidth').show();
+        $('.player-container').removeClass('fullwidth').show();
+        $(this).text('[video+chat]');
+        cswitch = 0;
+        break;
+      case 1:
+        $('.chat-container').removeClass('fullwidth').hide();
+        $('.player-container').addClass('fullwidth').show();
+        $(this).text('[video-chat]');
+        break;
+      case 2:
+        $('.chat-container').addClass('fullwidth').show();
+        $('.player-container').removeClass('fullwidth').hide();
+        $(this).text('[chat-video]');
+        break;
+    }
+  }
+
+  $('#cswitch').click(fcswitch);
+
+  $('.player-container').resizable({
+    autoHide: false,
+    handles: 'e',
+    start: function(e,ui) {
+      var parent = ui.element.parent();
+      $('.player-container').resizable( "option", "maxWidth", parent.width() / 100 * 90);
+      $('.player-container').resizable( "option", "minWidth", parent.width() / 100 * 10);
+    },
+    resize: function(e, ui) {
+      var parent = ui.element.parent();
+      var remain = parent.width() - ui.element.outerWidth();
+      var npanel = ui.element.next();
+      var npanelWidth = (remain - (npanel.outerWidth() - npanel.width())) / parent.width() * 100;
+      npanel.css({ width: npanelWidth + '%', left: (100 - npanelWidth) + '%' });
+    }
+  });
 
   function sendMessage(message) {
     $.post('/pub/' + pair, message);

@@ -89,7 +89,7 @@ a:visited {
   position: absolute;
   top: 1.5em;
   left: 80%;
-  width: 20% !important;
+  width: 20%;
   word-break: break-all;
   right: 0;
   bottom: 0;
@@ -298,4 +298,14 @@ form > table > tr > * {
 .spoiler {
   background: #F0D0B6;
   color: #F0D0B6;
+}
+
+.ui-resizable-e {
+    position: absolute;
+    cursor: e-resize;
+    height: 100%;
+    width: 4px;
+    right: -2px;
+    top: 0;
+    bottom: 0;
 }

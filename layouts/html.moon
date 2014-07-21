@@ -17,6 +17,8 @@ class HtmlLayout extends Widget
       body ->
         div class: "header", ->
           div class: "right", ->
+            if @has_content_for "controls"
+              @content_for "controls"
             a href: @url_for("play_index"), ->
               text "Home"
             a href: @url_for("info"), ->

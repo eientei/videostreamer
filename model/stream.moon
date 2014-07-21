@@ -84,6 +84,16 @@ class StreamAppManager
       return nil
     @make_and_cache data[1]
 
+  get_token_by_name: (name) =>
+    for k, stream in pairs(@streams)
+      if stream.name == name
+        return k
+
+    data = Streams\select "where app = ? and name = ?", @appname, name
+    if next(data) == nil
+      return nil
+    data[1].token
+
   get_stream_by_token: (token) =>
     for k, stream in pairs(@streams)
       if stream.token == token

@@ -5,7 +5,7 @@ config "development", ->
   port 8080
 
   lua_code_cache "on"
-  postgresql_url "postgres://video:video@127.0.0.1/video"
+  postgresql_url "postgres://video:video@192.168.1.1/video"
 
   secret "shla sobaka po royalyu"
   session_name "rememberme"

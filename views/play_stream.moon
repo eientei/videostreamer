@@ -5,28 +5,42 @@ class extends Widget
     @content_for "title", "#{@rtmp_pair}"
     @content_for "script", ->
       script type: "application/javascript", src: "/js/stream.js"
+    if (not @params.novideo) and (not @params.nochat)
+      @content_for "controls", ->
+        a href: "#", id: "cswitch", ->
+          text "[video+chat]"
     if not @params.novideo
       videoclasses = "player-container"
       if @params.nochat
         videoclasses ..= " fullwidth"
       div class: videoclasses, ->
         div class: "player-wrapper", ->
-          object {
-            data: "/swf/yukkuplayer.swf",
-            type: "application/x-shockwave-flash",
-            width: "100%", height: "100%", ->
-              buffer = @params.buffer
-              if not buffer
-                buffer = 1.0
-              flash_vars = "videoUrl="
-              flash_vars ..= @rtmp_base .. "/" .. @rtmp_pair
-              flash_vars ..= "&buffer=" .. buffer
-              param name: "allowFullscreen", value: "true"
-              param name: "scale", value: "noscale"
-              param name: "bgcolor", value: "#000000"
-              param name: "wmode", value: "direct"
-              param name: "flashvars", value: flash_vars
-          }
+          if @params.type == "html5"
+            video {
+              src: "/hls/" .. @rtmp_pair .. "/index.m3u8"
+              width: "100%"
+              height: "100%"
+              autoplay: "true"
+              controls: "true"
+              type: "application/x-mpegURL"
+            }
+          else
+            object {
+              data: "/swf/yukkuplayer.swf",
+              type: "application/x-shockwave-flash",
+              width: "100%", height: "100%", ->
+                buffer = @params.buffer
+                if not buffer
+                  buffer = 1.0
+                flash_vars = "videoUrl="
+                flash_vars ..= @rtmp_base .. "/" .. @rtmp_pair
+                flash_vars ..= "&buffer=" .. buffer
+                param name: "allowFullscreen", value: "true"
+                param name: "scale", value: "noscale"
+                param name: "bgcolor", value: "#000000"
+                param name: "wmode", value: "direct"
+                param name: "flashvars", value: flash_vars
+            }
     if not @params.nochat
       chatclasses = "chat-container"
       if @params.novideo

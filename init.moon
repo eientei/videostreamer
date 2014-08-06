@@ -10,4 +10,4 @@ import to_json from require "lapis.util"
 lapis = require "lapis"
 config = require("lapis.config").get!
 encoding = require "lapis.util.encoding"
-
+util = require "lapis.util"

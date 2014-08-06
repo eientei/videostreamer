@@ -38,7 +38,7 @@ class extends lapis.Application
 
   [user_logout: "/logout"]: =>
     @session.username = nil
-    @app.cookie_attributes = {}
+    @app.cookie_attributes = ""
     redirect_to: @url_for("play_index"), status: 302, render: false
 
   [user_profile: "/profile"]: respond_to {

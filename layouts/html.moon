@@ -4,6 +4,7 @@ class HtmlLayout extends Widget
   content: =>
     html_5 ->
       head ->
+        meta charset: "UTF-8"
         title ->
           if @title
             text @title .. " - Yukkuri Video Streamer"

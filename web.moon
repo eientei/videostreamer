@@ -7,11 +7,16 @@ lapis.serve class extends lapis.Application
   @include require("app.user")
 
   @before_filter =>
+    print collectgarbage("count")
+    collectgarbage("restart")
+    collectgarbage("collect")
+
+  @before_filter =>
     expires = "Expires="
     expires ..= os.date("!%a, %d %b ")
     expires ..= (tonumber os.date("!%Y"))+1
     expires ..= os.date("! %H:%M:%S GMT")
-    @app.cookie_attributes = { expires }
+    @app.cookie_attributes = expires
     StreamManager\init_streams!
 
   @before_filter =>

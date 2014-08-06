@@ -6,6 +6,8 @@ class extends Widget
     div class: "root-container", ->
       div class: "inner-container", ->
         div class: "fancybox main", ->
+          p ->
+            text "Sorry, database was lost due to problems with old hosting. ETA of resolving this prolblem is around 2 months. [2014-07-31]"
           h1 "Running streams:"
           if @streams
               ul ->

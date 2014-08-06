@@ -125,10 +125,10 @@ class VideoPlayer extends EventDispatcher {
         m_stream = new NetStream(m_connection);
         m_stream.addEventListener(NetStatusEvent.NET_STATUS, onNetStatus);
         m_stream.bufferTime = m_buffer;
-        m_stream.bufferTimeMax = 10;
-        m_stream.backBufferTime = 10;
-        m_stream.dataReliable = true;
-        m_stream.audioReliable = true;
+        m_stream.bufferTimeMax = m_buffer * 2;
+        m_stream.backBufferTime = m_buffer;
+        m_stream.dataReliable = false;
+        m_stream.audioReliable = false;
         m_stream.videoReliable = false;
         m_stream.client = this;
         initPersist();
@@ -276,6 +276,7 @@ class VideoPlayer extends EventDispatcher {
     }
 
     private function onAsyncError(event : AsyncErrorEvent) {
+
     }
 
     private function onStageVideoState(event : StageVideoAvailabilityEvent) {

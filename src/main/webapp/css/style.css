@@ -1,0 +1,288 @@
+body, html {
+    margin: 0;
+    padding: 0;
+}
+
+
+.noselect, .noselect img {
+    -webkit-user-drag: none;
+
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.toppanel {
+    height: 18px;
+    background: #000;
+    color: #fff;
+    font-size: 14px;
+}
+
+.toppanel img {
+    margin-top: 1px;
+}
+
+.toppanel a {
+    color: #fff;
+    text-decoration: none;
+    vertical-align: top;
+}
+
+
+.toppanel .left {
+    width: 75%;
+    height: 100%;
+}
+
+.toppanel .left > * {
+    display: block;
+    width: 100%;
+    text-align: center;
+}
+
+.toppanel .right {
+    position: absolute;
+    right: 1px;
+    top: 0;
+}
+
+.toppanel a:hover {
+    color: #999999;
+}
+
+
+.hidden {
+    display: none;
+}
+
+.player {
+    position: absolute;
+    top: 18px;
+    bottom: 0;
+    left: 0;
+    right: 25%;
+    background: #000;
+}
+
+.chat {
+    position: absolute;
+    top: 18px;
+    bottom: 0;
+    left: 75%;
+    right: 0;
+    overflow: hidden;
+}
+
+.fullscreen {
+    width: 100%;
+    left: 0 !important;
+}
+
+.uiresizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 10px;
+    right: -5px;
+    z-index: 2;
+    cursor: e-resize;
+}
+
+
+.chatarea {
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+.messagetemplate {
+    display: none;
+}
+
+.messages {
+    height: 75%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: relative;
+}
+
+.bars {
+    position: absolute;
+    top: 75%;
+    height: 25%;
+    width: 100%;
+    display: table;
+}
+
+.chatresizer {
+    margin-top: -5px;
+    position: absolute;
+    height: 10px;
+    width: 100%;
+    cursor: n-resize;
+    z-index: 1;
+}
+
+.blackbarwrap {
+    display: table-row;
+    width: 100%;
+}
+
+.blackbar {
+    background: #000;
+    width: 100%;
+    color: #fff;
+    padding: 1px;
+}
+
+.blackbar span {
+    display: inline-block;
+    vertical-align: top;
+    padding-left: 2px;
+}
+
+.blackbar img {
+    display: inline-block;
+    margin-top: 1px;
+    margin-left: 2px;
+    opacity: 0.5;
+}
+
+.blackbar img.typer {
+    opacity: 1.0;
+}
+
+.inputwrap {
+    display: table-row;
+    height: 100%;
+}
+
+.inputbar {
+    width: 100%;
+    height: 100%;
+    display: block;
+    padding: 0.3em;
+    font-size: 12px;
+    line-height: 1.1em;
+    resize: none;
+    border: none;
+    outline: 0;
+    overflow: auto;
+}
+
+.message a {
+    text-decoration: none;
+    color: #000;
+}
+
+.message a:hover {
+    color: #999;
+}
+
+.message {
+    padding: 0.5em;
+    border-top: 1px solid #ccc;
+    font-size: 12px;
+}
+
+.message .ordinallink {
+    text-align: right;
+    display: block;
+    width: 100%;
+}
+
+.message .secondline {
+    text-align: right;
+    display: block;
+    width: 100%;
+}
+
+.message .secondline > * {
+    display: inline-block;
+}
+
+.message .thirdline {
+    width: 100%;
+}
+
+.message .thirdline .msgtext {
+    word-break: break-all;
+    word-wrap: break-word;
+    white-space: -moz-pre-wrap;
+    white-space: pre-wrap;
+    white-space: -o-pre-wrap;
+    white-space: pre-line;
+    font-size: 16px;
+}
+
+.message .thirdline > img {
+    float: left;
+    margin-right: 0.5em;
+}
+
+.clearfix {
+    clear: both;
+}
+
+.message.history {
+    background: #ddd;
+}
+
+.loadMore {
+    width: 100%;
+    text-align: center;
+    display: block;
+}
+
+.quote {
+    color: #0a0;
+}
+
+.spoiler:hover {
+    color: #000;
+}
+
+.spoiler {
+    background: #F0D0B6;
+    color: #F0D0B6;
+}
+
+.preview {
+    position: fixed;
+    opacity: 0;
+    background: #fff;
+    box-shadow: 0 0 10px #000;
+}
+
+
+.fancybox {
+    background: #eee;
+    border-radius: 1em;
+    padding: 1em;
+    margin: 1em;
+}
+
+.darker {
+    background: #ddd;
+}
+
+.streams li > * {
+    line-height: 32px;
+    vertical-align: middle;
+}
+
+form {
+    margin: 0;
+}
+
+.errors {
+    color: #f00;
+    padding-left: 1em;
+}

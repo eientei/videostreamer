@@ -79,6 +79,8 @@
         var initial = false;
         var oldId = 0;
         var newId = 0;
+        var unreadMessages = 0;
+        var allowBubbble = false;
 
         (function() {
             var appstr = appstream.split('/');
@@ -249,6 +251,13 @@
             el.removeAttr("data-awaiting");
         }
 
+        Tinycon.setOptions({
+            width: 9,
+            height: 9,
+            font: '12px arial',
+            fallback: true
+        });
+
         function connect() {
             ws = new SockJS("/chat");
             ws.onopen = function() {
@@ -293,6 +302,14 @@
 
                 } else if (obj.type == "message") {
                     appendNewMessage(obj.data);
+                    if (allowBubbble) {
+                        unreadMessages++;
+                        if (unreadMessages > 0) {
+                            Tinycon.setBubble(unreadMessages);
+                        } else {
+                            Tinycon.setBubble(null);
+                        }
+                    }
                 } else if (obj.type == "history") {
                     $(obj.data.chatMessages).each(function(idx, value){
                         prependOldMessage(value, initial);
@@ -421,6 +438,24 @@
                 title: text
             });
         }
+
+        $(window).on("blur focus", function(e) {
+            var prevType = $(this).data("prevType");
+
+            if (prevType != e.type) {   //  reduce double fire issues
+                switch (e.type) {
+                    case "blur":
+                        allowBubbble = true;
+                        break;
+                    case "focus":
+                        allowBubbble = false;
+                        unreadMessages = 0;
+                        Tinycon.setBubble(null);
+                        break;
+                }
+            }
+            $(this).data("prevType", e.type);
+        })
 
         $(".toppanel .left .editable").click(function() {
             var elem = $(this);

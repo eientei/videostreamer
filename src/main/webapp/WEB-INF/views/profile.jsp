@@ -74,16 +74,20 @@
             <c:set var="req" value="${pageContext.request}" />
             <c:set var="baseURL" value="${fn:replace(req.requestURL, fn:substring(req.requestURI, 0, fn:length(req.requestURI)), req.contextPath)}" />
             <jsp:useBean id="profileForm" scope="request" type="org.eientei.video.form.ProfileForm"/>
+            <input type="hidden" name="stream.id" value="${profileForm.stream.id}"/>
             <div>
                 <span>${profileForm.stream.token}</span>
                 <button type="submit" name="action" value="streamToken">Generate new token</button>
             </div>
             <div>
-                <input type="hidden" name="stream.id" value="${profileForm.stream.id}"/>
                 <input type="hidden" name="stream.token" value="${profileForm.stream.token}"/>
                 live / <input type="text" name="stream.name" value="${profileForm.stream.name}"/>
-                <button type="submit" name="action" value="streamUpdate">Update</button>
+                <button type="submit" name="action" value="streamNameUpdate">Update</button>
                 <span class="errors"><forms:errors path="stream.name"/></span>
+            </div>
+            <div>
+                Topic: <input type="text" name="stream.topic" value="${profileForm.stream.topic}"/>
+                <button type="submit" name="action" value="streamTopicUpdate">Update</button>
             </div>
             <div>Publish url: <a href="${rtmpBase}/live/${profileForm.stream.token}">${rtmpBase}/live/${profileForm.stream.token}</a></div>
             <div>View url: <a href="${rtmpBase}/live/${profileForm.stream.name}">${rtmpBase}/live/${profileForm.stream.name}</a></div>

@@ -147,9 +147,8 @@ public class ChatRoom {
             messageList.setHasMore(iterator.hasNext());
             if (messageList.getChatMessages().isEmpty()) {
                 client.setMessageIterator(null);
-            } else {
-                deliverTextMessage(client, makeTextMessage(MessageType.HISTORY, messageList));
             }
+            deliverTextMessage(client, makeTextMessage(MessageType.HISTORY, messageList));
         }
     }
 

@@ -52,9 +52,11 @@ public class ChatController extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         ChatClient client = clients.remove(session.getId());
-        ChatRoom room = client.getRoom();
-        if (room != null) {
-            room.removeClient(client);
+        if (client != null) {
+            ChatRoom room = client.getRoom();
+            if (room != null) {
+                room.removeClient(client);
+            }
         }
     }
 

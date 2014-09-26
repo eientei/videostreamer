@@ -64,6 +64,9 @@ public class UserController extends BaseController {
     @Autowired
     private SessionExpirer sessionExpirer;
 
+    @Autowired
+    private ChatController chatController;
+
     @RequestMapping("login")
     public String login(Model model) {
         if (!SecurityContextHolder.getContext().getAuthentication().getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ANONYMOUS"))) {
@@ -207,18 +210,15 @@ public class UserController extends BaseController {
         if (action.equals("password")) {
             if (!appUserDetails.getDataUser().getPasswordhash().equals(VideostreamUtils.hashMd5(profileForm.getPasswordOriginal()))) {
                 bindingResult.addError(new FieldError("profileForm", "passwordOriginal", "Incorrect current password"));
-                model.addAttribute("profileForm", profileForm);
                 return "profile";
             }
             if (profileForm.getPassword() == null || profileForm.getPassword().trim().isEmpty()) {
                 bindingResult.addError(new FieldError("profileForm", "password", "May not be blank"));
-                model.addAttribute("profileForm", profileForm);
                 return "profile";
             }
 
             if (!profileForm.getPassword().equals(profileForm.getPasswordRepeat())) {
                 bindingResult.addError(new FieldError("profileForm", "passwordRepeat", "Does not match"));
-                model.addAttribute("profileForm", profileForm);
                 return "profile";
             }
 
@@ -229,19 +229,20 @@ public class UserController extends BaseController {
             appUserDetails.getDataUser().setEmail(profileForm.getEmail());
             userService.saveUser(appUserDetails.getDataUser());
             model.addAttribute("userhash", getUserHash(request));
-        } else if (action.equals("streamUpdate")) {
+        } else if (action.equals("streamNameUpdate")) {
             long id = profileForm.getStream().getId();
             try {
                 streamService.updateStreamName(id, appUserDetails.getDataUser(), profileForm.getStream().getName());
             } catch (StreamService.StreamExists streamExists) {
                 bindingResult.addError(new FieldError("profileForm", "stream.name", "Such stream already exists"));
-                model.addAttribute("profileForm", profileForm);
                 return "profile";
             } catch (StreamService.StreamInavlidName streamInavlidName) {
                 bindingResult.addError(new FieldError("profileForm", "stream.name", streamInavlidName.getMessage()));
-                model.addAttribute("profileForm", profileForm);
+                profileForm.getStream().setName(streamService.getStreamByIdFor(id, appUserDetails.getDataUser()).getName());
                 return "profile";
             }
+        } else if (action.equals("streamTopicUpdate")) {
+            streamService.updateStreamTopic(profileForm.getStream().getTopic(), appUserDetails.getDataUser());
         } else if (action.equals("streamToken")) {
             long id = profileForm.getStream().getId();
             streamService.updateStreamToken(id, appUserDetails.getDataUser());

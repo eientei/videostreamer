@@ -27,6 +27,28 @@
     <h2>OpenBroadcaster (aka OBS, Windows)</h2>
     <p>
         Grab OBS here: <a href="https://obsproject.com">https://obsproject.com</a>
-        And use this settings file: TBA
     </p>
+    <ul>
+        <li>
+            Broadcast Settings -> Mode: Live Stream
+        </li>
+        <li>
+            Broadcast Settings -> Streaming Service: Custom
+        </li>
+        <li>
+            Broadcast Settings -> FMS URL: rtmp://video.eientei.org/live
+        </li>
+        <li>
+            Broadcast Settings -> Play Path/Stream key: 128c853bb99bfeb971f9f766c92326c8 (the key you have in your profile)
+        </li>
+        <li>
+            Broadcast Settings -> Auto-Reconnect: true
+        </li>
+        <li>
+            Advanced -> Video -> x264 CPU Prset: Ultrafast
+        </li>
+        <li>
+            Advanced -> Video -> Custom x264 Encoder Settings: tune=zerolatency
+        </li>
+    </ul>
 </div>

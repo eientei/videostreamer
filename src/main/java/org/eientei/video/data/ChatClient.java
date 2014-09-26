@@ -7,6 +7,8 @@ import org.eientei.video.security.AppUserDetailsService;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.util.List;
+
 /**
  * User: iamtakingiteasy
  * Date: 2014-09-18
@@ -28,7 +30,10 @@ public class ChatClient implements Comparable<ChatClient> {
             userDetails = (AppUserDetails) ((Authentication) session.getPrincipal()).getPrincipal();
         }
 
-        remote = session.getHandshakeHeaders().get("X-Real-IP").get(0);
+        List<String> realIps = session.getHandshakeHeaders().get("X-Real-IP");
+        if (realIps != null && !realIps.isEmpty()) {
+            remote = realIps.get(0);
+        }
         if (remote == null) {
             remote = session.getRemoteAddress().getAddress().getHostAddress();
         }

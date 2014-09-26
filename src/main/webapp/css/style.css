@@ -75,11 +75,17 @@ body, html {
     left: 75%;
     right: 0;
     overflow: hidden;
+    color: #000;
 }
 
 .fullscreen {
     width: 100%;
     left: 0 !important;
+}
+
+.center {
+    width: 100%;
+    text-align: center;
 }
 
 .uiresizer {

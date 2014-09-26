@@ -92,6 +92,9 @@ body, html {
     cursor: e-resize;
 }
 
+.fullscreen .uiresizer {
+    display: none;
+}
 
 .chatarea {
     display: block;

@@ -7,7 +7,9 @@
 <jsp:useBean id="buffer" scope="request" type="java.lang.Double"/>
 <jsp:useBean id="player" scope="request" type="java.lang.String"/>
 
-<div class="player${(novideo == true) ? ' hidden' : ''}${(nochat == true) ? ' fullscreen' : ''}">
+
+<c:if test="${not novideo}">
+<div class="player${(nochat == true) ? ' fullscreen' : ''}">
     <c:choose>
         <c:when test="${player == 'hls'}">
             play hls
@@ -30,7 +32,9 @@
     </c:choose>
     <div class="uiresizer"></div>
 </div>
-<div class="chat${(nochat == true) ? ' hidden' : ''}${(novideo == true) ? ' fullscreen' : ''}">
+</c:if>
+<c:if test="${not nochat}">
+<div class="chat${(novideo == true) ? ' fullscreen' : ''}">
     <div class="chatarea">
         <div class="messagetemplate message">
             <div class="error">Template</div>
@@ -444,3 +448,4 @@
         connect();
     </script>
 </div>
+</c:if>

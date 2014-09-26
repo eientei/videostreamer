@@ -4,11 +4,9 @@
 <div class="fancybox">
     <form:form action="/login" method="post" commandName="loginForm">
         <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
-        <c:if test="${not empty errors}">
             <div class="errors">
-                Invalid username or password.
+                <form:errors/>
             </div>
-        </c:if>
         <table>
             <tr>
                 <td>
@@ -26,6 +24,16 @@
                     Password
                 </td>
             </tr>
+            <c:if test="${captcha}">
+                <tr>
+                    <td colspan="2">
+                        <div id="recpatcha_div"></div>
+                        <script type="application/javascript">
+                            Recaptcha.create("${reCaptchaPublic}", "recpatcha_div", { theme: "red" } );
+                        </script>
+                    </td>
+                </tr>
+            </c:if>
             <tr>
                 <td colspan="2">
                     <button type="submit">Log In</button>

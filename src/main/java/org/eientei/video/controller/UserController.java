@@ -20,17 +20,26 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.RememberMeServices;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.client.RestTemplate;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * User: iamtakingiteasy
@@ -66,17 +75,29 @@ public class UserController extends BaseController {
     }
 
     @RequestMapping(value = "login", method = RequestMethod.POST)
-    public String login(HttpServletRequest request, HttpServletResponse response, Model model, @Valid LoginForm loginForm, BindingResult bindingResult) throws IOException, ServletException {
+    public String login(HttpServletRequest request,
+                        HttpServletResponse response,
+                        Model model,
+                        @Valid LoginForm loginForm,
+                        BindingResult bindingResult,
+                        @RequestParam(value = "recaptcha_challenge_field", required = false) String cChall,
+                        @RequestParam(value = "recaptcha_response_field", required = false) String cResp) throws IOException, ServletException {
         if (bindingResult.hasErrors()) {
-            model.addAttribute("errors", true);
             return "login";
         }
+
+        if (!verifyCaptcha(request, cChall, cResp)) {
+            bindingResult.addError(new ObjectError("loginForm", "Wrong captcha"));
+            return "login";
+        }
+
         try {
             loginUser(request, response, loginForm.getUsername(), loginForm.getPassword());
         } catch (Exception e) {
-            model.addAttribute("errors", true);
+            bindingResult.addError(new ObjectError("loginForm", "Wrong login or password"));
             return "login";
         }
+
         model.asMap().clear();
         return "redirect:/profile";
     }
@@ -87,13 +108,42 @@ public class UserController extends BaseController {
         return "signup";
     }
 
+    private boolean verifyCaptcha(HttpServletRequest request, String cChall, String cResp) {
+        if (getCaptchaEnabled()) {
+            RestTemplate restTemplate = new RestTemplate();
+
+            MultiValueMap<String, String> r = new LinkedMultiValueMap<String, String>();
+            r.add("privatekey", getRecaptchaPrivate());
+            r.add("remoteip",  VideostreamUtils.getIp(request));
+            r.add("challenge", cChall);
+            r.add("response", cResp);
+            String res = restTemplate.postForObject("http://www.google.com/recaptcha/api/verify", r, String.class);
+
+            if (!res.startsWith("true")) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     @RequestMapping(value = "signup", method = RequestMethod.POST)
-    public String signup(HttpServletRequest request, HttpServletResponse response, Model model, @Valid SignupForm signupForm, BindingResult bindingResult) throws IOException, ServletException {
+    public String signup(HttpServletRequest request,
+                         HttpServletResponse response,
+                         Model model,
+                         @Valid SignupForm signupForm,
+                         BindingResult bindingResult,
+                         @RequestParam(value = "recaptcha_challenge_field", required = false) String cChall,
+                         @RequestParam(value = "recaptcha_response_field", required = false) String cResp) throws IOException, ServletException {
         if (bindingResult.hasErrors()) {
             return "signup";
         }
         if (!signupForm.getPassword().equals(signupForm.getPasswordRepeat())) {
             bindingResult.addError(new FieldError("signupForm", "passwordRepeat", "Passwords do not match"));
+            return "signup";
+        }
+
+        if (!verifyCaptcha(request, cChall, cResp)) {
+            bindingResult.addError(new ObjectError("signupForm", "Wrong captcha"));
             return "signup";
         }
 

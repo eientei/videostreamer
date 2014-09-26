@@ -8,6 +8,7 @@ import org.parboiled.support.DefaultValueStack;
 import org.parboiled.support.ParsingResult;
 import org.parboiled.support.ValueStack;
 
+import javax.servlet.http.HttpServletRequest;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -57,5 +58,13 @@ public class VideostreamUtils {
         stack.push("");
         ParsingResult<String> result = runner.withValueStack(stack).run(message);
         return result.valueStack.pop();
+    }
+
+    public static String getIp(HttpServletRequest request) {
+        String remote = request.getHeader("X-Forwarded-For");
+        if (remote == null) {
+            remote = request.getRemoteAddr();
+        }
+        return remote;
     }
 }

@@ -50,6 +50,16 @@
                         <form:label path="email">Email (optional)</form:label>
                     </td>
                 </tr>
+                <c:if test="${captcha}">
+                <tr>
+                    <td colspan="2">
+                        <div id="recpatcha_div"></div>
+                        <script type="application/javascript">
+                            Recaptcha.create("${reCaptchaPublic}", "recpatcha_div", { theme: "red" } );
+                        </script>
+                    </td>
+                </tr>
+                </c:if>
                 <tr>
                     <td colspan="2">
                         <input type="submit" value="Sign Up"/>

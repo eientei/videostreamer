@@ -79,6 +79,10 @@
         var initial = false;
         var oldId = 0;
         var newId = 0;
+        var favicon = new Favico({
+            animation:"none",
+            type: "rectangle"
+        });
         var unreadMessages = 0;
         var allowBubbble = false;
 
@@ -251,13 +255,6 @@
             el.removeAttr("data-awaiting");
         }
 
-        Tinycon.setOptions({
-            width: 9,
-            height: 9,
-            font: '12px arial',
-            fallback: true
-        });
-
         function connect() {
             ws = new SockJS("/chat");
             ws.onopen = function() {
@@ -305,9 +302,9 @@
                     if (allowBubbble) {
                         unreadMessages++;
                         if (unreadMessages > 0) {
-                            Tinycon.setBubble(unreadMessages);
+                            favicon.badge(unreadMessages);
                         } else {
-                            Tinycon.setBubble(null);
+                            favicon.reset();
                         }
                     }
                 } else if (obj.type == "history") {
@@ -439,9 +436,10 @@
             });
         }
 
+
         $(window).on("blur focus", function(e) {
             var prevType = $(this).data("prevType");
-
+            console.log('blur or focus', e.type);
             if (prevType != e.type) {   //  reduce double fire issues
                 switch (e.type) {
                     case "blur":
@@ -450,7 +448,7 @@
                     case "focus":
                         allowBubbble = false;
                         unreadMessages = 0;
-                        Tinycon.setBubble(null);
+                        favicon.reset();
                         break;
                 }
             }

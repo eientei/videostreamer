@@ -12,8 +12,9 @@
     <script type="text/javascript" src="${pageContext.request.contextPath}/js/jquery-1.11.0.js"></script>
     <script type="text/javascript" src="${pageContext.request.contextPath}/js/jquery-ui.js"></script>
     <script type="text/javascript" src="${pageContext.request.contextPath}/js/jquery.cookie.js"></script>
-    <script type="text/javascript" src="${pageContext.request.contextPath}/js/tinycon.js"></script>
+    <script type="text/javascript" src="${pageContext.request.contextPath}/js/favico.js"></script>
     <script type="text/javascript" src="http://www.google.com/recaptcha/api/js/recaptcha_ajax.js"></script>
+    <link rel="shortcut icon" href="${pageContext.request.contextPath}/favicon.ico" sizes="16x16"/>
     <link href="${pageContext.request.contextPath}/css/style.css" rel="stylesheet"/>
 </head>
 <body>

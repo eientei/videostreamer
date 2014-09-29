@@ -2,6 +2,7 @@ package org.eientei.video.controller;
 
 import org.eientei.video.orm.entity.Stream;
 import org.eientei.video.orm.service.StreamService;
+import org.eientei.video.orm.util.VideostreamUtils;
 import org.eientei.video.security.AppUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 
 import javax.annotation.PostConstruct;
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
 /**
@@ -95,7 +97,8 @@ public class StreamController extends BaseController {
     }
 
     @RequestMapping(value = "{app:(?!js$|css$|swf$|chat$).*}/{name}")
-    public String appName(Model model, @PathVariable String app, @PathVariable String name,
+    public String appName(Model model, HttpServletRequest request,
+                          @PathVariable String app, @PathVariable String name,
                           @RequestParam(defaultValue = "false") boolean novideo,
                           @RequestParam(defaultValue = "false") boolean nochat,
                           @RequestParam(defaultValue = "1.0") Double buffer,
@@ -115,6 +118,8 @@ public class StreamController extends BaseController {
         model.addAttribute("showtitle", true);
         AppUserDetails appUserDetails = (AppUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
+        model.addAttribute("authorhash", VideostreamUtils.determineUserHash(stream.getAuthor(), VideostreamUtils.getIp(request)));
+
         if (stream.getAuthor().getId() == appUserDetails.getDataUser().getId()) {
             model.addAttribute("streameditable", true);
         } else {
@@ -124,6 +129,6 @@ public class StreamController extends BaseController {
         if (stream.getTopic() != null) {
             model.addAttribute("streamtitle", stream.getTopic());
         }
-        return "playback";
+        return "playback/" + name;
     }
 }

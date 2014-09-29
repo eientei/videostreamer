@@ -57,7 +57,7 @@
         <div class="bars">
             <div class="chatresizer"></div>
             <div class="blackbarwrap">
-                <div class="blackbar"></div>
+                <div class="blackbar" data-authorhash="${authorhash}"></div>
             </div>
             <div class="inputwrap">
                 <textarea class="inputbar"></textarea>
@@ -280,23 +280,39 @@
                     wasConnected = true;
                     connected = true;
                     myhash = obj.data;
+                    console.log('connected');
                 } else if (obj.type == "onlines") {
                     var bbar = $('.blackbar');
 
                     function appendImg(value) {
                         bbar.append('<img class="onlineuser" data-hash="' + value + '" width="16" height="16" src="http://www.gravatar.com/avatar/' + value + '?d=identicon&s=64" />');
                     }
-
+                    var authorhash = bbar.data("authorhash");
                     bbar.children().remove();
-                    appendImg(myhash);
-                    bbar.append('<span>|</span>');
+
+                    if (myhash != authorhash) {
+                        appendImg(myhash);
+                    }
+                    if ($.inArray(authorhash, obj.data) > -1) {
+                        bbar.append('<span>(</span>');
+                        appendImg(authorhash);
+                        bbar.append('<span>)</span>');
+                    } else {
+                        bbar.append('<span>(</span><div class="imgspacer"></div><span>)</span>');
+                    }
                     $(obj.data).each(function(idx, value) {
-                        if (value == myhash) {
+                        if (value == myhash || value == authorhash) {
                             return;
                         }
                         appendImg(value);
                     });
-
+                    var lenbrck = "(" + bbar.find('img').length + ")";
+                    var title = document.title;
+                    if (title.match(/\([0-9]+\)/)) {
+                        document.title = title.replace(/\([0-9]+\)/, lenbrck)
+                    } else {
+                        document.title = title + " " + lenbrck;
+                    }
                 } else if (obj.type == "message") {
                     appendNewMessage(obj.data);
                     if (allowBubbble) {
@@ -439,7 +455,6 @@
 
         $(window).on("blur focus", function(e) {
             var prevType = $(this).data("prevType");
-            console.log('blur or focus', e.type);
             if (prevType != e.type) {   //  reduce double fire issues
                 switch (e.type) {
                     case "blur":

@@ -18,7 +18,8 @@ public enum  MessageType {
     HISTORY("history"),
     PREVIEW("preview"),
     ONLINES("onlines"),
-    TYPOING("typoing");
+    TYPOING("typoing"),
+    TOPICUP("topicup");
 
     private static final Map<String, MessageType> registry = new ConcurrentHashMap<String, MessageType>() {{
         for (MessageType messageType : MessageType.values()) {

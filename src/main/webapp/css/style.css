@@ -88,12 +88,6 @@ body, html {
     text-align: center;
 }
 
-.imgspacer {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-}
-
 .uiresizer {
     position: absolute;
     top: 0;
@@ -167,9 +161,31 @@ body, html {
 
 .blackbar img {
     display: inline-block;
+    vertical-align: top;
     margin-top: 1px;
     margin-left: 2px;
     opacity: 0.5;
+}
+
+.borderdash {
+    display: block;
+    margin-top: 1px;
+    width: 5px;
+    height: 16px;
+    border-right: 1px #fff solid;
+}
+
+.imgspacer {
+    margin-left: 1px;
+    display: inline-block;
+    width: 10px;
+    height: 18px;
+}
+
+.imgholder {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
 }
 
 .blackbar img.typer {

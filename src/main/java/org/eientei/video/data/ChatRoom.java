@@ -32,6 +32,13 @@ public class ChatRoom {
 
     private static final int BULK_SIZE = 30;
 
+    public void sendTopicUpdate(String title) {
+        TextMessage onlinesMessage = makeTextMessage(MessageType.TOPICUP, title);
+        for (ChatClient c : clients) {
+            deliverTextMessage(c, onlinesMessage);
+        }
+    }
+
     public class DescendingIterator {
         private int afterPos;
         private int beforePos;

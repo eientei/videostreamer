@@ -290,26 +290,28 @@
                     var authorhash = bbar.data("authorhash");
                     bbar.children().remove();
 
+                    if ($.inArray(authorhash, obj.data) > -1) {
+                        appendImg(authorhash);
+                    } else {
+                        bbar.append('<div class="imgholder">');
+                    }
+
+                    bbar.append('<div class="imgspacer"><div class="borderdash"></div></div>');
+
                     if (myhash != authorhash) {
                         appendImg(myhash);
                     }
-                    if ($.inArray(authorhash, obj.data) > -1) {
-                        bbar.append('<span>(</span>');
-                        appendImg(authorhash);
-                        bbar.append('<span>)</span>');
-                    } else {
-                        bbar.append('<span>(</span><div class="imgspacer"></div><span>)</span>');
-                    }
+
                     $(obj.data).each(function(idx, value) {
                         if (value == myhash || value == authorhash) {
                             return;
                         }
                         appendImg(value);
                     });
-                    var lenbrck = "(" + bbar.find('img').length + ")";
+                    var lenbrck = "(" + bbar.find('img').length + " watching)";
                     var title = document.title;
-                    if (title.match(/\([0-9]+\)/)) {
-                        document.title = title.replace(/\([0-9]+\)/, lenbrck)
+                    if (title.match(/\([0-9]+ watching\)/)) {
+                        document.title = title.replace(/\([0-9]+ watching\)/, lenbrck)
                     } else {
                         document.title = title + " " + lenbrck;
                     }
@@ -339,6 +341,8 @@
                     processTypos(obj.data);
                 } else if (obj.type == "preview") {
                     previewMessage(obj.data);
+                } else if (obj.type == "topicup") {
+                    $('.streamtitle').text(obj.data);
                 }
             };
         }

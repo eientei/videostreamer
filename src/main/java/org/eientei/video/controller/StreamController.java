@@ -1,5 +1,6 @@
 package org.eientei.video.controller;
 
+import org.eientei.video.data.ChatRoom;
 import org.eientei.video.orm.entity.Stream;
 import org.eientei.video.orm.service.StreamService;
 import org.eientei.video.orm.util.VideostreamUtils;
@@ -91,9 +92,11 @@ public class StreamController extends BaseController {
 
     @RequestMapping(value = "{app:(?!js$|css$|swf$|chat$).*}/{name}/title", method = RequestMethod.POST)
     @ResponseStatus(value = HttpStatus.OK)
-    public void appName(@RequestParam("title") String title) {
+    public void appName(@RequestParam("title") String title, @PathVariable String app, @PathVariable String name) {
         AppUserDetails appUserDetails = (AppUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         streamService.updateStreamTopic(title, appUserDetails.getDataUser());
+        ChatRoom room = chatController.getRoom(app + '/' + name);
+        room.sendTopicUpdate(title);
     }
 
     @RequestMapping(value = "{app:(?!js$|css$|swf$|chat$).*}/{name}")

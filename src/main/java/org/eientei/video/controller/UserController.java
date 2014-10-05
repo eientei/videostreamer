@@ -235,6 +235,8 @@ public class UserController extends BaseController {
                 streamService.updateStreamName(id, appUserDetails.getDataUser(), profileForm.getStream().getName());
             } catch (StreamService.StreamExists streamExists) {
                 bindingResult.addError(new FieldError("profileForm", "stream.name", "Such stream already exists"));
+                Stream oldStream = streamService.getUserStream(appUserDetails.getDataUser());
+                profileForm.setStream(oldStream);
                 return "profile";
             } catch (StreamService.StreamInavlidName streamInavlidName) {
                 bindingResult.addError(new FieldError("profileForm", "stream.name", streamInavlidName.getMessage()));

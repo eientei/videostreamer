@@ -18,6 +18,9 @@
                                 - "${stream.topic}"
                             </c:if>
                             ]
+                            [
+                            <a href="/${stream.app}/${stream.name}?buffer=0.0">unbuffered</a>
+                            ]
                             [ <a href="${rtmpBase}/${stream.app}/${stream.name}">direct rtmp url</a> ]
                             [ <a href="/${stream.app}/${stream.name}?novideo=1">no video</a> ]
                             [ <a href="/${stream.app}/${stream.name}?nochat=1">no chat</a> ]

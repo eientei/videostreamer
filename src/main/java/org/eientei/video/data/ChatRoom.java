@@ -39,6 +39,7 @@ public class ChatRoom {
         }
     }
 
+
     public class DescendingIterator {
         private int afterPos;
         private int beforePos;
@@ -115,6 +116,14 @@ public class ChatRoom {
         }, 1000, 1000, TimeUnit.MILLISECONDS);
 
         loadOlderMessages();
+    }
+
+    public String getApp() {
+        return app;
+    }
+
+    public String getName() {
+        return stream;
     }
 
     private void refreshTypoers() {
@@ -314,13 +323,14 @@ public class ChatRoom {
         }
     }
 
-    public void addMessage(ChatClient client, ClientMessage clientMessage) {
+    public void addMessage(ChatClient client, ClientMessage clientMessage, boolean isAdmin) {
         Message message = new Message();
         message.setApp(app);
         message.setName(stream);
         message.setMessage(clientMessage.getMessage());
         message.setRemote(client.getRemote());
         message.setAuthor(client.getUser());
+        message.setAdmin(isAdmin);
 
         messageService.storeMessage(message);
 

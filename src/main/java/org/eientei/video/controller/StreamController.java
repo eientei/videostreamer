@@ -3,6 +3,7 @@ package org.eientei.video.controller;
 import org.eientei.video.data.ChatRoom;
 import org.eientei.video.orm.entity.Stream;
 import org.eientei.video.orm.service.StreamService;
+import org.eientei.video.orm.service.UserService;
 import org.eientei.video.orm.util.VideostreamUtils;
 import org.eientei.video.security.AppUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +14,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 
-import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
@@ -33,6 +33,9 @@ public class StreamController extends BaseController {
 
     @Autowired
     private ChatController chatController;
+
+    @Autowired
+    private UserService userService;
 
     @Autowired
     private StreamService streamService;
@@ -108,30 +111,38 @@ public class StreamController extends BaseController {
                           @RequestParam(defaultValue = "rtmp") String player
                           ) throws AppNameNotFound {
         Stream stream = streamService.getStream(app, name);
-        if (stream == null) {
+        AppUserDetails appUserDetails = (AppUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        boolean isAdmin = appUserDetails.getDataUser().getGroups().contains(userService.getGroupByName("Admin")) && name.equals("admin");
+
+        if (stream == null && !isAdmin) {
             throw new AppNameNotFound();
         }
+
         model.addAttribute("stream", stream);
-        model.addAttribute("novideo", novideo);
         model.addAttribute("nochat", nochat);
         model.addAttribute("buffer", buffer);
         model.addAttribute("player", player);
         model.addAttribute("app", app);
         model.addAttribute("name", name);
-        model.addAttribute("showtitle", true);
-        AppUserDetails appUserDetails = (AppUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
-        model.addAttribute("authorhash", VideostreamUtils.determineUserHash(stream.getAuthor(), VideostreamUtils.getIp(request)));
-
-        if (stream.getAuthor().getId() == appUserDetails.getDataUser().getId()) {
-            model.addAttribute("streameditable", true);
+        if (isAdmin) {
+            model.addAttribute("novideo", true);
+            model.addAttribute("showtitle", false);
         } else {
-            model.addAttribute("streameditable", false);
+            model.addAttribute("novideo", novideo);
+            model.addAttribute("showtitle", true);
+            model.addAttribute("authorhash", VideostreamUtils.determineUserHash(stream.getAuthor(), VideostreamUtils.getIp(request)));
+            if (stream.getAuthor().getId() == appUserDetails.getDataUser().getId()) {
+                model.addAttribute("streameditable", true);
+            } else {
+                model.addAttribute("streameditable", false);
+            }
+
+            if (stream.getTopic() != null) {
+                model.addAttribute("streamtitle", stream.getTopic());
+            }
         }
 
-        if (stream.getTopic() != null) {
-            model.addAttribute("streamtitle", stream.getTopic());
-        }
         return "playback/" + name;
     }
 }

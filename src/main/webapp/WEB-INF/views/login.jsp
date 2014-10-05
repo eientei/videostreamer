@@ -41,4 +41,5 @@
             </tr>
         </table>
     </form:form>
+    If you don't have an account, you can <a href="${pageContext.request.contextPath}/signup">signup</a>
 </div>

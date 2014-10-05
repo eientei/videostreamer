@@ -7,6 +7,7 @@ import org.eientei.video.orm.entity.Message;
 import org.eientei.video.orm.entity.Stream;
 import org.eientei.video.orm.service.MessageService;
 import org.eientei.video.orm.service.StreamService;
+import org.eientei.video.orm.service.UserService;
 import org.eientei.video.security.AppUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -29,7 +30,10 @@ public class ChatController extends TextWebSocketHandler {
     private StreamService streamService;
 
     @Autowired
-    private AppUserDetailsService userService;
+    private UserService userService;
+
+    @Autowired
+    private AppUserDetailsService userDetailsService;
 
     @Autowired
     private MessageService messageService;
@@ -46,7 +50,7 @@ public class ChatController extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        clients.put(session.getId(), new ChatClient(session, userService));
+        clients.put(session.getId(), new ChatClient(session, userDetailsService));
     }
 
     @Override
@@ -81,9 +85,14 @@ public class ChatController extends TextWebSocketHandler {
     }
 
     private void processMessage(ChatClient chatClient, ChatRoom room, ClientMessage clientMessage) {
+        boolean isAdmin = chatClient.getUser().getGroups().contains(userService.getGroupByName("Admin")) && room.getName().equals("admin");
         switch (clientMessage.getType()) {
             case MESSAGE:
-                room.addMessage(chatClient, clientMessage);
+                if (isAdmin) {
+                    broadcastMessage(chatClient, clientMessage);
+                } else {
+                    room.addMessage(chatClient, clientMessage, false);
+                }
                 break;
             case HISTORY:
                 room.sendHistory(chatClient);
@@ -114,18 +123,26 @@ public class ChatController extends TextWebSocketHandler {
         }
     }
 
+    private void broadcastMessage(ChatClient chatClient, ClientMessage clientMessage) {
+        for (ChatRoom room : rooms.values()) {
+            room.addMessage(chatClient, clientMessage, true);
+        }
+    }
+
     private boolean connectUser(ChatClient chatClient, ClientHandshake handshake) {
         Stream stream = streamService.getStream(handshake.getApp(), handshake.getStream());
-        if (stream == null) {
+        String appStream = handshake.getApp() + '/' + handshake.getStream();
+        boolean isAdmin = chatClient.getUser().getGroups().contains(userService.getGroupByName("Admin")) && handshake.getStream().equals("admin");
+        if (stream == null && !isAdmin) {
             return false;
         }
-
-        String appStream = handshake.getApp() + '/' + handshake.getStream();
 
         ChatRoom room = rooms.get(appStream);
         if (room == null) {
             room = new ChatRoom(messageService, objectMapper, handshake.getApp(), handshake.getStream());
-            stream.setChatRoom(room);
+            if (!isAdmin) {
+                stream.setChatRoom(room);
+            }
             rooms.put(appStream, room);
         }
         room.addClient(chatClient, handshake);

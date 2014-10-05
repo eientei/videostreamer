@@ -1,7 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <jsp:useBean id="rtmpBase" scope="request" type="java.lang.String"/>
-<jsp:useBean id="stream" scope="request" type="org.eientei.video.orm.entity.Stream"/>
 <jsp:useBean id="novideo" scope="request" type="java.lang.Boolean"/>
 <jsp:useBean id="nochat" scope="request" type="java.lang.Boolean"/>
 <jsp:useBean id="buffer" scope="request" type="java.lang.Double"/>
@@ -26,7 +25,7 @@
                 <param name="scale" value="noscale"/>
                 <param name="bgcolor" value="#000000"/>
                 <param name="wmode" value="direct"/>
-                <param name="flashvars" value="videoUrl=${rtmpBase}/${app}/${name}&amp;buffer=0"/>
+                <param name="flashvars" value="videoUrl=${rtmpBase}/${app}/${name}&amp;buffer=${buffer}"/>
             </object>
         </c:otherwise>
     </c:choose>
@@ -39,7 +38,9 @@
         <div class="messagetemplate message">
             <div class="error">Template</div>
             <div class="body">
-                <a class="ordinallink" href="javascript:void(0)">&gt;&gt;<span class="ordinal">0</span></a>
+                <div class="ordinalcontainer">
+                    <a class="ordinallink" href="javascript:void(0)">&gt;&gt;<span class="ordinal">0</span></a>
+                </div>
                 <div class="secondline">
                     <div class="datetime"></div>
                     <img class="hashremote" width="16" height="16" src="http://www.gravatar.com/avatar/00000000000000000000000000000000?d=identicon&s=64" />
@@ -114,8 +115,12 @@
         }
 
         function formMessage(value) {
+            console.log(value);
             var template = $(".messagetemplate").clone();
             template.removeClass("messagetemplate");
+            if (value.admin) {
+                template.addClass("messageadmin");
+            }
             template.find(".error").remove();
             template.find(".ordinal").text(value.id);
             template.find(".datetime").text(makeDateTime(value.posted));
@@ -284,8 +289,25 @@
                 } else if (obj.type == "onlines") {
                     var bbar = $('.blackbar');
 
+                    $(".toremove").remove();
+
                     function appendImg(value) {
-                        bbar.append('<img class="onlineuser" data-hash="' + value + '" width="16" height="16" src="http://www.gravatar.com/avatar/' + value + '?d=identicon&s=64" />');
+                        var aimg = $('<img class="onlineuser" data-hash="' + value + '" width="16" height="16" src="http://www.gravatar.com/avatar/' + value + '?d=identicon&s=64" />');
+                        aimg.hover(function() {
+                            var d = $(this).clone().hide().css('position', 'fixed').css('opacity',1.0).addClass("toremove");
+                            $('body').append(d);
+                            d.attr('width', 32).attr('height', 32).position({
+                                my: 'left top',
+                                at: 'right bottom',
+                                of: this
+                            }).fadeIn();
+                            this.relhover = d;
+                        }, function() {
+                            this.relhover.fadeOut(function() {
+                                $(this).remove();
+                            })
+                        });
+                        bbar.append(aimg);
                     }
                     var authorhash = bbar.data("authorhash");
                     bbar.children().remove();

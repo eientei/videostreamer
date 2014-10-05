@@ -39,7 +39,7 @@ public class StreamService {
     public Stream getStream(String app, String name) {
         Search search = new Search();
         search.addFilterEqual("app", app);
-        search.addFilterEqual("name", name);
+        search.addFilterCustom("lower({name}) = lower(?1)", name);
         return dao.searchUnique(search);
     }
 
@@ -82,6 +82,9 @@ public class StreamService {
         if (!name.matches("^[0-9a-zA-Z_.-]{3,}$")) {
             throw new StreamInavlidName("Stream name must consist of >3 symbols in [0-9a-zA-Z_.-] range");
         }
+        if (name.equalsIgnoreCase("admin")) {
+            throw new StreamInavlidName("Stream name must not be reserved");
+        }
     }
 
 
@@ -111,7 +114,8 @@ public class StreamService {
 
         Stream stream = getStreamByIdFor(num, dataUser);
         if (stream != null) {
-            if (getStream(stream.getApp(), newName) != null) {
+            Stream otherStream = getStream(stream.getApp(), newName);
+            if (otherStream != null && otherStream.getAuthor().getId() != dataUser.getId()) {
                 throw new StreamExists();
             }
             stream.setName(newName);

@@ -16,6 +16,7 @@ public class ChatMessage {
     private String remote;
     private String author;
     private String message;
+    private boolean isAdmin;
 
     public ChatMessage(Message msg) {
         id = msg.getId();
@@ -23,6 +24,7 @@ public class ChatMessage {
         remote = VideostreamUtils.hashMd5(msg.getRemote());
         message = VideostreamUtils.preProcess(msg.getMessage());
         author = VideostreamUtils.determineUserHash(msg.getAuthor(), msg.getRemote());
+        isAdmin = msg.isAdmin();
     }
 
     public int getId() {
@@ -43,5 +45,9 @@ public class ChatMessage {
 
     public String getMessage() {
         return message;
+    }
+
+    public boolean isAdmin() {
+        return isAdmin;
     }
 }

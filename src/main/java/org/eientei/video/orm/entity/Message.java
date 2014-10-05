@@ -35,6 +35,9 @@ public class Message {
     @Column(nullable = false, length = 256)
     private String message;
 
+    @Column(nullable = false)
+    private boolean isAdmin;
+
     public int getId() {
         return id;
     }
@@ -89,5 +92,13 @@ public class Message {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public boolean isAdmin() {
+        return isAdmin;
+    }
+
+    public void setAdmin(boolean isAdmin) {
+        this.isAdmin = isAdmin;
     }
 }

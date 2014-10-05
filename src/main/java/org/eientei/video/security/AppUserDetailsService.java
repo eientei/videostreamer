@@ -27,7 +27,7 @@ public class AppUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String userName) throws UsernameNotFoundException {
-        User user = userService.getUserByName(userName);
+        User user = userService.getUserByNameStrict(userName);
 
         if (user == null) {
             if (userName.equals("Anonymous")) {

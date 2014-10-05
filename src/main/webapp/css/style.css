@@ -225,7 +225,7 @@ body, html {
     font-size: 12px;
 }
 
-.message .ordinallink {
+.message .ordinalcontainer {
     text-align: right;
     display: block;
     width: 100%;
@@ -266,6 +266,10 @@ body, html {
 
 .message.history {
     background: #ddd;
+}
+
+.message.messageadmin {
+    background: #efe;
 }
 
 .loadMore {
@@ -318,4 +322,9 @@ form {
 .errors {
     color: #f00;
     padding-left: 1em;
+}
+
+.code {
+    background: #fff;
+    padding: 5px;
 }

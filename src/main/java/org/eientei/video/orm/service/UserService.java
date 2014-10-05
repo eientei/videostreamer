@@ -29,21 +29,23 @@ public class UserService {
 
     public User getUserByName(String name) {
         Search search = new Search();
+        search.addFilterCustom("lower({name}) = lower(?1)", name);
+        return lookupUser(search);
+    }
+
+    public User getUserByNameStrict(String name) {
+        Search search = new Search();
         search.addFilterEqual("name", name);
+        return lookupUser(search);
+    }
+
+    private User lookupUser(Search search) {
         User user = userDao.searchUnique(search);
         if (user != null) {
             for (Group group : user.getGroups()) {
                 for (Role role : group.getRoles()) {
                 }
             }
-        }
-        return user;
-    }
-
-    public User getUserByNameOrAnonymous(String name) {
-        User user = getUserByName(name);
-        if (user == null) {
-            user = getUserByName("Anonymous");
         }
         return user;
     }
@@ -69,7 +71,7 @@ public class UserService {
     }
 
     @Transactional(readOnly = false)
-    public User createUser(String username, String password, String email) throws UserAlreadyExists {
+    public synchronized User createUser(String username, String password, String email) throws UserAlreadyExists {
         if (getUserByName(username) != null) {
             throw new UserAlreadyExists();
         }

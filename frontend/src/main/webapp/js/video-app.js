@@ -574,6 +574,16 @@ angular.module('videoAppView', [
             });
         }
     }
+}]).directive('repeatEnd', ['$timeout', function ($timeout) {
+    return {
+        restrict: 'A',
+        scope: '@',
+        link: function (scope, el, attrs) {
+            if (scope.$last || scope.refpoint) {
+                scope.$eval(attrs.repeatEnd);
+            }
+        }
+    };
 }]).directive('ngEnter', function () {
     return function (scope, element, attrs) {
         element.bind('keydown keypress', function (event) {
@@ -755,12 +765,12 @@ angular.module('videoAppController', [
 
     $scope.onlyvideo = $routeParams.onlyvideo;
     $scope.onlychat = $routeParams.onlychat;
+    $scope.refpoint = 0;
 
     var bootstrapped = false;
     var active = true;
     var first = true;
     var imm = false;
-    var refpoint = 0;
     var blured = false;
     var missed = 0;
 
@@ -817,7 +827,7 @@ angular.module('videoAppController', [
     };
 
     $scope.loadMore = function () {
-        refpoint = $scope.messages[0].id;
+        $scope.refpoint = $scope.messages[0].id;
         $scope.ws.send(JSON.stringify({
             type: CHAT_MESSAGE_TYPE.HISTORY,
             data: {
@@ -838,24 +848,23 @@ angular.module('videoAppController', [
         }
     };
 
-    $scope.scrollHistory = function (ref) {
+    $scope.scrollHistory = function () {
         var messages = $('.messages');
         if (!messages.length) {
             return;
         }
-        var scrollHeight = messages[0].scrollHeight;
-        if (ref == 0) {
-            messages[0].scrollTop = scrollHeight;
-            return;
-        }
-        var children = messages.children('.message');
+        var children = messages.children('div');
         var top = 0;
         for (var i = 0; i < children.length; i++) {
             var ch = $(children[i]);
-            if (ch.find('.ordinal').text() == ref) {
+            if (ch.find('.ordinal').text() == $scope.refpoint) {
                 break;
             }
             top += ch.outerHeight(true);
+        }
+        if ($scope.refpoint == 0) {
+            messages[0].scrollTop = top;
+            return;
         }
         messages[0].scrollTop = top;
     };
@@ -949,9 +958,6 @@ angular.module('videoAppController', [
                     }
                     $scope.hasMore = msg.data.hasMore;
                     $scope.$apply();
-                    $timeout(function () {
-                        $scope.scrollHistory(refpoint);
-                    }, 50);
                     break;
                 case CHAT_MESSAGE_TYPE.TOPIC:
                     $scope.stream.topic = msg.data.topic;

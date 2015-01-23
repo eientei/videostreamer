@@ -232,10 +232,15 @@ angular.module('videoApp', [
         }
     };
 
+    $rootScope.favicon = new Favico({
+        animation:'fade'
+    });
+
     $rootScope.$on('$routeChangeStart', function (a, next) {
         $rootScope.checkAccess(next);
         $rootScope.setPlayback(false);
         $rootScope.stream.clear();
+        $rootScope.favicon.badge('');
     });
 }]);
 
@@ -659,6 +664,8 @@ angular.module('videoAppController', [
     var first = true;
     var imm = false;
     var refpoint = 0;
+    var blured = false;
+    var missed = 0;
 
     Internal.request('/stream/bootstrap', { app: $routeParams.app, name: $routeParams.stream }).then(function (data) {
         if (!data.ok) {
@@ -741,6 +748,15 @@ angular.module('videoAppController', [
         messages[0].scrollTop = top;
     };
 
+    window.onfocus = function () {
+        $scope.favicon.badge('');
+        blured = false;
+        missed = 0;
+    };
+    window.onblur = function () {
+        blured = true;
+    };
+
     $scope.connect = function () {
         $scope.ws = new SockJS('/internal/chat');
 
@@ -772,6 +788,10 @@ angular.module('videoAppController', [
                     $scope.messages.push(msg.data);
                     $scope.$apply();
                     $scope.scrollToBottom();
+                    if (blured) {
+                        missed++;
+                        $scope.favicon.badge(missed);
+                    }
                     break;
                 case CHAT_MESSAGE_TYPE.ONLINE:
 

@@ -27,6 +27,9 @@ import flash.net.SharedObject;
 import flash.net.URLRequest;
 import flash.display.Loader;
 import flash.display.Bitmap;
+import flash.display.LoaderInfo;
+import flash.system.LoaderContext;
+import flash.external.ExternalInterface;
 
 import yukkuplayer.controls.VolumeSlider;
 import yukkuplayer.controls.VolumeIcon;
@@ -89,6 +92,7 @@ class VideoPlayer extends EventDispatcher {
 
         m_loadedImage = false;
 
+        /*
         m_idleImage = new Loader();
         m_idleImage.contentLoaderInfo.addEventListener(Event.COMPLETE, function(e : Event) {
             m_idleOverlay.addChild(m_idleImage);
@@ -98,7 +102,9 @@ class VideoPlayer extends EventDispatcher {
             positionIdle();
         });
 
-        m_idleImage.load(new URLRequest(idleImageUrl));
+        m_idleImage.load(new URLRequest(idleImageUrl), new LoaderContext());
+        */
+
         
         initUrls(videoUrl);
         initNet();
@@ -158,8 +164,10 @@ class VideoPlayer extends EventDispatcher {
     }
 
     private function initGUI() {
+        /*
         m_idleOverlay = new Sprite();
         m_idleOverlay.visible = false;
+        */
 
         m_iconBottom = new Sprite();
         m_iconBottom.visible = false;
@@ -193,7 +201,8 @@ class VideoPlayer extends EventDispatcher {
 
         haxe.Timer.delay(function() {
             if (!m_connOk) {
-                m_idleOverlay.visible = true;
+                //m_idleOverlay.visible = true;
+                ExternalInterface.call('streamOffline');
             }
         }, 1000);
 
@@ -202,7 +211,7 @@ class VideoPlayer extends EventDispatcher {
             m_infoDigest.text = "Accel: " + m_accel + " with " + Math.round(m_stream.currentFPS) + " FPS at " + m_width + "x" + m_height + " delay: " + m_stream.liveDelay + " buffer: " + m_stream.bufferTime +"s kbps: " + Math.round(m_stream.info.currentBytesPerSecond/1024) + " drop: " + m_stream.info.droppedFrames;
         };
 
-        m_movieClip.addChild(m_idleOverlay);
+        //m_movieClip.addChild(m_idleOverlay);
         m_movieClip.addChild(m_iconTop);
         m_movieClip.addChild(m_iconBottom);
 
@@ -214,10 +223,12 @@ class VideoPlayer extends EventDispatcher {
         m_infoDigest.x = 10;
         m_infoDigest.y = 2;
 
+        /*
         m_idleOverlay.graphics.clear();
         m_idleOverlay.graphics.beginFill(0x000000, 1.0);
         m_idleOverlay.graphics.drawRect(0, 0, m_stage.stageWidth, m_stage.height);
         m_idleOverlay.graphics.endFill();
+        */
 
         m_iconTop.graphics.clear();
         m_iconTop.graphics.beginFill(0x000000, 0.3);
@@ -316,9 +327,11 @@ class VideoPlayer extends EventDispatcher {
                 playVideo();
             case "NetStream.Play.Start":
                 m_connOk = true;
-                m_idleOverlay.visible = false;
+                //m_idleOverlay.visible = false;
+                ExternalInterface.call('streamOnline');
             case "NetStream.Play.Stop":
-                m_idleOverlay.visible = true;
+                //m_idleOverlay.visible = true;
+                ExternalInterface.call('streamOffline');
             case "NetConnection.Connect.Closed":
                 initNet();
             case "NetStream.Buffer.Full":
@@ -368,7 +381,7 @@ class VideoPlayer extends EventDispatcher {
     private function onResize(event : Event) {
         positionGui();
         resizeAndCenter();
-        positionIdle();
+        //positionIdle();
     }
 
     private function onMouseMove(event : MouseEvent) {

@@ -41,6 +41,18 @@
 
 }( jQuery ) );
 
+var playerScope;
+
+function streamOffline() {
+    playerScope.stream.setOffline(true);
+    playerScope.$apply();
+}
+
+function streamOnline() {
+    playerScope.stream.setOffline(false);
+    playerScope.$apply();
+}
+
 angular.module('videoApp', [
     'ngRoute',
     'ngSanitize',
@@ -94,8 +106,10 @@ angular.module('videoApp', [
     return this;
 }).service('Stream', function () {
     this.populate = function (data) {
-        this.id    = data.id;
-        this.topic = data.topic;
+        this.id        = data.id;
+        this.topic     = data.topic;
+        this.own       = data.own;
+        this.idleImage = data.idleImage;
     };
 
     this.setAppName = function (app, name) {
@@ -103,11 +117,18 @@ angular.module('videoApp', [
         this.name = name;
     };
 
+    this.setOffline = function (b) {
+        this.offline = b;
+    };
+
     this.clear = function () {
-        this.id    = null;
-        this.topic = null;
-        this.app   = 'video';
-        this.name  = 'eientei';
+        this.id        = null;
+        this.topic     = null;
+        this.app       = 'video';
+        this.name      = 'eientei';
+        this.own       = null;
+        this.offline   = null;
+        this.idleImage = null;
     };
 
     this.clear();
@@ -176,6 +197,7 @@ angular.module('videoApp', [
         Internal.request('/user/logout').then(function (data) {
             Session.populate(data);
             $rootScope.checkAccess($route.current, true);
+            $rootScope.$broadcast('logout');
         });
     };
 
@@ -290,6 +312,13 @@ angular.module('videoAppView', [
             });
         }
     };
+}).directive('wideTallDecide', function () {
+    return {
+        restrict: 'A',
+        link: function (scope, el, attrs) {
+            el.addClass((el.width/el.height > 1) ? 'wide' : 'tall');
+        }
+    };
 }).directive('iconPreview', function () {
     return {
         restrict: 'A',
@@ -373,11 +402,18 @@ angular.module('videoAppView', [
         restrict: 'A',
         link: function (scope, element, attribute) {
             element.bind('dblclick', function (event) {
+                if (!scope.stream.own) {
+                    return;
+                }
                 element.addClass('hidden');
                 var input = $('<input/>');
-                element.parent().append(input);
+                element.parent().prepend(input);
                 input.val(element.text());
                 input.focus();
+                scope.$on('$routeChangeStart', function () {
+                    input.remove();
+                    element.removeClass('hidden');
+                });
                 input.keydown(function (ev) {
                     if (ev.keyCode == 13) {
                         var newtopic = input.val();
@@ -405,10 +441,20 @@ angular.module('videoAppView', [
                     return;
                 }
 
+                $.cookie('player-x', x, { expires: 365, path: '/' });
+                x = x * (window.innerWidth / 100);
+
                 videowrap.width(x);
                 chatwrap.width(window.innerWidth - x);
                 element[0].style.left= x + 'px';
-                $.cookie('player-x', x, { expires: 365, path: '/' });
+
+                console.log(videowrap.width(), videowrap.height());
+                var el = $('.offlineimg img');
+                if (videowrap.width() > videowrap.height()) {
+                    el.attr('class', 'tall');
+                } else {
+                    el.attr('class', 'wide');
+                }
             }
 
             $timeout(function () {
@@ -429,6 +475,7 @@ angular.module('videoAppView', [
                         x = window.innerWidth - 100;
                     }
 
+                    x = x / (window.innerWidth / 100);
                     setValue(x);
                 }
             });
@@ -449,11 +496,13 @@ angular.module('videoAppView', [
                     return;
                 }
 
+                $.cookie('chat-y', y, { expires: 365, path: '/' });
+                y = y * (window.innerHeight / 100);
+
                 messages.height(y);
                 bars.height(window.innerHeight - y);
 
                 element[0].style.top= (y - 10) + 'px';
-                $.cookie('chat-y', y, { expires: 365, path: '/' });
             }
 
             $timeout(function () {
@@ -476,6 +525,7 @@ angular.module('videoAppView', [
 
                     y -= 10;
 
+                    y = y / (window.innerHeight / 100);
                     setValue(y);
                 }
             });
@@ -532,7 +582,7 @@ angular.module('videoAppController', [
             Recaptcha.reload();
         });
     };
-}]).controller('LoginController', ['$scope', '$route', 'Internal', 'Session', function ($scope, $route, Internal, Session) {
+}]).controller('LoginController', ['$rootScope', '$scope', '$route', 'Internal', 'Session', function ($rootScope, $scope, $route, Internal, Session) {
     $scope.performLogin = function (credentials) {
         var loginData = {
             name: credentials.username,
@@ -546,6 +596,7 @@ angular.module('videoAppController', [
             $scope.loginForm.$serverErrors = null;
             $scope.credentials = null;
             $scope.checkAccess($route.current, true);
+            $rootScope.$broadcast('login');
         }, function (data) {
             $scope.login = {
                 error: data.text
@@ -642,6 +693,8 @@ angular.module('videoAppController', [
         });
     };
 }]).controller('PlayerController', ['$scope', '$routeParams', '$sce', '$timeout', 'CHAT_MESSAGE_TYPE', 'Internal', function ($scope, $routeParams, $sce, $timeout, CHAT_MESSAGE_TYPE, Internal) {
+    playerScope = $scope;
+
     $scope.setPlayback(true);
 
     $scope.streamApp = $routeParams.app;
@@ -660,6 +713,7 @@ angular.module('videoAppController', [
     $scope.onlyvideo = $routeParams.onlyvideo;
     $scope.onlychat = $routeParams.onlychat;
 
+    var bootstrapped = false;
     var active = true;
     var first = true;
     var imm = false;
@@ -667,15 +721,30 @@ angular.module('videoAppController', [
     var blured = false;
     var missed = 0;
 
-    Internal.request('/stream/bootstrap', { app: $routeParams.app, name: $routeParams.stream }).then(function (data) {
-        if (!data.ok) {
-            $scope.makeError(404);
-        }
-        $scope.imageUrl = data.idleImage;
-        $scope.swfurl = '/swf/yukkuplayer.swf';
-        $scope.stream.populate(data);
-        $scope.stream.setAppName($routeParams.app, $routeParams.stream);
+    $scope.bootstrap = function () {
+        Internal.request('/stream/bootstrap', { app: $routeParams.app, name: $routeParams.stream }).then(function (data) {
+            if (!bootstrapped) {
+                if (!data.ok) {
+                    $scope.makeError(404);
+                    return;
+                }
+                bootstrapped = true;
+            }
+            $scope.stream.populate(data);
+            $scope.stream.setAppName($routeParams.app, $routeParams.stream);
+            $scope.swfurl = '/swf/yukkuplayer.swf';
+        });
+    };
+
+    $scope.$on('login', function () {
+        $scope.bootstrap();
     });
+
+    $scope.$on('logout', function () {
+        $scope.bootstrap();
+    });
+
+    $scope.bootstrap();
 
     $scope.insertOrdinal = function (id) {
         var textarea = $('.inputText');

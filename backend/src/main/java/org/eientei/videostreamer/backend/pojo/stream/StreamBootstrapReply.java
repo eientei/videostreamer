@@ -10,6 +10,7 @@ public class StreamBootstrapReply {
     private long id;
     private String idleImage;
     private String topic;
+    private boolean own;
 
     public boolean isOk() {
         return ok;
@@ -41,5 +42,13 @@ public class StreamBootstrapReply {
 
     public void setTopic(String topic) {
         this.topic = topic;
+    }
+
+    public boolean isOwn() {
+        return own;
+    }
+
+    public void setOwn(boolean own) {
+        this.own = own;
     }
 }

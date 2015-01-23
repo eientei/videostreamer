@@ -12,6 +12,9 @@
                         <span class="place">{{stream.app}}/{{stream.name}}</span>
                         <span class="time">{{stream.since | timeago}}</span></div>
                 </div>
+                <div class="viewers">
+                    <img class="authoricon" ng-repeat="online in stream.onlines" icon-preview ng-src="{{ online.hash | gravatar }}" data-name="{{ online.name }}" width="24" height="24" />
+                </div>
             </a>
             <div class="extra">
                 <div class="extra-icon"></div>
@@ -24,10 +27,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="viewers">
-                <img class="authoricon" ng-repeat="online in stream.onlines" icon-preview ng-src="{{ online.hash | gravatar }}" data-name="{{ online.name }}" width="24" height="24" />
             </div>
         </div>
     </div>

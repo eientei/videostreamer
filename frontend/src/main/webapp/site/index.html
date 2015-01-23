@@ -16,8 +16,8 @@
     <script src="/js/jquery-1.11.2.min.js"></script>
     <script src="/js/jquery-ui-1.10.4.custom.min.js"></script>
     <script src="/js/jquery.cookie.js"></script>
-    <script src="/js/favico-0.3.5.min.js"/>
-    <script ng-if="config.captchaEnabled" src="http://www.google.com/recaptcha/api/js/recaptcha_ajax.js"></script>
+    <script src="/js/favico-0.3.5.min.js"></script>
+    <script src="http://www.google.com/recaptcha/api/js/recaptcha_ajax.js"></script>
     <script src="/js/video-app.js"></script>
 </head>
 <body style="{{ (playback) ? 'overflow: hidden;' : '' }}">
@@ -28,6 +28,7 @@
     <div class="toppanel">
         <div class="left">
             <span class="topic" topic-change>{{stream.topic}}</span>
+            <span class="offline" ng-if="stream.offline"><i>(Offline)</i></span>
         </div>
         <div class="right">
             <div class="navigation">

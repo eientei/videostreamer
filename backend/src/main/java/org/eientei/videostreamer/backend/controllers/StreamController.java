@@ -91,7 +91,7 @@ public class StreamController {
 
     @RequestMapping(value = "bootstrap", method = RequestMethod.POST)
     @ResponseBody
-    public Object bootstrap(@RequestBody StreamBootstrap bootstrap) {
+    public Object bootstrap(@AuthenticationPrincipal AppUserDetails appUserDetails, @RequestBody StreamBootstrap bootstrap) {
         Stream stream = streamService.getStream(bootstrap.getApp(), bootstrap.getName());
         StreamBootstrapReply builder = new StreamBootstrapReply();
         if (stream != null) {
@@ -103,6 +103,7 @@ public class StreamController {
                 builder.setTopic(stream.getTopic());
             }
             builder.setId(stream.getId());
+            builder.setOwn(stream.getAuthor().getId() == appUserDetails.getDataUser().getId());
         } else {
             builder.setOk(false);
         }

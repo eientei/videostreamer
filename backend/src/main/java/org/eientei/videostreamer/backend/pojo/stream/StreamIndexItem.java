@@ -2,8 +2,8 @@ package org.eientei.videostreamer.backend.pojo.stream;
 
 import org.eientei.videostreamer.backend.pojo.chat.ServerChatOnlineItem;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * User: iamtakingiteasy
@@ -17,7 +17,7 @@ public class StreamIndexItem {
     private String authorName;
     private String authorHash;
     private long since;
-    private List<ServerChatOnlineItem> onlines = new ArrayList<ServerChatOnlineItem>();
+    private Set<ServerChatOnlineItem> onlines = new TreeSet<ServerChatOnlineItem>();
 
     public String getApp() {
         return app;
@@ -67,11 +67,11 @@ public class StreamIndexItem {
         this.since = since;
     }
 
-    public List<ServerChatOnlineItem> getOnlines() {
+    public Set<ServerChatOnlineItem> getOnlines() {
         return onlines;
     }
 
-    public void setOnlines(List<ServerChatOnlineItem> onlines) {
+    public void setOnlines(Set<ServerChatOnlineItem> onlines) {
         this.onlines = onlines;
     }
 }

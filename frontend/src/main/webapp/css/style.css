@@ -15,6 +15,10 @@ a:hover {
     color: #444;
 }
 
+h1 {
+    font-family: sans-serif;
+}
+
 .content {
     width: 100%;
     height: 100%;
@@ -503,6 +507,23 @@ a:hover {
     left: 50%;
     transform: translateY(-50%) translateX(-50%);
 }
+.chatvideo:hover:after {
+    padding-left: 0.5em;
+    content: '-> chat';
+    position: absolute;
+}
+
+.chat:hover:after {
+    padding-left: 0.5em;
+    content: '-> video';
+    position: absolute;
+}
+
+.video:hover:after {
+    padding-left: 0.5em;
+    content: '-> chat+video';
+    position: absolute;
+}
 
 .offlineimg img.wide {
     max-width: 100%;
@@ -511,7 +532,8 @@ a:hover {
     width: 100%;
     background: #000;
 }
-.offlineimg  img.tall {
+
+.offlineimg img.tall {
     max-height: 100%;
     max-width: 100%;
     height: 100%;

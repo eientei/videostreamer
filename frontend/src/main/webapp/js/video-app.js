@@ -268,10 +268,13 @@ angular.module('videoApp', [
     function nameMode() {
         if (!$rootScope.onlyvideo && !$rootScope.onlychat) {
             $rootScope.mode = 'chat+video';
+            $rootScope.modeCss = 'chatvideo';
         } else if (!$rootScope.onlyvideo) {
             $rootScope.mode = 'chat';
+            $rootScope.modeCss = 'chat';
         } else {
             $rootScope.mode = 'video';
+            $rootScope.modeCss = 'video';
         }
     }
     $rootScope.setMode = function (a,b) {
@@ -375,6 +378,17 @@ angular.module('videoAppView', [
                 theImage.src = n;
             });
 
+        }
+    };
+}).directive('setClass', function () {
+    return {
+        restrict: 'A',
+        link: function (scope, el, attrs) {
+            scope.$watch('modeCss', function (n,o) {
+                el.removeClass(o);
+                el.addClass(n);
+            });
+            el.addClass(attrs.setClass);
         }
     };
 }).directive('iconPreview', function () {

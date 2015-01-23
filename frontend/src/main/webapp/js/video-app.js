@@ -315,8 +315,35 @@ angular.module('videoAppView', [
 }).directive('wideTallDecide', function () {
     return {
         restrict: 'A',
+        scope: {
+            text: '@ngSrc'
+        },
         link: function (scope, el, attrs) {
-            el.addClass((el.width/el.height > 1) ? 'wide' : 'tall');
+            scope.$watch('text', function (n) {
+                var theImage = new Image();
+                theImage.onload  = function () {
+                    var width = theImage.width;
+                    var height = theImage.height;
+
+                    var videowrap = $('.player-wrapper');
+                    var el = $('.offlineimg img');
+                    var a = videowrap.width() / videowrap.height();
+                    var n = width / height;
+
+                    if (a < n) {
+                        el.removeClass('tall');
+                        el.addClass('wide');
+                    } else {
+                        el.removeClass('wide');
+                        el.addClass('tall');
+                    }
+
+                    el.attr('nativeWidth', width);
+                    el.attr('nativeHeight', height);
+                };
+                theImage.src = n;
+            });
+
         }
     };
 }).directive('iconPreview', function () {
@@ -442,18 +469,28 @@ angular.module('videoAppView', [
                 }
 
                 $.cookie('player-x', x, { expires: 365, path: '/' });
+                if (x < 10) {
+                    x = 10;
+                }
+                if (x > 90) {
+                    x = 90;
+                }
                 x = x * (window.innerWidth / 100);
 
                 videowrap.width(x);
                 chatwrap.width(window.innerWidth - x);
                 element[0].style.left= x + 'px';
 
-                console.log(videowrap.width(), videowrap.height());
                 var el = $('.offlineimg img');
-                if (videowrap.width() > videowrap.height()) {
-                    el.attr('class', 'tall');
+                var a = videowrap.width() / videowrap.height();
+                var n = el.attr('nativewidth') / el.attr('nativeheight');
+
+                if (a < n) {
+                    el.removeClass('tall');
+                    el.addClass('wide');
                 } else {
-                    el.attr('class', 'wide');
+                    el.removeClass('wide');
+                    el.addClass('tall');
                 }
             }
 
@@ -497,6 +534,12 @@ angular.module('videoAppView', [
                 }
 
                 $.cookie('chat-y', y, { expires: 365, path: '/' });
+                if (y < 10) {
+                    y = 10;
+                }
+                if (y > 90) {
+                    y = 90;
+                }
                 y = y * (window.innerHeight / 100);
 
                 messages.height(y);

@@ -50,8 +50,7 @@ a:hover {
 }
 
 .content .toppanel .left .topic {
-    line-height: 16px;
-    font-size: smaller;
+    font-size: 16px;
 }
 
 .content .toppanel .right {
@@ -490,7 +489,8 @@ a:hover {
 
 
 .offline {
-    margin-left: 1em;
+    margin-left: 0.2em;
+    font-size: 14px;
 }
 
 .offlineimg {

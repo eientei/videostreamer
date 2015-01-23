@@ -44,12 +44,12 @@ a:hover {
     display: inline-block;
 }
 
-.content .toppanel .left {
+.content .toppanel .center {
     width: 75%;
     text-align: center;
 }
 
-.content .toppanel .left .topic {
+.content .toppanel .center .topic {
     font-size: 16px;
 }
 
@@ -156,7 +156,7 @@ a:hover {
 }
 
 .only {
-    width: 100%;
+    width: 100% !important;
 }
 
 .drag,
@@ -485,8 +485,6 @@ a:hover {
 .hidden {
     display: none;
 }
-
-
 
 .offline {
     margin-left: 0.2em;

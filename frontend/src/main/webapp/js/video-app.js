@@ -264,6 +264,37 @@ angular.module('videoApp', [
         $rootScope.stream.clear();
         $rootScope.favicon.badge('');
     });
+
+    function nameMode() {
+        if (!$rootScope.onlyvideo && !$rootScope.onlychat) {
+            $rootScope.mode = 'chat+video';
+        } else if (!$rootScope.onlyvideo) {
+            $rootScope.mode = 'chat';
+        } else {
+            $rootScope.mode = 'video';
+        }
+    }
+    $rootScope.setMode = function (a,b) {
+        $rootScope.onlyvideo = a;
+        $rootScope.onlychat = b;
+
+        nameMode();
+    };
+
+    $rootScope.switchMode = function () {
+        if (!$rootScope.onlyvideo && !$rootScope.onlychat) {
+            $rootScope.onlyvideo = false;
+            $rootScope.onlychat = true;
+        } else if (!$rootScope.onlyvideo) {
+            $rootScope.onlyvideo = true;
+            $rootScope.onlychat = false;
+        } else {
+            $rootScope.onlyvideo = false;
+            $rootScope.onlychat = false;
+        }
+
+        nameMode();
+    };
 }]);
 
 
@@ -752,8 +783,6 @@ angular.module('videoAppController', [
 
     $scope.streamApp = $routeParams.app;
     $scope.streamName = $routeParams.stream;
-    $scope.videoEnabled = true;
-    $scope.chatEnabled = true;
     $scope.buffer = '1.0';
     $scope.messages = [];
     $scope.typers = [];
@@ -763,8 +792,6 @@ angular.module('videoAppController', [
         $scope.buffer = $routeParams.buffer;
     }
 
-    $scope.onlyvideo = $routeParams.onlyvideo;
-    $scope.onlychat = $routeParams.onlychat;
     $scope.refpoint = 0;
 
     var bootstrapped = false;
@@ -773,6 +800,8 @@ angular.module('videoAppController', [
     var imm = false;
     var blured = false;
     var missed = 0;
+
+    $scope.setMode($routeParams.onlyvideo, $routeParams.onlychat);
 
     $scope.bootstrap = function () {
         Internal.request('/stream/bootstrap', { app: $routeParams.app, name: $routeParams.stream }).then(function (data) {

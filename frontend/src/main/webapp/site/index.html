@@ -26,7 +26,10 @@
 </div>
 <div class="content" ng-if="loaded">
     <div class="toppanel">
-        <div class="left">
+        <div class="left" ng-if="stream.id">
+            <a href="javascript:void(0)" ng-click="switchMode()">{{mode}}</a>
+        </div>
+        <div class="center">
             <span class="topic" topic-change>{{stream.topic}}</span>
             <span class="offline" ng-if="stream.offline">(<i>Offline</i>)</span>
         </div>

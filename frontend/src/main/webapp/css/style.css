@@ -1,0 +1,490 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    background: #eee;
+    color: #000;
+    height: 100%;
+}
+
+a {
+    text-decoration: none;
+    color: #449;
+}
+
+a:hover {
+    color: #444;
+}
+
+.content {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+}
+
+.loading {
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    display: table;
+}
+
+.loading span {
+    vertical-align: middle;
+    display: table-cell;
+}
+
+.content .toppanel {
+    background: #222;
+    color: #eee;
+    height: 16px;
+    padding: 5px;
+}
+
+.content .toppanel > * {
+    display: inline-block;
+}
+
+.content .toppanel .left {
+    width: 75%;
+    text-align: center;
+}
+
+.content .toppanel .left .topic {
+    line-height: 16px;
+    font-size: smaller;
+}
+
+.content .toppanel .right {
+    text-align: right;
+    position: absolute;
+    right: 5px;
+}
+
+.content .toppanel .right > * {
+    display: inline-block;
+}
+
+.content .toppanel .right .navigation {
+    vertical-align: top;
+    line-height: 16px;
+}
+
+.content .toppanel a {
+    color: #ddd;
+}
+
+.content .toppanel a:hover {
+    color: #fff;
+}
+
+.content .centeroid {
+    padding: 2em;
+}
+
+.login {
+    width: 100%;
+    z-index: 10;
+    background: #222;
+    color: #eee;
+    padding-left: 5em;
+    padding-bottom: 1em;
+}
+
+.login form {
+    display: inline-block;
+    text-align: left;
+}
+
+.login .close {
+    display: block;
+}
+
+.login a {
+    color: #ddd;
+}
+
+.login a:hover {
+    color: #fff;
+}
+
+.login .passwordreset {
+    float: right;
+}
+
+.login .submitgroup > * {
+    display: inline-block;
+}
+
+.controls {
+    background: #eee;
+    padding-bottom: 0.5em;
+}
+
+.controls .tab {
+    background: #eee;
+    padding: 0.5em;
+}
+
+.controls .tab.active {
+    background: #ddd;
+    padding-bottom: 1em;
+}
+
+.tabcontents {
+    background: #ddd;
+    padding: 1em;
+}
+
+.playback {
+    position: absolute;
+    top: 26px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    overflow: hidden;
+}
+
+.player-wrapper {
+    width: 75%;
+    height: 100%;
+    float: left;
+}
+
+.chat-wrapper {
+    width: 25%;
+    height: 100%;
+    float: left;
+}
+
+.only {
+    width: 100%;
+}
+
+.drag,
+.drag:focus {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    outline-style:none;
+}
+
+.videodrag {
+    cursor: w-resize;
+    height:100%;
+    width: 10px;
+    position: absolute;
+    left: 75%;
+    z-index: 9999;
+}
+
+.chatdrag {
+    cursor: n-resize;
+    z-index: 9999;
+    width: 100%;
+    height: 10px;
+    bottom: 25%;
+    position: absolute;
+}
+
+.chat-wrapper .chat {
+    width: 100%;
+    height: 100%;
+}
+
+.chat-wrapper .chat .messages {
+    height: 75%;
+    width: 100%;
+    position: relative;
+    overflow-y: auto;
+}
+
+.chat-wrapper .chat .bars {
+    width: 100%;
+    height: 25%;
+    position: relative;
+    display: table;
+}
+
+.chat-wrapper .chat .blackbar {
+    background: #222;
+    line-height: 16px;
+    color: #eee;
+    width: 100%;
+    display: table-cell;
+}
+
+.chat-wrapper .chat .blackbar img {
+    opacity: 0.5;
+}
+
+.chat-wrapper .chat .blackbar img.typing {
+    opacity: 1.0;
+}
+
+.chat-wrapper .chat .blackbar img, .chat-wrapper .chat .blackbar span {
+    vertical-align: top;
+    float: left;
+    margin: 2px;
+}
+
+.chat-wrapper .chat .blackbar .placeholder {
+    width: 16px;
+    height: 16px;
+    float: left;
+    margin-left: 12px;
+    margin-right: 12px;
+}
+
+.chat-wrapper .chat .blackbar img.first {
+    margin-left: 12px;
+    margin-right: 12px;
+}
+
+.clearfix {
+    display: block;
+    clear: both;
+}
+
+.chat-wrapper .chat .inputbar {
+    height: 100%;
+    width: 100%;
+    display: table-row;
+}
+
+.inputbar textarea {
+    height: 100%;
+    width: 100%;
+    padding: 0.3em;
+    font-size: 12px;
+    line-height: 1.1em;
+    resize: none;
+    border: none;
+    outline: 0;
+    overflow: auto;
+    box-sizing: border-box;
+    background: #eee;
+    color: #222;
+}
+
+.message {
+    padding: 0.5em;
+    border-top: 1px solid #ccc;
+    font-size: 12px;
+}
+
+.message.preview {
+    border-top: 0;
+}
+
+.loadMore {
+    width: 100%;
+    text-align: center;
+    display: block;
+}
+
+.message .ordinalcontainer a {
+    text-decoration: none;
+}
+
+.message a[data-refid] {
+    text-decoration: none;
+}
+
+.message .ordinalcontainer {
+    text-align: right;
+    display: block;
+    width: 100%;
+}
+
+.message .secondline {
+    text-align: right;
+    display: block;
+    width: 100%;
+}
+
+.message .secondline > * {
+    display: inline-block;
+}
+
+.message .thirdline {
+    width: 100%;
+}
+
+.message .thirdline .msgtext {
+    word-wrap: break-word;
+    white-space: -moz-pre-wrap;
+    white-space: pre-wrap;
+    white-space: -o-pre-wrap;
+    white-space: pre-line;
+    font-size: 16px;
+}
+
+.message .thirdline > img {
+    float: left;
+    margin-right: 0.5em;
+}
+
+
+.quote {
+    color: #0a0;
+}
+
+.spoiler:hover {
+    color: #000;
+}
+
+.spoiler {
+    background: #F0D0B6;
+    color: #F0D0B6;
+}
+
+.code {
+    background: #fff;
+    padding: 5px;
+}
+
+.fancybox {
+    background: #eee;
+    border-radius: 1em;
+    padding: 1em;
+    margin: 1em;
+}
+
+
+
+.stream > *, .stream > a > * {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.topic {
+    font-size: 28px;
+}
+
+.info {
+    padding-left: 14px;
+}
+
+.time {
+}
+
+.stream > a {
+    padding: 14px;
+    display: block;
+}
+
+.stream {
+    position: relative;
+    transition: all 0.3s;
+    margin-bottom: 3px;
+    box-shadow: 0 0 18px -6px transparent;
+    overflow: hidden;
+}
+
+.stream * {
+    transition: all 0.3s;
+}
+
+.stream:hover {
+    box-shadow: 0 0 18px -6px black;
+}
+
+.additional {
+    color: rgb(127, 127, 127);
+}
+
+.stream:hover .place {
+    color: rgb(19, 19, 200);
+}
+
+.extra-icon
+{
+    width: 22px;
+    height: 22px;
+    background: url(/img/settings-128.png);
+    background-size: cover;
+    opacity: 0;
+}
+
+.stream:hover .extra-icon {
+    opacity: 0.6;
+}
+
+.extra > * {
+    display: inline-block;
+    vertical-align: top;
+}
+
+.extra {
+    position: absolute;
+    right: -94px;
+    top: 0;
+    float: right;
+    bottom: 0;
+}
+
+.extra-icon {
+    margin-right: 10px;
+    margin-top: 14px;
+}
+
+.extra-menu-wrap1 {
+    background: #484848;
+    color: rgb(195, 191, 191);
+    vertical-align: middle;
+    height: 100%;
+    box-shadow: 12px 0 8px -9px black inset;
+}
+
+.extra-menu-wrap1 a {
+    color: rgb(195, 191, 191);
+}
+
+.extra-menu > * {
+    display: block;
+}
+
+
+.extra-menu > *:hover {
+    color: white;
+}
+
+.extra-menu-wrap2 {
+    display: table;
+    height: 100%;
+}
+
+.extra-menu {
+    display: table-cell;
+    height: 100%;
+    vertical-align: middle;
+    padding: 0 11px;
+}
+
+.extra:hover {
+    right: 0;
+}
+
+.viewers > * {
+    height: 20px;
+    width: 20px;
+    margin: 2px;
+}
+
+.viewers {
+    position: absolute;
+    bottom: 14px;
+    right: 14px;
+
+}
+
+.extra:hover + div {
+    right: 109px;
+}
+
+.hidden {
+    display: none;
+}

@@ -1,0 +1,79 @@
+<div class="centeroid">
+    <div class="view">
+        <form name="signupForm" method="post" app-submit="signup(credentials)" novalidate>
+            <div class="fieldgroup">
+                <input type="text"
+                       id="username"
+                       name="username"
+                       placeholder="Username"
+                       ng-model="credentials.username"
+                       minlength="3"
+                       maxlength="64"
+                       required="true"
+                       pattern="^[a-zA-Z][0-9a-zA-Z_.-]*$"
+                       ng-model-options="{ updateOn: 'default blur', debounce: { default: 250, blur: 0 } }" >
+                <span class="label">— Username</span>
+                <div class="errors">
+                    <div ng-show="signupForm.username.$error.minlength || (signupForm.username.$dirty && signupForm.username.$error.required)">Username should be at least 3 symbols length</div>
+                    <div ng-show="signupForm.username.$error.maxlength">Username should not exceed 64 symbols length</div>
+                    <div ng-show="signupForm.username.$error.pattern">Name should consist of digits (0-9), latin letters (a-zA-Z) or (_.-) and start with a letter</div>
+                </div>
+            </div>
+
+            <div class="fieldgroup">
+                <input type="password"
+                       id="password"
+                       name="password"
+                       placeholder="Password"
+                       ng-model="credentials.password"
+                       minlength="3"
+                       maxlength="64"
+                       required="true"
+                       ng-model-options="{ updateOn: 'default blur', debounce: { default: 250, blur: 0 } }">
+                <span class="label">— Passsword</span>
+                <div class="errors">
+                    <div ng-show="signupForm.password.$error.minlength || (signupForm.password.$dirty && signupForm.password.$error.required)">Password should be at least 3 symbols length</div>
+                    <div ng-show="signupForm.password.$error.maxlength">Password should not exceed 64 symbols length</div>
+                </div>
+            </div>
+
+            <div class="fieldgroup">
+                <input type="password"
+                       id="passwordconfirm"
+                       name="passwordconfirm"
+                       placeholder="Password Confirmation"
+                       ng-model="credentials.passwordconfirm"
+                       same-as="signupForm.password"
+                       required="true"
+                       ng-model-options="{ updateOn: 'default blur', debounce: { default: 250, blur: 0 } }">
+                <span class="label">— Password confirmation</span>
+                <div class="errors">
+                    <div ng-show="(signupForm.password.$valid && signupForm.passwordconfirm.$error.sameAs) || (signupForm.passwordconfirm.$dirty && signupForm.passwordconfirm.$error.required)">Password confirmation should be same as password</div>
+                </div>
+            </div>
+
+            <div class="fieldgroup">
+                <input type="email"
+                       id="email"
+                       name="email"
+                       placeholder="Email (Optional)"
+                       ng-model="credentials.email"
+                       ng-model-options="{ updateOn: 'default blur', debounce: { default: 250, blur: 0 } }">
+                <span class="label">— Email (optional)</span>
+                <div class="errors">
+                    <div ng-show="signupForm.email.$error.email">Invalid Email entered</div>
+                </div>
+            </div>
+            <div class="fieldgroup">
+                <button type="submit">Signup</button>
+            </div>
+
+            <ul>
+                <li ng-if="signupForm.$submitted && !signupForm.$valid">Please correct the form</li>
+                <li ng-if="error">{{error}}</li>
+            </ul>
+
+            <div ng-if="config.captchaEnabled" re-captcha></div>
+        </form>
+    </div>
+</div>

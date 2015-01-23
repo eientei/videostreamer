@@ -1,0 +1,50 @@
+<form name="loginForm" method="post" app-submit="performLogin(credentials)" ng-controller="LoginController" novalidate>
+    <div class="fieldgroup">
+        <input type="text"
+               id="username"
+               name="username"
+               placeholder="Username"
+               ng-model="credentials.username"
+               minlength="3"
+               maxlength="64"
+               required="true"
+               pattern="^[a-zA-Z][0-9a-zA-Z_.-]*$"
+               ng-model-options="{ updateOn: 'default blur', debounce: { default: 250, blur: 0 } }" >
+        <span class="label">— Username</span>
+
+        <div class="errors">
+            <div ng-show="loginForm.username.$error.minlength || (loginForm.username.$dirty && loginForm.username.$error.required)">Username should be at least 3 symbols length</div>
+            <div ng-show="loginForm.username.$error.maxlength">Username should not exceed 64 symbols length</div>
+            <div ng-show="loginForm.username.$error.pattern">Name should consist of digits (0-9), latin letters (a-zA-Z) or (_.-) and start with a letter</div>
+        </div>
+    </div>
+    <div class="fieldgroup">
+        <input type="password"
+               id="password"
+               name="password"
+               placeholder="Password"
+               ng-model="credentials.password"
+               minlength="3"
+               maxlength="64"
+               required="true"
+               ng-model-options="{ updateOn: 'default blur', debounce: { default: 250, blur: 0 } }">
+        <span class="label">— Password</span>
+        <div class="errors">
+            <div ng-show="loginForm.password.$error.minlength || (loginForm.password.$dirty && loginForm.password.$error.required)">Password should be at least 3 symbols length</div>
+            <div ng-show="loginForm.password.$error.maxlength">Password should not exceed 64 symbols length</div>
+        </div>
+    </div>
+    <div class="submitgroup">
+        <button type="submit">Login</button>
+        <a class="passwordreset" href="/passwordreset">Forgot password?</a>
+    </div>
+
+    <ul>
+        <li ng-if="loginForm.$submitted && !loginForm.$valid">Please correct the form</li>
+        <li ng-if="login.error">{{login.error}}</li>
+    </ul>
+</form>
+
+<a class="close" href="javascript:void(0)" ng-click="hideLogin()">
+    <span>Close</span>
+</a>

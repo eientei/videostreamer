@@ -1,0 +1,13 @@
+<div class="centeroid">
+    <div class="controls">
+        <a href="/profile" class="tab{{ (path == '/profile') ? ' active' : '' }}">Streams</a>
+        <a href="/profile/personal" class="tab{{ (path == '/profile/personal') ? ' active' : '' }}">Personal</a>
+        <a href="/profile/credentials" class="tab{{ (path == '/profile/credentials') ? ' active' : '' }}">Credentials</a>
+    </div>
+
+    <div class="tabcontents">
+        <div ng-if="path == '/profile'" ng-include="'/view/profile.streams.view.html'"></div>
+        <div ng-if="path == '/profile/personal'" ng-include="'/view/profile.personal.view.html'"></div>
+        <div ng-if="path == '/profile/credentials'" ng-include="'/view/profile.credentials.view.html'"></div>
+    </div>
+</div>

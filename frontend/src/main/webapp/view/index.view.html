@@ -1,0 +1,35 @@
+<div class="centeroid">
+    <div class="view">
+        <div class="stream" ng-repeat="stream in streamIndex.items">
+            <a href="{{config.origin}}/{{stream.app}}/{{stream.name}}">
+                <div class="avatar">
+                    <img class="authoricon" ng-src="{{stream.authorHash | gravatar}}" alt="{{stream.authorName}}" width="64" height="64"/>
+                </div>
+                <div class="info">
+                    <div class="topic">{{stream.topic | topic}}</div>
+                    <div class="additional">
+                        at
+                        <span class="place">{{stream.app}}/{{stream.name}}</span>
+                        <span class="time">{{stream.since | timeago}}</span></div>
+                </div>
+            </a>
+            <div class="extra">
+                <div class="extra-icon"></div>
+                <div class="extra-menu-wrap1">
+                    <div class="extra-menu-wrap2">
+                        <div class="extra-menu">
+                            <a href="{{config.origin}}/{{stream.app}}/{{stream.name}}?buffer=0.0">unbuffered</a>
+                            <a href="{{config.origin}}/{{stream.app}}/{{stream.name}}?onlyvideo">only video</a>
+                            <a href="{{config.origin}}/{{stream.app}}/{{stream.name}}?onlychat">only chat</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="viewers">
+                <img class="authoricon" ng-repeat="online in stream.onlines" icon-preview ng-src="{{ online.hash | gravatar }}" data-name="{{ online.name }}" width="24" height="24" />
+            </div>
+        </div>
+    </div>
+    <h1 ng-if="streamIndex.items.length == 0">No streams running</h1>
+</div>

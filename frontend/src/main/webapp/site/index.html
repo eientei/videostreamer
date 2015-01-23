@@ -1,0 +1,53 @@
+<html ng-app="videoApp">
+<head lang="en">
+    <meta charset="UTF-8">
+    <title ng-bind="stream.app + '/' + stream.name">video/eientei</title>
+    <link rel="shortcut icon" href="/favicon.ico" sizes="16x16"/>
+    <link href="/css/style.css" rel="stylesheet"/>
+    <link href="/css/jquery-ui-1.10.4.custom.min.css" rel="stylesheet"/>
+    <base href="/"/>
+    <script src="/js/angular.min.js"></script>
+    <script src="/js/angular-route.min.js"></script>
+    <script src="/js/angular-sanitize.min.js"></script>
+    <script src="/js/angular-cookies.min.js"></script>
+    <script src="/js/angular-animate.min.js"></script>
+    <script src="/js/sockjs.min.js"></script>
+    <script src="/js/moment-with-locales.min.js"></script>
+    <script src="/js/jquery-1.11.2.min.js"></script>
+    <script src="/js/jquery-ui-1.10.4.custom.min.js"></script>
+    <script src="/js/jquery.cookie.js"></script>
+    <script ng-if="config.captchaEnabled" src="http://www.google.com/recaptcha/api/js/recaptcha_ajax.js"></script>
+    <script src="/js/video-app.js"></script>
+</head>
+<body style="{{ (playback) ? 'overflow: hidden;' : '' }}">
+<div class="loading" ng-if="!loaded">
+    <span>Loading ...</span>
+</div>
+<div class="content" ng-if="loaded">
+    <div class="toppanel">
+        <div class="left">
+            <span class="topic" topic-change>{{stream.topic}}</span>
+        </div>
+        <div class="right">
+            <div class="navigation">
+                <a href="/">Home</a>
+                <a href="/info">Info</a>
+                <a ng-if="!session.authed" href="/signup">Signup</a>
+                <a ng-if="!session.authed" href="javascript:void(0)" ng-click="showLogin()">Login</a>
+                <a ng-if="session.authed" href="/profile">Profile</a>
+                <a ng-if="session.authed" href="javascript:void(0)" ng-click="performLogout()">Logout</a>
+            </div>
+            <img class="authoricon" alt="{{session.name}}" ng-src="{{session.hash | gravatar}}" width="16" height="16"/>
+        </div>
+    </div>
+
+    <div class="login" style="{{ (playback) ? 'position: fixed' : '' }}" id="login" ng-show="login" ng-include="'/view/login.view.html'"></div>
+    <div class="error" ng-if="error">
+        <div class="centeroid">
+            <h1>{{error.code + ' - ' + error.message + ': ' + error.path}}</h1>
+        </div>
+    </div>
+    <div class="viewport" ng-view ng-if="!error"></div>
+</div>
+</body>
+</html>

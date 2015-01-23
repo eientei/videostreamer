@@ -1,0 +1,14 @@
+<div class="message{{ message.flags.author ? ' author' : ''}}{{ message.flags.admin? ' admin' : ''}}{{ message.preview? ' preview' : ''}}">
+    <div class="ordinalcontainer">
+        <a class="ordinallink" href="javascript:void(0)" ng-click="insertOrdinal(message.id)">&gt;&gt;<span class="ordinal">{{message.id}}</span></a>
+    </div>
+    <div class="secondline">
+        <div class="datetime">{{message.date | date: 'yyyy-MM-dd HH:mm:ss Z'}}</div>
+        <img class="hashremote" width="16" height="16" ng-src="{{ message.remote | gravatar }}" />
+    </div>
+    <div class="thirdline">
+        <img class="hashauthor" width="32" height="32" ng-src="{{ message.author | gravatar }}" />
+        <div class="msgtext" post-preview ng-bind-html="message.text"></div>
+        <div class="clearfix"></div>
+    </div>
+</div>

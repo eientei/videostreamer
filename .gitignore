@@ -1,0 +1,8 @@
+deploy.sh
+target
+.idea
+*.class
+*.jar
+*.war
+*.ear
+*.iml

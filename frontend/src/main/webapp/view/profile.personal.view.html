@@ -1,0 +1,30 @@
+<div class="centeroid">
+    <form name="profileFormPersonal" method="post" app-submit="updatePersonal(credentials)" novalidate>
+        <div class="fieldgroup">
+            <input type="email"
+                   id="email"
+                   name="email"
+                   placeholder="Email (Optional)"
+                   ng-model="credentials.email"
+                   ng-model-options="{ updateOn: 'default blur', debounce: { default: 250, blur: 0 } }">
+            <span class="label">— Email</span>
+            <div class="errors">
+                <div ng-show="profileFormPersonal.email.$error.email">Invalid Email entered</div>
+            </div>
+        </div>
+
+        <div class="fieldgroup">
+            <button type="submit">Submit</button>
+        </div>
+
+        <div class="fieldgroup">
+            <img src="{{session.hash | gravatar}}" width="64" height="64"/>
+        </div>
+
+
+        <ul>
+            <li ng-if="profileFormPersonal.$submitted && !profileFormPersonal.$valid">Please correct the form</li>
+            <li ng-repeat="error in profileFormPersonal.$serverErrors">{{error}}</li>
+        </ul>
+    </form>
+</div>

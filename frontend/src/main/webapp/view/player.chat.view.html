@@ -1,0 +1,19 @@
+<div class="chat">
+    <div class="messages">
+        <a href="javascript:void(0)" class="loadMore" ng-show="hasMore" ng-click="loadMore()">...</a>
+        <div ng-repeat="message in messages">
+            <div ng-include="'/view/player.chat.message.view.html'"></div>
+        </div>
+    </div>
+    <div class="chatdrag drag" drag-chat></div>
+    <div class="bars">
+        <div class="blackbar">
+            <div class="placeholder" ng-if="!hasAuthor"></div>
+            <img class="online {{ typers.indexOf(online.hash) != -1 ? 'typing' : '' }} {{ (online.owner) ? 'first' : '' }}" icon-preview width="16" height="16" ng-src="{{ online.hash | gravatar }}" data-name="{{ online.name }}" ng-repeat="online in onlines" />
+            <div class="clearfix"></div>
+        </div>
+        <div class="inputbar">
+            <textarea class="inputText" name="inputText" ng-enter="sendMessage(this)" trim-limit="255" ng-keypress="sendTyping()"></textarea>
+        </div>
+    </div>
+</div>

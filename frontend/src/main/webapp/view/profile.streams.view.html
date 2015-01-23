@@ -1,0 +1,140 @@
+<div class="centeroid">
+    <ul>
+        <li ng-repeat="stream in streams">
+            <form class="profile" name="profileFormStreams" method="post" novalidate>
+                <div>Stream #{{$index+1}}</div>
+                <table>
+                    <tr class="fieldgroup">
+                        <td>
+                            <button ng-click="updateKey(stream)">Generate</button>
+                        </td>
+                        <td>
+                            <span class="streamKey">{{stream.key}}</span>
+                        </td>
+                        <td>
+                            <span class="label">— Your channel publish key (private)</span>
+                        </td>
+                    </tr>
+                    <tr class="fieldgroup">
+                        <td>
+                            <button ng-click="updateName(stream, stream.copy.name)">Update</button>
+                        </td>
+                        <td>
+                            <input type="text"
+                                   id="streamName"
+                                   name="streamName"
+                                   placeholder="Stream Name"
+                                   ng-model="stream.copy.name"
+                                   minlength="3"
+                                   maxlength="64"
+                                   required="true"
+                                   ng-enter="updateName(stream, stream.copy.name)"
+                                   pattern="^[a-zA-Z][0-9a-zA-Z_.-]*$"
+                                   ng-model-options="{ updateOn: 'default blur', debounce: { default: 250, blur: 0 } }" >
+                            <span ng-show="profileFormStreams.streamName.$dirty">*</span>
+                        </td>
+                        <td class="label">
+                            — Your channel name
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="3" class="errors">
+                            <div ng-show="profileFormStreams.streamName.$error.minlength || (profileFormStreams.streamName.$dirty && profileFormStreams.streamName.$error.required)">Channel name should be at least 3 symbols length</div>
+                            <div ng-show="profileFormStreams.streamName.$error.maxlength">Channel name should not exceed 64 symbols length</div>
+                            <div ng-show="profileFormStreams.streamName.$error.pattern">Name should consist of digits (0-9), latin letters (a-zA-Z) or (_.-) and start with a letter</div>
+                            <div ng-show="stream.error.name">{{stream.error.name}}</div>
+                        </td>
+                    </tr>
+                    <tr class="fieldgroup">
+                        <td>
+                            <button ng-click="updateTopic(stream, stream.copy.topic)">Update</button>
+                        </td>
+                        <td>
+                            <input type="text"
+                                   id="streamTopic"
+                                   name="streamTopic"
+                                   placeholder="Stream Topic"
+                                   ng-model="stream.copy.topic"
+                                   ng-enter="updateTopic(stream, stream.copy.topic)" >
+                            <span ng-show="profileFormStreams.streamTopic.$dirty">*</span>
+                        </td>
+                        <td class="label">
+                            — Your channel topic
+                        </td>
+                    </tr>
+                    <tr class="fieldgroup">
+                        <td>
+                            <button ng-click="updateImage(stream, stream.copy.image)">Update</button>
+                        </td>
+                        <td>
+                            <input type="text"
+                                   id="streamImage"
+                                   name="streamImage"
+                                   placeholder="Stream Idle Image"
+                                   ng-model="stream.copy.image"
+                                   ng-enter="updateImage(stream, stream.copy.image)" >
+                            <span ng-show="profileFormStreams.streamImage.$dirty">*</span>
+                        </td>
+                        <td class="label">
+                            — Your channel idle image URL
+                        </td>
+                    </tr>
+                </table>
+
+                <div>
+                    <button ng-show="stream.restricted" ng-click="updatePrivate(stream)">Make stream public</button>
+                    <button ng-show="!stream.restricted" ng-click="updatePrivate(stream)">Make stream private</button>
+                </div>
+
+                <div>
+                    Delete stream: <a href="javascript:void(0)" ng-show="!stream.confident" ng-click="stream.confident = true">I know what i am doing</a>
+                    <button ng-show="stream.confident" ng-click="stream.confident = false">Cancel</button>
+                    <button ng-show="stream.confident" ng-click="deleteStream(stream)">Perform deletion</button>
+                </div>
+
+                <ul>
+                    <li ng-repeat="error in profileFormStreams.$serverErrors">{{error}}</li>
+                </ul>
+
+                A quick info about your stream:
+                <table>
+                    <tr>
+                        <td>
+                            Publish url:
+                        </td>
+                        <td>
+                            <a href="{{config.rtmpBase}}/{{stream.app}}/{{stream.key}}">{{config.rtmpBase}}/{{stream.app}}/{{stream.key}}</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            View url:
+                        </td>
+                        <td>
+                            <a href="{{config.rtmpBase}}/{{stream.app}}/{{stream.name}}">{{config.rtmpBase}}/{{stream.app}}/{{stream.name}}</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Web url:
+                        </td>
+                        <td>
+                            <a href="{{config.origin}}/{{stream.app}}/{{stream.name}}">{{config.origin}}/{{stream.app}}/{{stream.name}}</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Status:
+                        </td>
+                        <td>
+                            {{stream.status}} {{(stream.remote) ? ('Streaming from ip: ' + stream.remote) : 'Offline'}},
+                            {{stream.restricted ? 'Privately sharable' : 'Publicly visible'}}
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </li>
+    </ul>
+    <button ng-show="streams.length < config.maxStreams" ng-click="addStream()">Add stream</button>
+    <span ng-show="streams.length >= config.maxStreams">Stream limit reached</span>
+</div>

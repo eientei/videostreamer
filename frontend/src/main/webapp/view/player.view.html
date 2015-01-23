@@ -1,0 +1,6 @@
+<div class="playback">
+    <div ng-if="!onlychat" class="player-wrapper {{ onlyvideo ? 'only' : '' }}" ng-include="'/view/player.flash.view.html'"></div>
+    <div ng-if="!onlychat && !onlyvideo" drag-video class="videodrag drag"></div>
+    <div ng-if="!onlyvideo" class="chat-wrapper {{ onlychat ? 'only' : '' }}" ng-include="'/view/player.chat.view.html'"></div>
+    <div class="clearfix"></div>
+</div>

@@ -267,14 +267,11 @@ angular.module('videoApp', [
 
     function nameMode() {
         if (!$rootScope.onlyvideo && !$rootScope.onlychat) {
-            $rootScope.mode = 'chat+video';
-            $rootScope.modeCss = 'chatvideo';
+            $rootScope.modeCss = 'chatvideoicon';
         } else if (!$rootScope.onlyvideo) {
-            $rootScope.mode = 'chat';
-            $rootScope.modeCss = 'chat';
+            $rootScope.modeCss = 'chaticon';
         } else {
-            $rootScope.mode = 'video';
-            $rootScope.modeCss = 'video';
+            $rootScope.modeCss = 'videoicon';
         }
     }
     $rootScope.setMode = function (a,b) {
@@ -520,11 +517,10 @@ angular.module('videoAppView', [
                 if (x > 90) {
                     x = 90;
                 }
-                x = x * (window.innerWidth / 100);
 
-                videowrap.width(x);
-                chatwrap.width(window.innerWidth - x);
-                element[0].style.left= x + 'px';
+                videowrap[0].style.width = (x) + '%';
+                chatwrap[0].style.width = (100 - x) + '%';
+                element[0].style.left= x + '%';
 
                 var el = $('.offlineimg img');
                 var a = videowrap.width() / videowrap.height();
@@ -585,12 +581,10 @@ angular.module('videoAppView', [
                 if (y > 90) {
                     y = 90;
                 }
-                y = y * (window.innerHeight / 100);
 
-                messages.height(y);
-                bars.height(window.innerHeight - y);
-
-                element[0].style.top= (y - 10) + 'px';
+                messages[0].style.height = (y) + '%';
+                bars[0].style.height = (window.innerHeight - y) + '%';
+                element[0].style.top = (y) + '%';
             }
 
             $timeout(function () {
@@ -624,8 +618,10 @@ angular.module('videoAppView', [
         restrict: 'A',
         scope: '@',
         link: function (scope, el, attrs) {
-            if (scope.$last || scope.refpoint) {
-                scope.$eval(attrs.repeatEnd);
+            if (scope.$last || scope.message.id == scope.refpoint - 1) {
+                $timeout(function () {
+                    scope.$eval(attrs.repeatEnd);
+                });
             }
         }
     };
@@ -860,10 +856,14 @@ angular.module('videoAppController', [
     };
 
     $scope.sendMessage = function (el) {
+        var txt = el.inputText.text.substr(0, 256);
+        if (txt.length < 1) {
+            return;
+        }
         $scope.ws.send(JSON.stringify({
             type: CHAT_MESSAGE_TYPE.MESSAGE,
             data: {
-                text: el.inputText.text
+                text: txt
             }
         }));
         el.inputText.clear();
@@ -887,7 +887,8 @@ angular.module('videoAppController', [
         var diff = scrollHeight - scrollTop;
 
         if (diff < messages.height() * 2) {
-            messages[0].scrollTop = scrollHeight;
+            console.log($('.allmessages').height());
+            messages[0].scrollTop = $('.allmessages').height();
         }
     };
 
@@ -896,20 +897,31 @@ angular.module('videoAppController', [
         if (!messages.length) {
             return;
         }
-        var children = messages.children('div');
-        var top = 0;
-        for (var i = 0; i < children.length; i++) {
-            var ch = $(children[i]);
-            if (ch.find('.ordinal').text() == $scope.refpoint) {
-                break;
-            }
-            top += ch.outerHeight(true);
-        }
-        if ($scope.refpoint == 0) {
-            messages[0].scrollTop = top;
+
+        if (this.newmsg) {
             return;
         }
-        messages[0].scrollTop = top;
+
+        var scrollHeight = messages[0].scrollHeight;
+        var scrollTop = messages[0].scrollTop;
+
+        var diff = scrollHeight - scrollTop;
+
+        if (diff < messages.height() * 2 || $scope.refpoint == 0) {
+            messages[0].scrollTop = $('.allmessages').height();
+            if (messages[0].scrollTop == 0) {
+                setTimeout($scope.scrollHistory, 20);
+            }
+            return;
+        }
+
+        var child = messages.find('.ordinal:contains(' + $scope.refpoint + ')').parents('.outerMessage');
+        if (!child.length) {
+            return;
+        }
+        messages[0].scrollTop = child[0].offsetTop - 14;
+
+        $scope.refpoint = 0;
     };
 
     window.onfocus = function () {
@@ -949,9 +961,9 @@ angular.module('videoAppController', [
             switch(msg.type) {
                 case CHAT_MESSAGE_TYPE.MESSAGE:
                     msg.data.text = $sce.trustAsHtml(msg.data.text);
+                    msg.data.newmsg = true;
                     $scope.messages.push(msg.data);
                     $scope.$apply();
-                    $scope.scrollToBottom();
                     if (blured) {
                         missed++;
                         $scope.favicon.badge(missed);
@@ -997,8 +1009,8 @@ angular.module('videoAppController', [
                 case CHAT_MESSAGE_TYPE.HISTORY:
                     for (var i = 0; i < msg.data.items.length; i++) {
                         msg.data.items[i].text = $sce.trustAsHtml(msg.data.items[i].text);
-                        $scope.messages.unshift(msg.data.items[i]);
                     }
+                    $scope.messages.unshift.apply($scope.messages, msg.data.items.reverse());
                     $scope.hasMore = msg.data.hasMore;
                     $scope.$apply();
                     break;

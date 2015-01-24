@@ -1,4 +1,4 @@
-<div class="message{{ message.flags.author ? ' author' : ''}}{{ message.flags.admin? ' admin' : ''}}{{ message.preview? ' preview' : ''}}" repeat-end="scrollHistory()">
+<div class="message{{ message.flags.author ? ' author' : ''}}{{ message.flags.admin? ' admin' : ''}}{{ message.preview? ' preview' : ''}}">
     <div class="ordinalcontainer">
         <a class="ordinallink" href="javascript:void(0)" ng-click="insertOrdinal(message.id)">&gt;&gt;<span class="ordinal">{{message.id}}</span></a>
     </div>

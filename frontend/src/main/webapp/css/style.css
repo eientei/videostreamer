@@ -507,22 +507,50 @@ h1 {
     left: 50%;
     transform: translateY(-50%) translateX(-50%);
 }
-.chatvideo:hover:after {
-    padding-left: 0.5em;
-    content: '-> chat';
+.chatvideoicon {
     position: absolute;
+    background-image: url(/img/chatvideo.png);
+    background-size: 32px 16px;
+    width: 32px;
+    height: 16px;
+    top: 6px;
+    display: block;
 }
 
-.chat:hover:after {
-    padding-left: 0.5em;
-    content: '-> video';
+.chatvideoicon:hover {
     position: absolute;
+    background: url(/img/chat.png) no-repeat center;
+    background-size: 16px 100%;
 }
 
-.video:hover:after {
-    padding-left: 0.5em;
-    content: '-> chat+video';
+.chaticon {
     position: absolute;
+    background: url(/img/chat.png) no-repeat center;
+    background-size: 16px 16px;
+    width: 32px;
+    height: 16px;
+    top: 6px;
+    display: block;
+}
+
+.chaticon:hover {
+    background-image: url(/img/video.png);
+}
+
+
+.videoicon {
+    position: absolute;
+    background: url(/img/video.png) no-repeat center;
+    background-size: 16px 16px;
+    width: 32px;
+    height: 16px;
+    top: 6px;
+    display: block;
+}
+
+.videoicon:hover {
+    background: url(/img/chatvideo.png) no-repeat center;
+    background-size: 32px 16px;
 }
 
 .offlineimg img.wide {

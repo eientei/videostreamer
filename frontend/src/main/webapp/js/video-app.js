@@ -887,7 +887,6 @@ angular.module('videoAppController', [
         var diff = scrollHeight - scrollTop;
 
         if (diff < messages.height() * 2) {
-            console.log($('.allmessages').height());
             messages[0].scrollTop = $('.allmessages').height();
         }
     };
@@ -970,7 +969,6 @@ angular.module('videoAppController', [
                     }
                     break;
                 case CHAT_MESSAGE_TYPE.ONLINE:
-
                     $scope.onlines = msg.data.items;
 
                     $scope.hasAuthor = false;
@@ -1001,6 +999,8 @@ angular.module('videoAppController', [
                             }
                         }));
                     }
+
+                    $scope.$apply();
                     break;
                 case CHAT_MESSAGE_TYPE.TYPING:
                     $scope.typers = msg.data.items;

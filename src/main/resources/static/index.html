@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>video.eientei</title>
+    <base href="/"/>
+    <link rel="shortcut icon" href="/favicon.ico" sizes="16x16"/>
+
+    <!-- angular -->
+    <script src="/webjars/angularjs/1.3.14/angular.js"></script>
+    <script src="/webjars/angularjs/1.3.14/angular-resource.js"></script>
+    <script src="/webjars/angularjs/1.3.14/angular-route.js"></script>
+    <script src="/webjars/angularjs/1.3.14/angular-animate.js"></script>
+    <script src="/webjars/angularjs/1.3.14/angular-sanitize.js"></script>
+
+    <!-- angular ui bootstrap -->
+    <script src="/webjars/angular-ui-bootstrap/0.12.1-1/ui-bootstrap-tpls.js"></script>
+    <link  href="/webjars/bootstrap/3.3.4/css/bootstrap.css" rel="stylesheet"/>
+
+    <!-- font awesome -->
+    <link  href="/webjars/font-awesome/4.3.0/css/font-awesome.css" rel="stylesheet"/>
+
+    <!-- SockJS -->
+    <script src="/webjars/sockjs-client/0.3.4-1/sockjs.js"></script>
+
+    <!-- MomentJS -->
+    <script src="/webjars/momentjs/2.9.0/moment.js"></script>
+
+    <!-- ReCaptcha -->
+    <script src='https://www.google.com/recaptcha/api.js'></script>
+
+    <!-- videostreamer application -->
+    <link  href="/static/css/app.css" rel="stylesheet"/>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/service/restapi.js"></script>
+    <script src="/static/js/directive/formfield.js"></script>
+    <script src="/static/js/directive/playresize.js"></script>
+    <script src="/static/js/directive/chattyper.js"></script>
+    <script src="/static/js/directive/preview.js"></script>
+    <script src="/static/js/directive/trusthtml.js"></script>
+    <script src="/static/js/directive/iscurrent.js"></script>
+    <script src="/static/js/directive/bakemessage.js"></script>
+    <script src="/static/js/directive/recaptcha.js"></script>
+    <script src="/static/js/filter/identicon.js"></script>
+    <script src="/static/js/filter/momentify.js"></script>
+    <script src="/static/js/filter/sincify.js"></script>
+    <script src="/static/js/filter/zoomicon.js"></script>
+    <script src="/static/js/controller/notfound.js"></script>
+    <script src="/static/js/controller/main.js"></script>
+    <script src="/static/js/controller/login.js"></script>
+    <script src="/static/js/controller/signup.js"></script>
+    <script src="/static/js/controller/play.js"></script>
+    <script src="/static/js/controller/chat.js"></script>
+    <script src="/static/js/controller/player.js"></script>
+    <script src="/static/js/controller/profile.js"></script>
+    <script src="/static/js/thirdparty/favico-0.3.8.min.js"></script>
+</head>
+<body ng-app="videostreamer">
+<div ng-show="!loaded">
+    <div style="position: absolute; left: 50%; top: 50%;">
+        <img style="position: relative; left:-50%; top:-50%;" src="/static/img/spinner.gif"/>
+    </div>
+</div>
+<style type="text/css">
+    .navbar .nav,
+    .navbar .nav > li {
+        float:none;
+        display:inline-block;
+        *display:inline;
+        *zoom:1;
+        vertical-align: top;
+    }
+    .navbar .nav > li > a {
+        outline: none;
+    }
+    .navbar > .container-fluid {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+    .navbar > .container-fluid:after, .navbar > .container-fluid:before {
+        content: normal !important;
+    }
+
+</style>
+<div ng-show="loaded" style="width: 100%; height: 100%; box-sizing: border-box; display: flex; flex-direction: column">
+    <nav class="navbar navbar-default" style="margin-bottom: 0; flex-shrink: 0">
+        <div class="container-fluid">
+            <ul class="nav navbar-nav navbar-left">
+                <li><a is-current href="/">Home</a></li>
+                <li><a is-current href="/signup" ng-show="user.username == 'anonymous'">Signup</a></li>
+                <li><a is-current href="/profile" ng-show="user.username != 'anonymous'">Profile</a></li>
+                <li><a is-current href="/howto">Howto</a></li>
+            </ul>
+            <ul class="nav navbar-nav">
+                <li ng-show="topic">
+                    <a ng-show="!topicedit">
+                        <span ng-show="topictext" ng-click="editTopic()">{{topictext}}</span>
+                        <span ng-show="!topictext" ng-click="editTopic()"><em>No topic</em></span>
+                    </a>
+                    <form ng-show="topicedit" class="navbar-form">
+                        <div class="form-group">
+                            <input class="form-control" type="text" id="topicfield" ng-blur="sendTopic(topictext)" ng-keypress="$event.which == 13 && sendTopic(topictext)" ng-model="topictext">
+                        </div>
+                    </form>
+                </li>
+            </ul>
+            <form ng-controller="login" class="navbar-form navbar-right" name="loginform">
+                <div class="form-group" ng-show="user.username == 'anonymous'">
+                    <alert style="margin: 0 !important; padding: 5px 30px 5px 5px !important; white-space: nowrap; display: inline-block;" ng-show="errlogin" close="errlogin = false">Invalid username/password</alert>
+                    <div class="form-group">
+                        <input class="form-control" ng-model="username" type="text" placeholder="Username">
+                    </div>
+                    <div class="form-group">
+                        <input class="form-control" ng-model="password" type="password" placeholder="Password">
+                    </div>
+                    <button class="btn btn-default" ng-click="login(username, password)">Sign in</button>
+                </div>
+                <div class="form-group" ng-show="user.username != 'anonymous'">
+                    <button class="btn btn-default" ng-click="logout()">Sign out</button>
+                </div>
+                <div class="form-group">
+                    <img ng-src="{{ user.hashicon | identicon }}" tooltip="{{user.username}}" tooltip-placement="left" width="32" height="32"/>
+                </div>
+            </form>
+        </div>
+    </nav>
+    <div style="box-sizing: border-box; flex-grow: 1; display: flex" ng-view="" ng-show="!error">
+    </div>
+    <div class="error container-fluid" style="box-sizing: border-box; flex-grow: 1; display: flex" ng-show="error">
+        <h3>Error: {{error}}</h3>
+    </div>
+</div>
+</body>
+</html>

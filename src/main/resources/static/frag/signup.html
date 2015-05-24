@@ -1,0 +1,49 @@
+<form class="container-fluid" style="padding-top: 20px; flex-grow: 1;" name="form" form-errors="" tooltip-placement="bottom" novalidate>
+    <div style="padding-top: 15px">
+        <script type="text/ng-template" id="desc_minlength.html">
+            Must contain at least 3 symbols
+        </script>
+
+        <script type="text/ng-template" id="desc_maxlength.html">
+            Must contain at most 30 symbols
+        </script>
+
+        <script type="text/ng-template" id="desc_required.html">
+            Must not be empty
+        </script>
+
+        <script type="text/ng-template" id="desc_AlreadyExists.html">
+            User already exists
+        </script>
+
+        <script type="text/ng-template" id="desc_ReCaptcha.html">
+            Invalid CAPTCHA
+        </script>
+
+        <script type="text/ng-template" id="desc_Size.html">
+            Must contain 3..30 symbols
+        </script>
+
+        <div ng-class="{'has-error': form.username.$error.arr}" class="form-group">
+            <input tooltip="{{form.username.tooltip}}" ng-minlength="3" ng-maxlength="30" ng-required="true" ng-model="username" class="form-control" name="username" type="text" placeholder="Username">
+        </div>
+        <div ng-class="{'has-error': form.password.$error.arr}" class="form-group">
+            <input tooltip="{{form.password.tooltip}}" ng-minlength="3" ng-maxlength="30" ng-required="true" ng-model="password" class="form-control" name="password" type="password" placeholder="Password">
+        </div>
+        <div ng-class="{'has-error': form.email.$error.arr}"  class="form-group">
+            <input tooltip="{{form.email.tooltip}}" ng-model="email" class="form-control" name="email" type="text" placeholder="Email (not required)">
+        </div>
+
+        <div style="display: flex; flex-direction: row; height: 78px">
+            <div style="flex-grow: 0" recaptcha="{{captchaPub}}"></div>
+            <alert style="flex-grow: 1; margin: 0 0 2px 1em" ng-show="form.tooltip.length > 0" close="form.tooltip = []">
+                <ul>
+                    <li ng-repeat="tip in form.tooltip">{{tip}}</li>
+                </ul>
+            </alert>
+        </div>
+        <div style="clear: both;"></div>
+
+        <button type="submit" style="margin-top: 1em" class="btn btn-default" ng-click="signup(username, password, email)">Signup</button>
+    </div>
+</form>

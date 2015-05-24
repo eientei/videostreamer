@@ -1,0 +1,67 @@
+<div class="container-fluid" style="width: 100%" ng-show="streamsloaded">
+    <div style="padding-top: 15px">
+        <div ng-if="!streams">
+            <h3>No streams running</h3>
+        </div>
+
+        <style type="text/css">
+            .stream {
+                box-shadow: 0 0 8px -4px transparent;
+                margin-bottom: 8px;
+                padding: 8px;
+                transition: all 0.3s;
+            }
+            .stream:hover {
+                box-shadow: 0 0 8px -4px black;
+            }
+            .control {
+                float: right;
+            }
+            .control > * {
+                background: transparent;
+                padding-left: 5px;
+                padding-right: 5px;
+                margin-left: 5px;
+                border-radius: 5px;
+                display: block;
+            }
+            .control > *:hover {
+                background: #eee;
+            }
+        </style>
+
+        <div ng-show="streams.length == 0">
+            <h1>No streams running</h1>
+        </div>
+
+        <div ng-repeat="stream in streams" class="stream">
+            <div style="float: right; font-size: 10px;">
+                <div class="control">
+                    <a href="{{'/' + stream.app + '/' + stream.name}}?nobuffer">nobuffer</a>
+                    <a href="{{'/' + stream.app + '/' + stream.name}}?novideo">novideo</a>
+                    <a href="{{'/' + stream.app + '/' + stream.name}}?nochat">nochat</a>
+                </div>
+            </div>
+            <a href="{{'/' + stream.app + '/' + stream.name}}" style="width: 100%">
+                <div style="float: left; margin-right: 1em">
+                    <img ng-src="{{stream.authorHashicon | identicon}}" width="64" height="64"/>
+                </div>
+                <div style="line-height: 16px">
+                    <div style="font-size: 18px">
+                        <div ng-if="stream.topic">"{{stream.topic}}"</div>
+                        <div ng-if="!stream.topic"><em>No topic</em></div>
+                    </div>
+                    <div style="font-size: 10px">
+                        <div>{{stream.authorName}} @ {{stream.app + '/' + stream.name}} for {{ stream.since | momentify }}</div>
+                    </div>
+                </div>
+                <div class="inlinechilds">
+                    <div ng-if="!stream.online.length" style="line-height: 32px; vertical-align: bottom"><em>So ronery...</em></div>
+                    <img ng-repeat="online in stream.online" ng-src="{{online.hash | identicon}}" tooltip-append-to-body="true" tooltip="{{online.name}}" width="32" height="32"/>
+                    <div ng-if="stream.online.length" style="line-height: 32px; vertical-align: bottom">({{stream.online.length}} total)</div>
+                </div>
+                <div style="clear: both"></div>
+            </a>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,46 @@
+.inlinechilds > * {
+    display: inline-block;
+}
+
+a:hover, a:focus {
+    text-decoration: none;
+}
+
+html, body {
+    margin: 0;
+    border: 0;
+    padding: 0;
+    height: 100%;
+}
+
+.mainpadd {
+    padding: 0 40px 0 40px;
+}
+
+.fullwidth {
+    width: 100% !important;
+}
+
+.quote {
+    color: #0a0;
+}
+
+.spoiler:hover {
+    color: #000;
+}
+
+.spoiler {
+    background: #F0D0B6;
+    color: #F0D0B6;
+}
+
+
+.alert {
+    transition: 0.3s linear all;
+    opacity: 1.0;
+}
+
+.alert.ng-hide {
+    transition: 0.1s linear all;
+    opacity: 0.0;
+}

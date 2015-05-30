@@ -16,21 +16,27 @@ function streamOffline() {
 }
 
 angular.module('videostreamer').controller('play', ['$rootScope', '$scope', '$routeParams', 'restapi', function ($rootScope, $scope, $routeParams, restapi) {
-    $scope.online = true;
+    $scope.flashinited = false;
+
 
     onlineCb = function () {
-        $scope.online = true;
+        $scope.flashinited = true;
         $scope.$apply();
+        $scope.$broadcast('flash-online');
     };
 
     offlineCb = function () {
-        $scope.online = false;
+        $scope.flashinited = true;
         $scope.$apply();
+        $scope.$broadcast('flash-offline');
     };
 
     $scope.showvideo = !$routeParams.novideo;
     $scope.showchat = !$routeParams.nochat;
     $scope.bufflen = ($routeParams.nobuffer) ? 0.0 : 1.0;
+    if ($routeParams.buffer) {
+        $scope.bufflen = $routeParams.buffer;
+    }
     restapi.streams.stream($routeParams.app, $routeParams.name).success(function (stream) {
         $scope.stream = stream;
     }).error(function (e) {

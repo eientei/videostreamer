@@ -19,7 +19,6 @@ angular.module('videostreamer').controller('profile', ['$rootScope', '$scope', '
 
     $scope.category = $routeParams.category;
 
-    $rootScope.initseq();
     $scope.streams = [];
     $scope.current = null;
 

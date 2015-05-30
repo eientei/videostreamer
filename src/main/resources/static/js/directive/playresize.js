@@ -9,12 +9,21 @@ angular.module('videostreamer').directive('playhorizresize', ['$document', funct
             var player;
             var chat;
 
+            var navtopic;
+            var navleft;
+            var navright;
+
             var init = function () {
                 player = document.getElementById('player');
                 chat = document.getElementById('chat');
-                if (!player || !chat) {
+                navtopic = document.getElementById('navtopic');
+                navleft = document.getElementById('navleft');
+                navright = document.getElementById('navright');
+
+                if (!player || !chat || !navtopic || !navleft || !navright) {
                     return;
                 }
+
                 if (oldpos) {
                     setpos(oldpos);
                 }

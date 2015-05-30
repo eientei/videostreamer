@@ -40,6 +40,7 @@ angular.module('videostreamer', [
     };
 
     restapi.security.user().success(function (user) {
+        console.log(user);
         $rootScope.user = user;
         $rootScope.initseq();
     });

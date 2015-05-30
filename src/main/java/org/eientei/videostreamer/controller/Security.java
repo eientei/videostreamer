@@ -37,7 +37,7 @@ public class Security {
 
     @RequestMapping("user")
     public UserDTO user(@AuthenticationPrincipal VideostreamerUser user, HttpServletRequest request) {
-        return new UserDTO(user.getUsername(), determineHash(user, request));
+        return new UserDTO(user.getUsername(), determineHash(user, request), user.getEntity().getEmail());
     }
 
     @RequestMapping("signup")

@@ -1,7 +1,6 @@
 'use strict';
 
 angular.module('videostreamer').controller('signup', ['$rootScope', '$scope', '$location', 'restapi', function ($rootScope, $scope, $location, restapi) {
-    $rootScope.initseq();
 
     $scope.signup = function (username, password, email) {
         var captcha = $scope.captchael.find('textarea').val();

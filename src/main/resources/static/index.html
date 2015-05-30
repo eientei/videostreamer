@@ -41,6 +41,7 @@
     <script src="/static/js/directive/iscurrent.js"></script>
     <script src="/static/js/directive/bakemessage.js"></script>
     <script src="/static/js/directive/recaptcha.js"></script>
+    <script src="/static/js/directive/param.js"></script>
     <script src="/static/js/filter/identicon.js"></script>
     <script src="/static/js/filter/momentify.js"></script>
     <script src="/static/js/filter/sincify.js"></script>
@@ -62,6 +63,7 @@
     </div>
 </div>
 <style type="text/css">
+    /*
     .navbar .nav,
     .navbar .nav > li {
         float:none;
@@ -81,18 +83,27 @@
     .navbar > .container-fluid:after, .navbar > .container-fluid:before {
         content: normal !important;
     }
+    */
+
+    .navbar > .container-fluid:after, .navbar > .container-fluid:before {
+        content: normal !important;
+    }
+
+    .navbar .nav:after, .navbar .nav:before, {
+        content: normal !important;
+    }
 
 </style>
 <div ng-show="loaded" style="width: 100%; height: 100%; box-sizing: border-box; display: flex; flex-direction: column">
     <nav class="navbar navbar-default" style="margin-bottom: 0; flex-shrink: 0">
-        <div class="container-fluid">
-            <ul class="nav navbar-nav navbar-left">
+        <div class="container-fluid" style="display: flex; justify-content: space-between">
+            <ul class="nav navbar-nav navbar-left" id="navleft" style="flex-grow: 1">
                 <li><a is-current href="/">Home</a></li>
                 <li><a is-current href="/signup" ng-show="user.username == 'anonymous'">Signup</a></li>
                 <li><a is-current href="/profile" ng-show="user.username != 'anonymous'">Profile</a></li>
                 <li><a is-current href="/howto">Howto</a></li>
             </ul>
-            <ul class="nav navbar-nav">
+            <ul class="nav navbar-nav" id="navtopic" style="flex-grow: 2">
                 <li ng-show="topic">
                     <a ng-show="!topicedit">
                         <span ng-show="topictext" ng-click="editTopic()">{{topictext}}</span>
@@ -105,7 +116,7 @@
                     </form>
                 </li>
             </ul>
-            <form ng-controller="login" class="navbar-form navbar-right" name="loginform">
+            <form ng-controller="login" class="nav navbar-form navbar-right" name="loginform" id="navright">
                 <div class="form-group" ng-show="user.username == 'anonymous'">
                     <alert style="margin: 0 !important; padding: 5px 30px 5px 5px !important; white-space: nowrap; display: inline-block;" ng-show="errlogin" close="errlogin = false">Invalid username/password</alert>
                     <div class="form-group">

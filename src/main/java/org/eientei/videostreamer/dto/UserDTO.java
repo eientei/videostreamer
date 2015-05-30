@@ -8,10 +8,12 @@ package org.eientei.videostreamer.dto;
 public class UserDTO {
     private String username;
     private String hashicon;
+    private String email;
 
-    public UserDTO(String username, String hashicon) {
+    public UserDTO(String username, String hashicon, String email) {
         this.username = username;
         this.hashicon = hashicon;
+        this.email = email;
     }
 
     public String getUsername() {
@@ -20,5 +22,9 @@ public class UserDTO {
 
     public String getHashicon() {
         return hashicon;
+    }
+
+    public String getEmail() {
+        return email;
     }
 }

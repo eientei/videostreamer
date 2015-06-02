@@ -58,7 +58,11 @@ angular.module('videostreamer').directive('bakemessage', ['$compile', function (
                     res += '<a target="_blank" href="' + node.url + '">' + node.url + '</a>';
                 } else if (node.type == 'T') {
                     res += ' ';
-                    res += node.text;
+                    res += node.text
+                        .replace(/&/g, '&amp;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;');
                 } else {
                     console.log(node);
                 }

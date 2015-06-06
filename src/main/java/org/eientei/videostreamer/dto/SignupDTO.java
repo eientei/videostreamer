@@ -23,7 +23,6 @@ public class SignupDTO {
     private String email;
 
     @ReCaptcha
-    @NotEmpty
     private String captcha;
 
     public String getUsername() {

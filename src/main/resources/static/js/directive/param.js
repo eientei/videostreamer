@@ -31,23 +31,29 @@ angular.module('videostreamer').directive('param', [function () {
                 var el = angular.element(html);
 
                 scope.$on('flash-offline', function () {
-                    el.css({
+                    var elm = angular.element(document.getElementById('flashplayer'));
+                    console.log('flash online', elm);
+                    elm.css({
                         'top': 30000 + 'px',
                         'left': 30000 + 'px'
                     });
                 });
 
                 scope.$on('flash-online', function () {
-                    el.css({
+                    var elm = angular.element(document.getElementById('flashplayer'));
+                    console.log('flash online', elm);
+                    elm.css({
                         'top': 0,
                         'left': 0
                     });
                 });
 
+                /*
                 el.css({
                     'top': 30000 + 'px',
                     'left': 30000 + 'px'
                 });
+                */
                 element.append(el);
             });
         }

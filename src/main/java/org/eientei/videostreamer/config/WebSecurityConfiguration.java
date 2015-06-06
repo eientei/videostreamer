@@ -7,8 +7,11 @@ import org.eientei.videostreamer.controller.Chat;
 import org.eientei.videostreamer.orm.error.AlreadyExists;
 import org.eientei.videostreamer.orm.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.security.authentication.encoding.Md5PasswordEncoder;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
@@ -61,6 +64,9 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     @Autowired
     private Chat chat;
+
+    @Value("${videostreamer.smtpHost:}")
+    private String smtpHost;
 
     private UserDetails anonymous;
 
@@ -136,6 +142,13 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Bean
     public Md5PasswordEncoder passwordEncoder() {
         return new Md5PasswordEncoder();
+    }
+
+    @Bean
+    public JavaMailSender javaMailService() {
+        JavaMailSenderImpl javaMailSender = new JavaMailSenderImpl();
+        javaMailSender.setHost(smtpHost);
+        return javaMailSender;
     }
 
     private AuthenticationFailureHandler failureHandler() {

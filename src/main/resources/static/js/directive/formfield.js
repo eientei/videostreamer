@@ -50,7 +50,8 @@ angular.module('videostreamer').directive('form', ['$templateCache', function ($
                     var tips = [];
                     for (var v in val) {
                         if (val.hasOwnProperty(v)) {
-                            if (v == 'form') {
+                            console.log(v);
+                            if (v == 'form' || !form.hasOwnProperty(v)) {
                                 angular.forEach(val[v], function (n) {
                                     form.$error[n] = true;
                                     var tmpl = $templateCache.get('desc_' + n + '.html');

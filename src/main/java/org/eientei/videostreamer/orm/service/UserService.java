@@ -11,6 +11,8 @@ import org.springframework.security.authentication.encoding.Md5PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 /**
  * User: iamtakingiteasy
  * Date: 2015-05-04
@@ -66,14 +68,40 @@ public class UserService {
     @Transactional(readOnly = false)
     public void updatePassword(User user, String current, String desired) throws WrongPassword {
         userDAO.refresh(user);
-        if (!user.getPasswordhash().equals(hashMd5(current))) {
+        if (current != null && !user.getPasswordhash().equals(hashMd5(current))) {
             throw new WrongPassword();
         }
+        user.setResetkey(null);
         user.setPasswordhash(hashMd5(desired));
         userDAO.save(user);
     }
 
     private String hashMd5(String data) {
         return passwordEncoder.encodePassword(data, null);
+    }
+
+    public User getUserByEmail(String name, String email) {
+        Search search = new Search();
+        search.addFilterCustom("lower(cast({name} as text)) = lower(cast(?1 as text))", name);
+        search.addFilterCustom("lower(cast({email} as text)) = lower(cast(?1 as text))", email);
+        return userDAO.searchUnique(search);
+    }
+
+    @Transactional(readOnly = false)
+    public String resetPassword(User user) {
+        String hash = hashMd5(UUID.randomUUID().toString());
+        userDAO.refresh(user);
+        if (user.getResetkey() != null) {
+            return null;
+        }
+        user.setResetkey(hash);
+        userDAO.save(user);
+        return hash;
+    }
+
+    public User getUserByResetKey(String resetKey) {
+        Search search = new Search();
+        search.addFilterEqual("resetkey", resetKey);
+        return userDAO.searchUnique(search);
     }
 }

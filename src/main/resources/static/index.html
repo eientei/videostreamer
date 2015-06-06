@@ -54,6 +54,8 @@
     <script src="/static/js/controller/chat.js"></script>
     <script src="/static/js/controller/player.js"></script>
     <script src="/static/js/controller/profile.js"></script>
+    <script src="/static/js/controller/passwordreset.js"></script>
+    <script src="/static/js/controller/passwordresetsubmit.js"></script>
     <script src="/static/js/thirdparty/favico-0.3.8.min.js"></script>
 </head>
 <body ng-app="videostreamer">
@@ -118,7 +120,10 @@
             </ul>
             <form ng-controller="login" class="nav navbar-form navbar-right" name="loginform" id="navright">
                 <div class="form-group" ng-show="user.username == 'anonymous'">
-                    <alert style="margin: 0 !important; padding: 5px 30px 5px 5px !important; white-space: nowrap; display: inline-block;" ng-show="errlogin" close="errlogin = false">Invalid username/password</alert>
+                    <alert style="margin: 0 !important; padding: 5px 30px 5px 5px !important; white-space: nowrap; display: inline-block;" ng-show="errlogin" close="errlogin = false">
+                        Invalid username/password
+                        <a href="/passwordreset">Forgot?</a>
+                    </alert>
                     <div class="form-group">
                         <input class="form-control" ng-model="username" type="text" placeholder="Username">
                     </div>

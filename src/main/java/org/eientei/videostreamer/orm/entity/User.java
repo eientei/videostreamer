@@ -33,6 +33,9 @@ public class User {
     @OneToMany(mappedBy = "author", fetch = FetchType.EAGER)
     private Set<Stream> streams = new HashSet<Stream>();
 
+    @Column(nullable = true)
+    private String resetkey;
+
     public Long getId() {
         return id;
     }
@@ -79,5 +82,13 @@ public class User {
 
     public void setStreams(Set<Stream> streams) {
         this.streams = streams;
+    }
+
+    public String getResetkey() {
+        return resetkey;
+    }
+
+    public void setResetkey(String resetkey) {
+        this.resetkey = resetkey;
     }
 }

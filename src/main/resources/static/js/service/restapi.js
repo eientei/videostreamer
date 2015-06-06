@@ -57,6 +57,22 @@ angular.module('videostreamer').service('restapi', ['$http', function($http) {
                 current: oldpass,
                 desired: newpass
             });
+        },
+        resetreq: function(name, email, captcha) {
+            return me.post('security/resetreq', {
+                name: name,
+                email: email,
+                captcha: captcha
+            });
+        },
+        resettry: function (resetkey) {
+            return me.post('security/resettry', resetkey);
+        },
+        resetsubmit: function (resetkey, password) {
+            return me.post('security/resetsubmit', {
+                resetkey: resetkey,
+                password: password
+            });
         }
     };
 

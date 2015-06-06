@@ -18,7 +18,7 @@ public class Config {
     @Value("${videostreamer.rtmpPrefix:}")
     private String rtmpPrefix;
 
-    @Value("${videostreamer.captcha.secret:}")
+    @Value("${videostreamer.captcha.public:}")
     private String captchaPubkey;
 
     @RequestMapping("rtmp")

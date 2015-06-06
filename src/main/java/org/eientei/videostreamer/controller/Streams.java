@@ -83,7 +83,7 @@ public class Streams {
     @PreAuthorize("isAuthenticated()")
     @RequestMapping("rename/{app}/{name}")
     public void rename(@AuthenticationPrincipal VideostreamerUser user, @PathVariable String app, @PathVariable String name, @RequestBody String newname) throws AlreadyExists, InvalidName {
-        if (newname == null || newname.length() < 3 || newname.contains("/")) {
+        if (newname == null || newname.length() < 3 || newname.length() > 30 || newname.contains("/")) {
             throw new InvalidName();
         }
         streamService.updateStreamName(user.getEntity(), streamService.forUser(user.getEntity(), app, name), newname);

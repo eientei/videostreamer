@@ -203,7 +203,7 @@ class VideoPlayer extends EventDispatcher {
             if (!m_connOk && !m_paused) {
                 ExternalInterface.call('streamOffline');
             }
-        }, 1000);
+        }, 10000);
 
         var tt:haxe.Timer = new haxe.Timer(1000);
         tt.run = function() {

@@ -18,7 +18,6 @@ function streamOffline() {
 angular.module('videostreamer').controller('play', ['$rootScope', '$scope', '$routeParams', 'restapi', function ($rootScope, $scope, $routeParams, restapi) {
     $scope.flashinited = false;
 
-
     onlineCb = function () {
         $scope.flashinited = true;
         $scope.$apply();

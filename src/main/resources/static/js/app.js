@@ -14,6 +14,12 @@ angular.module('videostreamer', [
     }).when('/signup', {
         templateUrl: '/static/frag/signup.html',
         controller: 'signup'
+    }).when('/security/reset/:resetkey', {
+        templateUrl: '/static/frag/passwordresetsubmit.html',
+        controller: 'passwordresetsubmit'
+    }).when('/passwordreset', {
+        templateUrl: '/static/frag/passwordreset.html',
+        controller: 'passwordreset'
     }).when('/profile', {
         templateUrl: '/static/frag/profile.html',
         controller: 'profile'

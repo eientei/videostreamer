@@ -121,4 +121,15 @@ angular.module('videostreamer', [
     $rootScope.favicon = new Favico({
         animation:'fade'
     });
+
+    var localStorage = window['localStorage'];
+
+    if (localStorage['videostreamer.minified'] === 'true') {
+        $rootScope.minified = true;
+    }
+
+    $rootScope.toggleMinified = function () {
+        $rootScope.minified = !$rootScope.minified;
+        localStorage['videostreamer.minified'] = $rootScope.minified;
+    };
 }]);

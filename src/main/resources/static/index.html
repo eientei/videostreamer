@@ -87,6 +87,7 @@
     }
     */
 
+
     .navbar > .container-fluid:after, .navbar > .container-fluid:before {
         content: normal !important;
     }
@@ -95,9 +96,65 @@
         content: normal !important;
     }
 
+    .navbar, .navbar li.active, .navbar > div, .navbar > div > ul > li, .navbar > div >ul >li > a, .navbar form, .navbar form input, .navbar form button, .navbar img, .navbar .alert {
+        transition: 0.1s linear all;
+    }
+
+    .minified {
+        height: 20px;
+        min-height: 20px;
+    }
+
+    .minified li.active {
+        margin-top: -1px;
+    }
+
+    .minified > div {
+        height: 20px;
+    }
+
+    .minified > div > ul > li {
+        height: 20px;
+    }
+    .minified > div > ul > li > a {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    .minified form {
+        margin: -3px 0 0 0;
+        padding: 0;
+    }
+
+    .minified form input, .minified form button {
+        height: 16px;
+        font-size: xx-small;
+        padding: 0 4px 0 4px;
+    }
+
+    .minified img {
+        width: 16px;
+        height: 16px;
+    }
+
+    .minified .alert {
+        height: 18px;
+        font-size: xx-small;
+        padding: 2px 25px 0 25px !important;
+    }
+
+    .minified .fa-caret-up:before {
+        content: "\f0d7";
+    }
+
 </style>
 <div ng-show="loaded" style="width: 100%; height: 100%; box-sizing: border-box; display: flex; flex-direction: column">
-    <nav class="navbar navbar-default" style="margin-bottom: 0; flex-shrink: 0">
+    <nav class="navbar navbar-default" ng-class="{minified: minified}" style="margin-bottom: 0; flex-shrink: 0;">
+        <div style="position: absolute; top: -1ex; right: 2px;">
+            <a href="">
+                <i class="fa fa-caret-up" ng-click="toggleMinified()"></i>
+            </a>
+        </div>
         <div class="container-fluid" style="display: flex; justify-content: space-between">
             <ul class="nav navbar-nav navbar-left" id="navleft" style="flex-grow: 1">
                 <li><a is-current href="/">Home</a></li>
@@ -120,7 +177,7 @@
             </ul>
             <form ng-controller="login" class="nav navbar-form navbar-right" name="loginform" id="navright">
                 <div class="form-group" ng-show="user.username == 'anonymous'">
-                    <alert style="margin: 0 !important; padding: 5px 30px 5px 5px !important; white-space: nowrap; display: inline-block;" ng-show="errlogin" close="errlogin = false">
+                    <alert style="margin: 0; padding: 5px 30px 5px 5px; white-space: nowrap; display: inline-block;" ng-show="errlogin" close="errlogin = false">
                         Invalid username/password
                         <a href="/passwordreset">Forgot?</a>
                     </alert>

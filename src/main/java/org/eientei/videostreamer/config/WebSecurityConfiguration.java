@@ -125,7 +125,7 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
                 if (strings.contains(request.getMethod())) {
                     return false;
                 }
-                return !request.getRequestURI().startsWith("/nginx");
+                return !request.getRequestURI().startsWith("/nginx") && !request.getRequestURI().startsWith("/srs");
             }
         };
     }

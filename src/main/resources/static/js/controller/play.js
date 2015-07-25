@@ -32,7 +32,7 @@ angular.module('videostreamer').controller('play', ['$rootScope', '$scope', '$ro
 
     $scope.showvideo = !$routeParams.novideo;
     $scope.showchat = !$routeParams.nochat;
-    $scope.bufflen = ($routeParams.nobuffer) ? 0.0 : 1.0;
+    $scope.bufflen = ($routeParams.nobuffer) ? 0.0 : 0.0;
     if ($routeParams.buffer) {
         $scope.bufflen = $routeParams.buffer;
     }

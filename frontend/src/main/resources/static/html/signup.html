@@ -1,0 +1,39 @@
+<form class="container-fluid toppadd" name="form" novalidate>
+    <div>
+        <script type="text/ng-template" id="desc_NotEmpty.html" error-template="['NotEmpty', 'required']">
+            {{name | capitalize}} must not be empty
+        </script>
+
+        <script type="text/ng-template" id="desc_Length.html" error-template="['Length', 'minlength', 'maxlength']">
+            <span ng-if="name != 'email'">{{name | capitalize}} must contain 3..30 symbols</span>
+            <span ng-if="name == 'email'">{{name | capitalize}} must contain at most 250 symbols</span>
+        </script>
+
+        <script type="text/ng-template" id="desc_AlreadyExists.html" error-template="['AlreadyExists']">
+            User already exists
+        </script>
+
+        <script type="text/ng-template" id="desc_ReCaptcha.html" error-template="['ReCaptcha']">
+            Invalid CAPTCHA
+        </script>
+
+        <h3>Signup</h3>
+
+        <div class="form-group">
+            <input ng-minlength="3" ng-maxlength="30" ng-required="true" ng-model="username" class="form-control" name="username" type="text" placeholder="Username">
+        </div>
+        <div class="form-group">
+            <input ng-minlength="3" ng-maxlength="30" ng-required="true" ng-model="password" class="form-control" name="password" type="password" placeholder="Password">
+        </div>
+        <div class="form-group">
+            <input ng-maxlength="250" ng-model="email" class="form-control" name="email" type="text" placeholder="Email (not required)">
+        </div>
+
+        <div class="flex-captcha-errors">
+            <div class="recaptcha" recaptcha=""></div>
+            <div class="errors" form-errors="errors"></div>
+        </div>
+
+        <button type="submit" class="btn btn-default" ng-click="signup(username, password, email, recaptcha.value())">Signup</button>
+    </div>
+</form>

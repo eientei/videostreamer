@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html ng-app="video">
+<head lang="en">
+    <meta charset="UTF-8">
+    <title ng-bind="title.value">video.eientei</title>
+    <base href="/"/>
+    <link rel="shortcut icon" href="/favicon.ico" sizes="16x16"/>
+    <meta username="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- webjars-->
+    <link  href="/webjars/bootstrap/3.3.5/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link  href="/webjars/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet"/>
+    <script src="/webjars/angularjs/1.4.3/angular.min.js"></script>
+    <script src="/webjars/angular-animate/1.4.3/angular-animate.min.js"></script>
+    <script src="/webjars/angular-resource/1.4.3/angular-resource.min.js"></script>
+    <script src="/webjars/angular-route/1.4.3/angular-route.min.js"></script>
+    <script src="/webjars/angular-sanitize/1.4.3/angular-sanitize.min.js"></script>
+    <script src="/webjars/angular-cookies/1.4.3/angular-cookies.min.js"></script>
+    <script src="/webjars/angular-ui-bootstrap-bower/0.13.1/ui-bootstrap.min.js"></script>
+    <script src="/webjars/angular-ui-bootstrap-bower/0.13.1/ui-bootstrap-tpls.min.js"></script>
+    <script src="/webjars/momentjs/2.10.3/moment.js"></script>
+    <script src="/webjars/sockjs-client/1.0.1/dist/sockjs.min.js"></script>
+    <script src="/webjars/swagger-js/2.1.10-M1/lib/shred.bundle.js"></script>
+    <script src="/webjars/swagger-js/2.1.10-M1/lib/swagger-client.min.js"></script>
+
+    <!-- a hack to work-around warnings from shred -->
+    <script>
+        function fake(username) {
+            require.modules[username] = function () { };
+            require._core[username] = true;
+        }
+
+        fake('iconv-lite');
+        fake('zlib');
+    </script>
+
+    <!-- Videostreamer application -->
+    <link  href="/css/app.css" rel="stylesheet"/>
+    <script src="/js/app.js"></script>
+    <script src="/js/service/api.js"></script>
+    <script src="/js/service/config.js"></script>
+    <script src="/js/service/security.js"></script>
+    <script src="/js/service/stream.js"></script>
+    <script src="/js/service/title.js"></script>
+    <script src="/js/service/recaptcha.js"></script>
+    <script src="/js/service/errortemplate.js"></script>
+    <script src="/js/service/hash.js"></script>
+    <script src="/js/filter/identicon.js"></script>
+    <script src="/js/filter/momentify.js"></script>
+    <script src="/js/filter/capitalize.js"></script>
+    <script src="/js/filter/sincify.js"></script>
+    <script src="/js/directive/security.js"></script>
+    <script src="/js/directive/navhref.js"></script>
+    <script src="/js/directive/recaptcha.js"></script>
+    <script src="/js/directive/calccenter.js"></script>
+    <script src="/js/directive/formerrors.js"></script>
+    <script src="/js/directive/bindreplace.js"></script>
+    <script src="/js/directive/errortemplate.js"></script>
+    <script src="/js/directive/chattyper.js"></script>
+    <script src="/js/directive/bakemessage.js"></script>
+    <script src="/js/directive/bakemessage.js"></script>
+    <script src="/js/directive/resize.js"></script>
+    <script src="/js/directive/flashplayer.js"></script>
+    <script src="/js/controller/login.js"></script>
+    <script src="/js/controller/main.js"></script>
+    <script src="/js/controller/howto.js"></script>
+    <script src="/js/controller/topic.js"></script>
+    <script src="/js/controller/reset.js"></script>
+    <script src="/js/controller/resetpass.js"></script>
+    <script src="/js/controller/signup.js"></script>
+    <script src="/js/controller/profile.js"></script>
+    <script src="/js/controller/play.js"></script>
+</head>
+
+<body>
+
+<div class="fullscreen flextop">
+    <div class="wrap" id="navwrap">
+        <div class="navig">
+            <ul class="navig-left">
+                <li><a nav-href="/">Home</a></li>
+                <li sec-anon=""><a nav-href="/signup">Signup</a></li>
+                <li sec-user=""><a nav-href="/profile">Profile</a></li>
+                <li><a nav-href="/howto">Howto</a></li>
+            </ul>
+            <div class="navig-center" ng-controller="topic">
+                <div ng-click="editTopic()" ng-show="!editing && stream.expected">
+                    <strong ng-show="topictext">{{topictext}}</strong>
+                    <strong ng-show="!topictext"><em>No topic</em></strong>
+                </div>
+                <form ng-show="editing && stream.expected">
+                    <div class="form-group">
+                        <input class="form-control centered" autofocus="" type="text" ng-blur="sendTopic(topictext)" ng-keypress="$event.which == 13 && sendTopic(topictext)" ng-model="topictext">
+                    </div>
+                </form>
+            </div>
+            <form ng-controller="login" class="navig-right">
+                <div class="form-group flexbox" sec-anon="">
+                    <alert class="inline-alert" ng-show="errlogin" close="errlogin = false">
+                        Invalid username/password
+                        <a href="/passwordreset">Forgot?</a>
+                    </alert>
+                    <div class="form-group">
+                        <input class="form-control" ng-model="username" type="text" placeholder="Username">
+                    </div>
+                    <div class="form-group">
+                        <input class="form-control" ng-model="password" type="password" placeholder="Password">
+                    </div>
+                    <button class="btn btn-default" ng-click="login(username, password)">Sign in</button>
+                </div>
+                <div class="form-group" sec-user="">
+                    <button class="btn btn-default" ng-click="logout()">Sign out</button>
+                </div>
+                <div class="identicon form-group">
+                    <img ng-src="{{ user.hashicon | identicon }}" tooltip="{{user.username}}" tooltip-placement="left" width="32" height="32"/>
+                </div>
+            </form>
+        </div>
+        <!--
+    <div class="draghead">
+    </div>
+    -->
+    </div>
+    <div ng-show="!loaded && !error" class="spinner">
+        Loading...
+    </div>
+    <div class="error" ng-show="error">
+        <h3>Error {{error.code}} occured: {{error.path}}</h3>
+        <div ng-show="error.details">
+            Details: {{error.details}}
+        </div>
+    </div>
+    <div ng-view="" ng-show="loaded && !error" class="viewroot"></div>
+</div>
+</body>
+
+</html>

@@ -1,0 +1,25 @@
+<div ng-show="success" class="toppadd container-fluid">
+    <h3>Success! Try to logining in with your new password</h3>
+</div>
+<form class="toppadd container-fluid" ng-show="!success" name="form" novalidate>
+    <div>
+        <script type="text/ng-template" id="desc_InvalidPassword.html">
+            Invalid password
+        </script>
+
+        <script type="text/ng-template" id="desc_InvalidKey.html">
+            Invalid reset key
+        </script>
+
+        <div class="form-group">
+            <input showerr="" ng-minlength="3" ng-maxlength="30" ng-required="true" ng-model="password" class="form-control" name="password" type="password" placeholder="Password">
+        </div>
+        <alert ng-show="errors.form.length > 0" close="errors.form = []">
+            <ul>
+                <li ng-repeat="tip in errors.form" ng-include="" src="'desc_' + tip + '.html'"></li>
+            </ul>
+        </alert>
+
+        <button type="submit" ng-click="reset(password)">Password reset</button>
+    </div>
+</form>

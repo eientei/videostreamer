@@ -1,0 +1,43 @@
+<div ng-show="success" class="container-fluid toppadd">
+    <h3>Success! Check your email for the password reset instructions.</h3>
+</div>
+<form class="container-fluid toppadd" ng-show="!success" name="form" novalidate>
+    <div>
+        <script type="text/ng-template" id="desc_NotEmpty.html" error-template="['NotEmpty', 'required']">
+            {{name | capitalize}} must not be empty
+        </script>
+
+        <script type="text/ng-template" id="desc_Length.html" error-template="['Length', 'minlength', 'maxlength']">
+            <span ng-if="name != 'email'">{{name | capitalize}} must contain 3..30 symbols</span>
+            <span ng-if="name == 'email'">{{name | capitalize}} must contain at most 250 symbols</span>
+        </script>
+
+        <script type="text/ng-template" id="desc_InvalidEmail.html" error-template="['InvalidEmail']">
+            Invalid username or email
+        </script>
+
+        <script type="text/ng-template" id="desc_AlreadySent.html" error-template="['AlreadySent']">
+            Instructions already have been sent
+        </script>
+
+        <script type="text/ng-template" id="desc_ReCaptcha.html" error-template="['ReCaptcha']">
+            Invalid CAPTCHA
+        </script>
+
+        <h3>Password reset</h3>
+
+        <div class="form-group">
+            <input ng-minlength="3" ng-maxlength="30" ng-required="true" ng-model="username" class="form-control" name="username" type="text" placeholder="Username">
+        </div>
+        <div class="form-group">
+            <input ng-required="true" ng-model="email" class="form-control" name="email" type="text" placeholder="Email">
+        </div>
+
+        <div class="flex-captcha-errors">
+            <div class="recaptcha" recaptcha=""></div>
+            <div class="errors" form-errors="errors"></div>
+        </div>
+
+        <button type="submit" class="btn btn-default" ng-click="reset(username, email, recaptcha.value())">Request</button>
+    </div>
+</form>

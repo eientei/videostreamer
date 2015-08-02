@@ -1,0 +1,32 @@
+<div class="container-fluid toppadd">
+    <div ng-show="!streams || streams.length == 0">
+        <h3>No streams running</h3>
+    </div>
+
+    <div ng-repeat="stream in streams" class="stream">
+        <div class="control">
+            <a href="{{'/' + stream.app + '/' + stream.name}}?buffer=1.0">buffered</a>
+            <a href="{{'/' + stream.app + '/' + stream.name}}?novideo">novideo</a>
+            <a href="{{'/' + stream.app + '/' + stream.name}}?nochat">nochat</a>
+        </div>
+        <a class="fullwidth" href="{{'/' + stream.app + '/' + stream.name}}">
+            <div class="authoricon">
+                <img ng-src="{{stream.authorHashicon | identicon}}" width="64" height="64"/>
+            </div>
+            <div>
+                <div>
+                    <div ng-if="stream.topic">"{{stream.topic}}"</div>
+                    <div ng-if="!stream.topic"><em>No topic</em></div>
+                </div>
+                <div>
+                    <div>{{stream.authorName}} @ {{stream.app + '/' + stream.name}} for {{ stream.since | momentify }}</div>
+                </div>
+            </div>
+            <div class="inlinechilds">
+                <div ng-if="!stream.online.length"><em>So ronery...</em></div>
+                <img ng-repeat="online in stream.online" ng-src="{{online.hash | identicon}}" tooltip-append-to-body="true" tooltip="{{online.name}}" width="32" height="32"/>
+                <div ng-if="stream.online.length">({{stream.online.length}} total)</div>
+            </div>
+        </a>
+    </div>
+</div>

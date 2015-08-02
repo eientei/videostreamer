@@ -1,0 +1,35 @@
+<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
+    <id>separate</id>
+    <formats>
+        <format>dir</format>
+        <format>zip</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
+    <includeSiteDirectory>false</includeSiteDirectory>
+    <dependencySets>
+        <dependencySet>
+            <unpack>true</unpack>
+            <outputDirectory>/</outputDirectory>
+            <unpackOptions>
+                <includes>
+                    <include>static/**</include>
+                </includes>
+            </unpackOptions>
+            <scope>runtime</scope>
+        </dependencySet>
+    </dependencySets>
+    <moduleSets>
+        <moduleSet>
+            <useAllReactorProjects>true</useAllReactorProjects>
+            <binaries>
+                <unpack>false</unpack>
+                <includeDependencies>false</includeDependencies>
+            </binaries>
+            <includes>
+                <include>org.eientei.video:backend</include>
+            </includes>
+        </moduleSet>
+    </moduleSets>
+</assembly>

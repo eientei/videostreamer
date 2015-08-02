@@ -1,0 +1,142 @@
+<script type="text/ng-template" id="deleteConfirmation.html">
+    <div class="confirm">
+        <p>Note: Deleting stream will result in irreversible loss of all chat messages associated with the stream.</p>
+        <p>Are you sure you want to delete this stream?</p>
+        <div>
+            <button type="button" class="btn btn-danger" ng-click="deleteStream()">Yes, i am sure</button>
+            <button type="button" class="btn btn-success" ng-click="$dismiss()">No, close this window</button>
+        </div>
+    </div>
+</script>
+
+<script type="text/ng-template" id="renameConfirmation.html">
+    <div class="confirm">
+        <p>Note: renaming the stream will result in redirecting all users to new url</p>
+        <p>Are you sure you want to rename this stream?</p>
+        <div>
+            <button type="button" class="btn btn-danger" ng-click="updateStreamName()">Yes, i am sure</button>
+            <button type="button" class="btn btn-success" ng-click="$dismiss()">No, close this window</button>
+        </div>
+    </div>
+</script>
+
+<script type="text/ng-template" id="desc_AlreadyExists.html" error-template="['AlreadyExists']">
+    Stream already exists
+</script>
+
+<script type="text/ng-template" id="desc_InvalidName.html" error-template="['InvalidName']">
+    Invalid stream name
+</script>
+
+
+<div class="container-fluid toppadd">
+    <tabset justified="true">
+        <tab heading="Streams" active="tabs['streams']" select="selectTab('streams')">
+            <div class="flex-profile-inline">
+                <div class="profile-pills">
+                    <div>
+                        ({{streams.length}} / 5)
+                    </div>
+                    <tabset vertical="true" type="pills">
+                        <tab ng-click="selectStream(stream)" active="stream.active" ng-repeat="stream in streams">
+                            <tab-heading>
+                                {{stream.name}}
+                            </tab-heading>
+                        </tab>
+                    </tabset>
+                    <div class="addbtn" class="btn-group">
+                        <button type="button" class="btn btn-success" ng-click="createStream()" ng-show="streams.length < 5">Add (+)</button>
+                    </div>
+                </div>
+                <div ng-show="current" class="formgroups">
+                    <form name="form" ng-init="data.stream = this">
+                        <table class="input-group">
+                            <tr>
+                                <td class="input-group-addon">live</td>
+                                <td class="input-group-addon">/</td>
+                                <td><input type="text" ng-required="true" name="stream" class="form-control" placeholder="Stream name" ng-model="current.newname"></td>
+                                <td class="input-group-addon btn btn-success" ng-click="openRenameConfirm()">Update</td>
+                            </tr>
+                        </table>
+                        <div form-errors="errors"></div>
+                    </form>
+                    <form>
+                        <table class="input-group">
+                            <tr>
+                                <td class="input-group-addon" colspan="2">topic</td>
+                                <td><input type="text" class="form-control" placeholder="Stream topic" ng-model="current.newtopic"></td>
+                                <td class="input-group-addon btn btn-success" ng-click="updateStreamTopic()">Update</td>
+                            </tr>
+                        </table>
+                    </form>
+                    <form>
+                        <table class="input-group">
+                            <tr>
+                                <td class="input-group-addon" colspan="2">screensaver</td>
+                                <td><input type="text" class="form-control" placeholder="Stream offline image url" ng-model="current.newimage"></td>
+                                <td class="input-group-addon btn btn-success" ng-click="updateStreamImage()">Update</td>
+                            </tr>
+                        </table>
+                    </form>
+
+                    <form>
+                        <table class="input-group">
+                            <tr>
+                                <td class="input-group-addon" colspan="2">token</td>
+                                <td><input type="text" class="form-control" readonly placeholder="Stream token" ng-model="current.token"></td>
+                                <td class="input-group-addon btn btn-success" ng-click="updateStreamToken()">Generate new</td>
+                            </tr>
+                        </table>
+                    </form>
+
+                    <table>
+                        <tr>
+                            <td>
+                                <label class="btn toppadd btn-primary" ng-class="{'btn-success': !current.restricted, 'btn-info': current.restricted}" ng-click="updateStreamPrivate(!current.restricted)">
+                                    <span ng-show="current.restricted">Make public (currently private)</span>
+                                    <span ng-show="!current.restricted">Make private (currently public)</span>
+                                </label>
+
+                                <div class="toppadd">Currently streaming: <span ng-show="!current.remote">No</span><span ng-show="current.remote">{{current.remote}}</span></div>
+
+                                <button type="button" class="btn toppadd btn-danger" ng-click="openDeleteConfirm()">Delete stream</button>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </tab>
+        <tab heading="Personal" active="tabs['personal']" select="selectTab('personal')">
+            <div class="toppadd input-group">
+                <span class="input-group-addon"><img ng-src="{{userdata.hashicon | identicon}}"></span>
+                <input type="text" class="fixemail form-control" placeholder="Your email (gravatar'd)" ng-model-options="{ debounce: 300 }" ng-model="userdata.email">
+                <span class="input-group-addon btn btn-success" ng-click="updateEmail()">Update</span>
+            </div>
+        </tab>
+        <tab heading="Credentials" active="tabs['credentials']" select="selectTab('credentials')">
+            <div class="toppadd">
+                <div class="input-group">
+                    <span class="input-group-addon">Original password</span>
+                    <input type="password" class="form-control" placeholder="Your current password" ng-model="cred.oldpassword">
+                    <span class="input-group-addon">New password</span>
+                    <input type="password" class="form-control" placeholder="Your new password" ng-model="cred.newpassword">
+                    <span class="input-group-addon btn btn-success" ng-click="updatePassword(cred.oldpassword, cred.newpassword)">Update</span>
+                </div>
+                <script type="text/ng-template" id="desc_InvalidPassword.html">
+                    Invalid new password entered
+                </script>
+                <script type="text/ng-template" id="desc_WrongPassword.html">
+                    Invalid current password entered
+                </script>
+                <alert ng-show="errors.form.length > 0" close="errors.form = []">
+                    <ul>
+                        <li ng-repeat="tip in errors.form" ng-include="" src="'desc_' + tip + '.html'"></li>
+                    </ul>
+                </alert>
+                <alert ng-show="pwdsuccess" type="success" close="pwdsuccess = null">
+                    You have changed your password!
+                </alert>
+            </div>
+        </tab>
+    </tabset>
+</div>

@@ -1,0 +1,27 @@
+<div class="container-fluid toppadd">
+    <h3>How to stream</h3>
+    <p>First, you need to signup on the service, proceed to <a href="/signup">Signup page</a> to do this</p>
+    <p>When you done -- you'll be having one stream in your <a href="/profile">profile</a></p>
+    <p>There you shall see a stream token, which will serve as private key.</p>
+    <p>Do not disclose it to anyone you don't wish to be streaming on your channel</p>
+    <p>Then you need to get a broadcaster, capable of video/audio streaming over RTMP protocol.</p>
+    <p>For *nix systems the best choice in my opinion is the <a href="https://trac.ffmpeg.org/wiki/StreamingGuide">ffmpeg</a> utility</p>
+    <p>For windows -- it might be <a href="https://obsproject.com/">OBS (Open Broadcaster Streamer)</a></p>
+
+    <h3>Configuring ffmpeg</h3>
+    <pre>ffmpeg  -f x11grab -s 1366x768 -i :0.0 -f pulse -ac 2 -i loopback.monitor -vcodec libx264 -tune zerolatency -preset ultrafast -pix_fmt yuv420p -s 1366x768 -ar 44100 -threads 0 -f flv "{{rtmpPrefix}}/live/yourprivatetoken"</pre>
+
+    <h3>Configuring OBS</h3>
+    <pre>
+Broadcast Settings -> Mode: Live Stream
+Broadcast Settings -> Streaming Service: Custom
+Broadcast Settings -> FMS URL: {{rtmpPrefix}}/live
+Broadcast Settings -> Play Path/Stream key: yourprivatekey
+Broadcast Settings -> Auto-Reconnect: true
+Advanced -> Video -> x264 CPU Prset: Ultrafast
+Advanced -> Video -> Custom x264 Encoder Settings: tune=zerolatency
+    </pre>
+
+    <h3>Sources</h3>
+    <a href="https://github.com/eientei/videostreamer">https://github.com/eientei/videostreamer</a>
+</div>

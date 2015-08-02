@@ -1,0 +1,46 @@
+<script type="text/ng-template" id="ZoomIcon.html">
+    <img ng-src="{{userdata.hash | identicon}}"/>
+    <div>{{userdata.name}}</div>
+</script>
+<script type="text/ng-template" id="Message.html">
+    <div ng-class="{owner: message.owner}">
+        <div id="anchor" ng-if="message.anchor"></div>
+        <a href="" class="pull-right" ng-click="messageref(message.id)">&gt;&gt;{{message.id}}</a>
+        <div style="clear: both"></div>
+        <div class="pull-right nowrap">
+            {{ message.posted | sincify }}
+            <img width="16" height="16" tooltip-placement="left" tooltip-append-to-body="true" tooltip="{{message.username}}" ng-init="userdata={hash: message.hash, name: message.username}" ng-src="{{message.remoteHash | identicon}}">
+        </div>
+        <div style="clear: both"></div>
+        <img class="identmed" width="32" height="32" tooltip-placement="right" tooltip-append-to-body="true" tooltip="{{message.username}}" ng-src="{{message.hash | identicon}}">
+        <div class="wrapall" bakemessage="message.root" class="messagebody"></div>
+        <div style="clear: both"></div>
+    </div>
+</script>
+
+<div class="playercontainer">
+    <div class="player">
+        <div style="background-image: url('{{stream.image}}'); flex-grow: 1; background-size: cover; display: flex">
+            <div flashplayer="" vars="videoUrl={{config.rtmpPrefix}}/{{app}}/{{name}}&amp;buffer={{bufflen}}&idleImageUrl={{site}}/img/spinner.gif" src="/swf/yukkuplayer.swf"></div>
+        </div>
+
+        <div resize="vert" class="verticaldragger drag"></div>
+    </div>
+    <div class="chat">
+        <div class="messages">
+            <div class="messageswrapper" id="scroller">
+                <a href="" class="historyloader" ng-show="hashistory" ng-click="loadHistory(messages[0].id)">...</a>
+                <div class="messagerpt" id="{{$first ? 'messagefirst' : ''}}" ng-repeat="message in messages" ng-include="'Message.html'"></div>
+            </div>
+        </div>
+        <div resize="horiz" class="bar drag">
+            <img class="ownerseparator" width="16" height="16" ng-init="userdata=owner" tooltip-template="'ZoomIcon.html'" tooltip-append-to-body="true" ng-if="owner" ng-class="{silent: !owner.typing}"  ng-src="{{owner.hash | identicon}}"/>
+            <div class="holdseparator" ng-if="!owner"></div>
+            <div class="barseparator"></div>
+            <img width="16" height="16" ng-repeat="o in online" ng-init="userdata=o" tooltip-template="'ZoomIcon.html'" tooltip-append-to-body="true" ng-class="{silent: !o.typing}" ng-src="{{o.hash | identicon}}"/>
+        </div>
+        <div class="typer">
+            <textarea chat-typer="" placeholder="Type here" maxlength="250"></textarea>
+        </div>
+    </div>
+</div>

@@ -18,16 +18,19 @@ angular.module('video').directive('resize', ['$document', function ($document) {
 
             var a;
             var b;
-            if (direction == 'vert') {
-                a = element.parent();
-                b = a.next();
-            } else if (direction == 'horiz') {
-                a = angular.element(element.parent().children()[0]);
-                b = element.next();
-                msgs = element.parent();
-                navwrap = angular.element(document.getElementById('navwrap'));
-            }
-            setpos(oldpos);
+
+            setTimeout(function () {
+                if (direction == 'vert') {
+                    a = element.parent();
+                    b = a.next();
+                } else if (direction == 'horiz') {
+                    a = angular.element(element.parent().children()[0]);
+                    b = element.next();
+                    msgs = element.parent();
+                    navwrap = angular.element(document.getElementById('navwrap'));
+                }
+                setpos(oldpos);
+            }, 0);
 
             function setpos(pos) {
                 pos = Math.floor(pos);

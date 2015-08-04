@@ -17,16 +17,14 @@
         <div style="clear: both"></div>
     </div>
 </script>
-
 <div class="playercontainer">
-    <div class="player">
+    <div class="player" ng-if="showvideo" >
         <div style="background-image: url('{{stream.image}}'); flex-grow: 1; background-size: cover; display: flex">
             <div flashplayer="" vars="videoUrl={{config.rtmpPrefix}}/{{app}}/{{name}}&amp;buffer={{bufflen}}&idleImageUrl={{site}}/img/spinner.gif" src="/swf/yukkuplayer.swf"></div>
         </div>
-
         <div resize="vert" class="verticaldragger drag"></div>
     </div>
-    <div class="chat">
+    <div class="chat" ng-if="showchat">
         <div class="messages">
             <div class="messageswrapper" id="scroller">
                 <a href="" class="historyloader" ng-show="hashistory" ng-click="loadHistory(messages[0].id)">...</a>

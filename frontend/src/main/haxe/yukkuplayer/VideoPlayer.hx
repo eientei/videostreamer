@@ -31,6 +31,15 @@ import flash.display.LoaderInfo;
 import flash.system.LoaderContext;
 import flash.external.ExternalInterface;
 
+import openfl.net.URLLoader;
+import openfl.net.URLLoaderDataFormat;
+import openfl.net.URLRequest;
+
+import com.yagp.GifDecoder;
+import com.yagp.Gif;
+import com.yagp.GifPlayer;
+import com.yagp.GifPlayerWrapper;
+
 import yukkuplayer.controls.VolumeSlider;
 import yukkuplayer.controls.VolumeIcon;
 import yukkuplayer.controls.PauseIcon;
@@ -66,7 +75,7 @@ class VideoPlayer extends EventDispatcher {
     private var m_pauseIcon : PauseIcon;
     private var m_fullscreenIcon : FullscreenIcon;
     private var m_infoDigest : TextField;
-    private var m_idleImage : Loader;
+    private var m_idleImage : GifPlayerWrapper;
     private var m_idleOverlay : Sprite;
     private var m_loadedImage : Bool;
     private var m_idleWidth : Float;
@@ -93,14 +102,17 @@ class VideoPlayer extends EventDispatcher {
         m_loadedImage = false;
 
         m_idleOverlay = new Sprite();
-        m_idleOverlay.visible = false;
+        m_idleOverlay.visible = true;
         m_movieClip.addChild(m_idleOverlay);
 
 
 
-        m_idleImage = new Loader();
-        m_idleImage.contentLoaderInfo.addEventListener(Event.COMPLETE, function(e : Event) {
-        trace("done");
+        var l = new URLLoader();
+        l.dataFormat = URLLoaderDataFormat.BINARY;
+        l.addEventListener(Event.COMPLETE, function(e : Event) {
+            var gif : Gif = GifDecoder.parseByteArray(l.data);
+            m_idleImage = new GifPlayerWrapper(new GifPlayer(gif));
+
             m_idleOverlay.addChild(m_idleImage);
             m_loadedImage = true;
             m_idleWidth = m_idleImage.width;
@@ -108,8 +120,7 @@ class VideoPlayer extends EventDispatcher {
             positionIdle();
         });
 
-        trace(idleImageUrl);
-        m_idleImage.load(new URLRequest(idleImageUrl), new LoaderContext());
+        l.load(new URLRequest(idleImageUrl));
 
 
         initUrls(videoUrl);
@@ -286,14 +297,18 @@ class VideoPlayer extends EventDispatcher {
             var mx : Float;
             var my : Float;
 
-            mw = m_idleWidth * m_stage.stageHeight / m_idleHeight;
-            mh = m_stage.stageHeight;
+            //mw = m_idleWidth * m_stage.stageHeight / m_idleHeight;
+            //mh = m_stage.stageHeight;
+            mw = m_idleWidth;
+            mh = m_idleHeight;
             mx = (m_stage.stageWidth / 2) - (mw / 2);
-            my = 0;
+            my = (m_stage.stageHeight / 2) - (mh / 2);
 
             if (mw > m_stage.stageWidth) {
-                mw = m_stage.stageWidth;
-                mh = m_idleHeight * m_stage.stageWidth / m_idleWidth;
+                //mw = m_stage.stageWidth;
+                //mh = m_idleHeight * m_stage.stageWidth / m_idleWidth;
+                mw = m_idleWidth;
+                mh = m_idleHeight;
                 mx = 0;
                 my = (m_stage.stageHeight / 2) - (mh / 2);
             } else {

@@ -5,7 +5,7 @@
 
     <div ng-repeat="stream in streams" class="stream">
         <div class="control">
-            <a href="{{'/' + stream.app + '/' + stream.name}}?buffer=1.0">buffered</a>
+            <a href="{{'/' + stream.app + '/' + stream.name}}?nobuffer">unbuffered</a>
             <a href="{{'/' + stream.app + '/' + stream.name}}?novideo">novideo</a>
             <a href="{{'/' + stream.app + '/' + stream.name}}?nochat">nochat</a>
         </div>

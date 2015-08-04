@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('video').controller('play', ['$q', '$scope', '$routeParams', '$window', '$location', '$anchorScroll', 'TitleService', function ($q, $scope, $routeParams, $window, $location, $anchorScroll, TitleService) {
+angular.module('video').controller('play', ['$q', '$scope', '$routeParams', '$window', '$location', '$anchorScroll', 'TitleService', 'TyperService', function ($q, $scope, $routeParams, $window, $location, $anchorScroll, TitleService, TyperService) {
     $scope.site = 'http://' + location.hostname + ((location.port == 80 || location.port == '') ? '' : ':' + location.port);
 
     $scope.app = $routeParams.app;
@@ -8,7 +8,7 @@ angular.module('video').controller('play', ['$q', '$scope', '$routeParams', '$wi
 
     $scope.showvideo = !$routeParams.novideo;
     $scope.showchat = !$routeParams.nochat;
-    $scope.bufflen = ($routeParams.buffered) ? 1.0 : 0.0;
+    $scope.bufflen = ($routeParams.nobuffer) ? 0.0 : 1.0;
     if ($routeParams.buffer) {
         $scope.bufflen = $routeParams.buffer;
     }
@@ -77,9 +77,11 @@ angular.module('video').controller('play', ['$q', '$scope', '$routeParams', '$wi
             }
         }));
     };
+
     $scope.messageref = function (refid) {
-        $scope.insertText('>>' + refid);
+        TyperService.insertText('>>' + refid);
     };
+
     var messageHandler = function (e) {
         var d = JSON.parse(e.data);
         if (d.type == 'ONLINE') {
@@ -90,6 +92,8 @@ angular.module('video').controller('play', ['$q', '$scope', '$routeParams', '$wi
             handleMessage(d.data);
         } else if (d.type == 'HISTORY') {
             handleHistory(d.data);
+        } else if (d.type == 'IMAGE') {
+            handleImage(d.data);
         } else if (d.type == 'INFO') {
             handleInfo(d.data);
         } else if (d.type == 'TOPIC') {
@@ -113,6 +117,10 @@ angular.module('video').controller('play', ['$q', '$scope', '$routeParams', '$wi
     function handleOnline(data) {
         $scope.online = data.online;
         $scope.owner = data.owner;
+        $scope.$apply();
+    }
+    function handleImage(data) {
+        $scope.stream.image = data.image;
         $scope.$apply();
     }
     function handleHistory(data) {

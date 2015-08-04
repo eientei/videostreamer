@@ -1,0 +1,152 @@
+diff --git a/trunk/src/app/srs_app_http_hooks.cpp b/trunk/src/app/srs_app_http_hooks.cpp
+index 426b331..e2ecadd 100644
+--- a/trunk/src/app/srs_app_http_hooks.cpp
++++ b/trunk/src/app/srs_app_http_hooks.cpp
+@@ -170,7 +170,7 @@ void SrsHttpHooks::on_unpublish(string url, SrsRequest* req)
+         << SRS_JFIELD_STR("ip", req->ip) << SRS_JFIELD_CONT
+         << SRS_JFIELD_STR("vhost", req->vhost) << SRS_JFIELD_CONT
+         << SRS_JFIELD_STR("app", req->app) << SRS_JFIELD_CONT
+-        << SRS_JFIELD_STR("stream", req->stream)
++        << SRS_JFIELD_STR("stream", req->orig)
+         << SRS_JOBJECT_END;
+         
+     std::string data = ss.str();
+@@ -182,7 +182,7 @@ void SrsHttpHooks::on_unpublish(string url, SrsRequest* req)
+             client_id, url.c_str(), data.c_str(), res.c_str(), status_code, ret);
+         return;
+     }
+-    
++
+     srs_trace("http hook on_unpublish success. "
+         "client_id=%d, url=%s, request=%s, response=%s, ret=%d",
+         client_id, url.c_str(), data.c_str(), res.c_str(), ret);
+@@ -190,6 +190,44 @@ void SrsHttpHooks::on_unpublish(string url, SrsRequest* req)
+     return;
+ }
+ 
++int SrsHttpHooks::popsource(string url, SrsRequest* req)
++{
++    int ret = ERROR_SUCCESS;
++    
++    int client_id = _srs_context->get_id();
++    
++    std::stringstream ss;
++    ss << SRS_JOBJECT_START
++        << SRS_JFIELD_STR("action", "on_publish") << SRS_JFIELD_CONT
++        << SRS_JFIELD_ORG("client_id", client_id) << SRS_JFIELD_CONT
++        << SRS_JFIELD_STR("ip", req->ip) << SRS_JFIELD_CONT
++        << SRS_JFIELD_STR("vhost", req->vhost) << SRS_JFIELD_CONT
++        << SRS_JFIELD_STR("app", req->app) << SRS_JFIELD_CONT
++        << SRS_JFIELD_STR("stream", req->stream)
++        << SRS_JOBJECT_END;
++        
++    std::string data = ss.str();
++    std::string res;
++    int status_code;
++    if ((ret = do_post(url, data, status_code, res)) != ERROR_SUCCESS && status_code != 302) {
++        srs_error("http post on_publish uri failed. "
++            "client_id=%d, url=%s, request=%s, response=%s, code=%d, ret=%d",
++            client_id, url.c_str(), data.c_str(), res.c_str(), status_code, ret);
++        return ret;
++    }
++
++    if (status_code == 302) {
++        req->orig = req->stream;
++        req->stream = res;
++    }
++    
++    srs_trace("http hook on_publish success. "
++        "client_id=%d, url=%s, request=%s, response=%s, ret=%d",
++        client_id, url.c_str(), data.c_str(), res.c_str(), ret);
++    
++    return ret;
++}
++
+ int SrsHttpHooks::on_play(string url, SrsRequest* req)
+ {
+     int ret = ERROR_SUCCESS;
+@@ -430,6 +468,15 @@ int SrsHttpHooks::do_post(std::string url, std::string req, int& code, string& r
+     
+     // ensure the http status is ok.
+     // https://github.com/simple-rtmp-server/srs/issues/158
++    if (code == 302) {
++        for (int i = 0; i < msg->request_header_count(); i++) {
++            if (msg->request_header_key_at(i) == "Location") {
++                res = msg->request_header_value_at(i);
++                break;
++            }
++        }
++        return ret;
++    }
+     if (code != SRS_CONSTS_HTTP_OK) {
+         return ERROR_HTTP_STATUS_INVLIAD;
+     }
+diff --git a/trunk/src/app/srs_app_http_hooks.hpp b/trunk/src/app/srs_app_http_hooks.hpp
+index 47b2743..359f09d 100644
+--- a/trunk/src/app/srs_app_http_hooks.hpp
++++ b/trunk/src/app/srs_app_http_hooks.hpp
+@@ -71,6 +71,7 @@ public:
+     *         ignore if empty.
+     */
+     static int on_publish(std::string url, SrsRequest* req);
++    static int popsource(std::string url, SrsRequest* req);
+     /**
+     * on_unpublish hook, when client(encoder) stop publish stream.
+     * @param url the api server url, to process the event. 
+diff --git a/trunk/src/app/srs_app_rtmp_conn.cpp b/trunk/src/app/srs_app_rtmp_conn.cpp
+index 681cb05..b772461 100755
+--- a/trunk/src/app/srs_app_rtmp_conn.cpp
++++ b/trunk/src/app/srs_app_rtmp_conn.cpp
+@@ -414,6 +414,25 @@ int SrsRtmpConn::stream_service_cycle()
+     }
+     srs_info("set chunk_size=%d success", chunk_size);
+     
++#ifdef SRS_AUTO_HTTP_CALLBACK
++    if (_srs_config->get_vhost_http_hooks_enabled(req->vhost) && (type == SrsRtmpConnFMLEPublish || type == SrsRtmpConnFlashPublish)) {
++        // HTTP: on_publish 
++        SrsConfDirective* on_publish = _srs_config->get_vhost_on_publish(req->vhost);
++        if (!on_publish) {
++            srs_info("ignore the empty http callback: on_publish");
++            return ret;
++        }
++        
++        for (int i = 0; i < (int)on_publish->args.size(); i++) {
++            std::string url = on_publish->args.at(i);
++            if ((ret = SrsHttpHooks::popsource(url, req)) != ERROR_SUCCESS) {
++                srs_error("hook client on_publish failed. url=%s, ret=%d", url.c_str(), ret);
++                return ret;
++            }
++        }
++    }
++#endif
++
+     // find a source to serve.
+     SrsSource* source = SrsSource::fetch(req);
+     if (!source) {
+@@ -731,10 +750,10 @@ int SrsRtmpConn::publishing(SrsSource* source)
+     }
+     srs_verbose("check publish_refer success.");
+ 
+-    if ((ret = http_hooks_on_publish()) != ERROR_SUCCESS) {
+-        srs_error("http hook on_publish failed. ret=%d", ret);
+-        return ret;
+-    }
++//    if ((ret = http_hooks_on_publish()) != ERROR_SUCCESS) {
++//        srs_error("http hook on_publish failed. ret=%d", ret);
++//        return ret;
++//    }
+ 
+     bool vhost_is_edge = _srs_config->get_vhost_is_edge(req->vhost);
+     if ((ret = acquire_publish(source, vhost_is_edge)) == ERROR_SUCCESS) {
+diff --git a/trunk/src/protocol/srs_rtmp_stack.hpp b/trunk/src/protocol/srs_rtmp_stack.hpp
+index db6d76f..c11c14e 100644
+--- a/trunk/src/protocol/srs_rtmp_stack.hpp
++++ b/trunk/src/protocol/srs_rtmp_stack.hpp
+@@ -560,6 +560,7 @@ public:
+     // the param in tcUrl(app).
+     std::string param;
+     // the stream in play/publish
++    std::string orig;
+     std::string stream;
+     // for play live stream,
+     // used to specified the stop when exceed the duration.

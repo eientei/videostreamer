@@ -1,0 +1,47 @@
+# Maintainer: Alexander Tumin <iamtakingiteasy@eiente.org>
+
+pkgname=srs
+pkgver=1.0r1.46.g9623c46
+pkgrel=1
+pkgdesc="A simple rtmp server"
+arch=('i686' 'x86_64')
+url="https://github.com/simple-rtmp-server/srs"
+license=('MIT')
+groups=()
+depends=('gcc-libs')
+makedepends=('git')
+source=("git+https://github.com/simple-rtmp-server/srs.git"
+	'build.patch'
+	'control.patch')
+sha256sums=('SKIP'
+	'b41257c4413a36f6a08fec05f834e333f3b46fbe2a6ed82edb7903d00954138a'
+	'9fb92b99d0343320dc426246e774fcfc8e11a2ea862db52e4165616606927c06')
+
+pkgver() {
+	cd "$srcdir/$pkgname"
+	git describe --always | sed "s/-/./g"
+}
+
+prepare() {
+        cd "$srcdir/$pkgname"
+	git checkout develop
+	patch -p1 < "$srcdir/build.patch"
+	patch -p1 < "$srcdir/control.patch"
+}
+
+build() {
+        cd "$srcdir/$pkgname/trunk"
+        CPPFLAGS="" ./configure --prefix=/usr
+        CPPFLAGS="" make
+}
+
+package() {
+        cd "$srcdir/$pkgname"
+
+	mkdir -p "$pkgdir/usr/bin"
+	cp trunk/objs/srs "$pkgdir/usr/bin/srs"
+
+        mkdir -p $pkgdir/usr/share/licenses/srs
+        cp LICENSE "$pkgdir/usr/share/licenses/srs/LICENSE" 
+}
+

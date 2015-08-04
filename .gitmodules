@@ -1,0 +1,9 @@
+[submodule "frontend/src/main/haxe/yagp"]
+	path = frontend/src/main/haxe/yagp
+	url = https://github.com/Yanrishatum/yagp.git
+[submodule "frontend/src/main/haxe/openfl"]
+	path = frontend/src/main/haxe/openfl
+	url = https://github.com/openfl/openfl
+[submodule "frontend/src/main/haxe/lime"]
+	path = frontend/src/main/haxe/lime
+	url = https://github.com/openfl/lime

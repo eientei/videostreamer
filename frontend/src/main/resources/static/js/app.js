@@ -139,8 +139,12 @@ angular.module('video', [
         templateUrl: 'html/play.html',
         controller: 'play',
         resolve: {
-            stream: ['$route', 'StreamService', function ($route, StreamService) {
-                return StreamService.load($route.current.params);
+            stream: ['$q', '$route', 'StreamService', function ($q, $route, StreamService) {
+                return $q(function (resolve, reject) {
+                    StreamService.promise.then(function () {
+                        StreamService.load($route.current.params).then(resolve, reject);
+                    });
+                });
             }]
         }
     }).otherwise({

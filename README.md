@@ -19,7 +19,10 @@ spring.datasource.driverClassName=org.postgresql.Driver
 spring.datasource.url=jdbc:postgresql://127.0.0.1/videostreamer
 spring.datasource.username=videostreamer
 spring.datasource.password=videostreamer
+videostreamer.domain=eientei.org
+videostreamer.smtpHost=eientei.org
 videostreamer.rtmpPrefix=rtmp://127.0.0.1
+videostreamer.captcha=true
 videostreamer.captcha.secret=yourReCaptchaPrivateKey
 videostreamer.captcha.public=yourReCaptchaPublicKey
 ```
@@ -49,26 +52,35 @@ rtmp {
             interleave off;
             sync 10ms;
             
-            on_publish http://127.0.0.1/nginx/check_access;
-            on_publish_done http://127.0.0.1/nginx/finish_stream;
+            on_publish http://127.0.0.1/backend/control/nginx/check_access;
+            on_publish_done http://127.0.0.1/backend/control/nginx/finish_stream;
         }
     }
 }
 server {
-  listen 127.0.0.1:80;
-  server_name 127.0.0.1;
-  location / {
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-Host $host;
-    proxy_set_header X-Forwarded-Server $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
+  listen *:80;
+  server_name video.eientei.org videodev.eientei.org;
+  
+        location / {
+            rewrite ^/.*$ /index.html break;
+            root   /home/http/video/static;
+        }
+        location ~ ^/(css|html|img|js|swf|favicon.ico|webjars) {
+            root   /home/http/video/static;
+        }
 
-    proxy_pass http://127.0.0.1:8080/;
-  }
+        location /backend {
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-Host $host;
+            proxy_set_header X-Forwarded-Server $host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+
+            proxy_pass http://127.0.0.1:8080/backend;
+        }	
 }
 ```

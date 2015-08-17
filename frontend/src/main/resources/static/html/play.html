@@ -5,8 +5,7 @@
 <script type="text/ng-template" id="Message.html">
     <div ng-class="{owner: message.owner}">
         <div id="anchor" ng-if="message.anchor"></div>
-        <a href="" class="pull-right" ng-click="messageref(message.id)">&gt;&gt;{{message.id}}</a>
-        <div style="clear: both"></div>
+        <a href="" class="marginleft pull-right" ng-click="messageref(message.id)">&gt;&gt;{{message.id}}</a>
         <div class="pull-right nowrap">
             {{ message.posted | sincify }}
             <img width="16" height="16" tooltip-placement="left" tooltip-append-to-body="true" tooltip="{{message.username}}" ng-init="userdata={hash: message.hash, name: message.username}" ng-src="{{message.remoteHash | identicon}}">

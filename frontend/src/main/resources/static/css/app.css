@@ -393,3 +393,7 @@ html, body, .fullscreen {
 .inlinechilds > *{
     display: inline-block;
 }
+
+.marginleft {
+    margin-left: 1em;
+}

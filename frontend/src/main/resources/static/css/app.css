@@ -48,7 +48,7 @@ form button[type=submit] {
     padding-right: 5px;
     margin-left: 5px;
     border-radius: 5px;
-    display: block;;
+    display: block;
 }
 .control > *:hover {
     background: #eee;

@@ -120,7 +120,7 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
             @Override
             public boolean matches(HttpServletRequest request) {
                 List<String> strings = Arrays.asList("GET", "HEAD", "OPTIONS", "TRACE");
-                return !strings.contains(request.getMethod()) && !request.getRequestURI().contains("/control/");
+                return !strings.contains(request.getMethod()) && !request.getRequestURI().contains("/control/") && !request.getRequestURI().contains("/chat/");
             }
         };
     }

@@ -13,7 +13,6 @@ public class StreamOwnDTO extends StreamDTO {
     private String remote;
     private boolean restricted;
 
-
     public StreamOwnDTO(Stream stream, ChatRoom chatRoom) {
         super(stream, chatRoom);
         this.token = stream.getToken();

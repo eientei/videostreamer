@@ -80,9 +80,12 @@ class VideoPlayer extends EventDispatcher {
     private var m_loadedImage : Bool;
     private var m_idleWidth : Float;
     private var m_idleHeight : Float;
+    private var m_stub : Bool;
 
-    public function new(videoUrl : String, buffer: Float, idleImageUrl : String) {
+    public function new(videoUrl : String, buffer: Float, idleImageUrl : String, stub : Bool) {
         super();
+
+        m_stub = stub;
 
         m_buffer = buffer;
         m_stage = Lib.current.stage;
@@ -102,7 +105,7 @@ class VideoPlayer extends EventDispatcher {
         m_loadedImage = false;
 
         m_idleOverlay = new Sprite();
-        m_idleOverlay.visible = true;
+        m_idleOverlay.visible = !m_stub;
         m_movieClip.addChild(m_idleOverlay);
 
 
@@ -133,17 +136,18 @@ class VideoPlayer extends EventDispatcher {
     }
 
     private function displayOnline() {
-        m_idleOverlay.visible = true;
-
+        ExternalInterface.call("flash_online");
     }
 
     private function displayOffline() {
-        m_idleOverlay.visible = false;
+        ExternalInterface.call("flash_offline");
+        /*
         if (m_accel) {
             //m_accelVideo.clear();
         } else {
             m_plainVideo.clear();
         }
+        */
     }
 
     private function initPersist() {
@@ -226,16 +230,20 @@ class VideoPlayer extends EventDispatcher {
         m_infoDigest.mouseEnabled = false;
         m_iconTop.addChild(m_infoDigest);
 
-        var offt = new haxe.Timer(1000);
+
+        var offt = new haxe.Timer(5000);
         offt.run = function() {
             if (!m_paused) {
                 if (m_stream.info.currentBytesPerSecond == 0) {
-                    displayOffline();
+                    if (!m_stub) {
+                        displayOffline();
+                    }
                 } else {
-                    displayOnline();
+                    //displayOnline();
                 }
             }
         };
+
 
         var tt:haxe.Timer = new haxe.Timer(1000);
         tt.run = function() {
@@ -360,12 +368,11 @@ class VideoPlayer extends EventDispatcher {
             case "NetStream.Play.Start":
                 //m_idleOverlay.visible = false;
                 if (!m_paused) {
-
                 }
             case "NetStream.Play.Stop":
                 //m_idleOverlay.visible = true;
                 if (!m_paused) {
-                    displayOffline();
+                    //displayOffline();
                 }
             case "NetConnection.Connect.Closed":
                 initNet();
@@ -389,8 +396,13 @@ class VideoPlayer extends EventDispatcher {
     }
 
     private function onMetaData(data : Dynamic) {
+        if (m_stub) {
+            displayOnline();
+            m_stream.pause();
+            return;
+        }
         m_connOk = true;
-        displayOnline();
+        //displayOnline();
         m_width = data.width;
         m_height = data.height;
         resizeAndCenter();

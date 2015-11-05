@@ -8,27 +8,34 @@ angular.module('video').directive('flashplayer', [function () {
         },
         restrict: 'A',
         link: function (scope, element, attr) {
-            var src = '<object style="flex-grow: 1" id="flashplayer" type="application/x-shockwave-flash" data="' + scope.src + '">'
+            var src_dir = '<object style="flex-grow: 1" id="flashplayer" type="application/x-shockwave-flash" data="' + scope.src + '">'
+                + '<param name="allowFullscreen" value="true">'
+                + '<param name="scale" value="noscale">'
+                + '<param name="bgcolor" value="#000000">'
+                + '<param name="wmode" value="direct">'
+                + '<param name="flashvars" value="' + scope.vars + '&stub=false">'
+                + '</object>';
+
+            var src_trans = '<object style="flex-grow: 1" id="flashplayer" type="application/x-shockwave-flash" data="' + scope.src + '">'
                 + '<param name="allowFullscreen" value="true">'
                 + '<param name="scale" value="noscale">'
                 + '<param name="bgcolor" value="#000000">'
                 + '<param name="wmode" value="transparent">'
-                + '<param name="flashvars" value="' + scope.vars + '">'
+                + '<param name="flashvars" value="' + scope.vars + '&stub=true">'
                 + '</object>';
-            var el = angular.element(src);
-            element.replaceWith(el);
+            var olddir = null;
+            var timeout = null;
+            scope.$on('flash', function (ev, dir) {
+                clearTimeout(timeout);
+                if (olddir != dir) {
+                    setTimeout(function () {
+                        element.children().remove();
+                        element.append(angular.element(dir ? src_dir : src_trans));
+                        olddir = dir;
+                    }, 1000);
+                }
+            });
+            element.append(angular.element(src_trans));
         }
     }
 }]);
-/*
-
-<div flashplayer="" vars="videoUrl={{config.rtmpPrefix}}/{{app}}/{{name}}&amp;buffer={{bufflen}}" src="/swf/yukkuplayer.swf"></div>
-
-
-    <param name="allowFullscreen" value="true">
-    <param name="scale" value="noscale">
-    <param name="bgcolor" value="#000000">
-    <param name="wmode" value="transparent">
-    <param name="flashvars" value="videoUrl={{config.rtmpPrefix}}/{{app}}/{{name}}&amp;buffer={{bufflen}}">
-    </object>
-    */

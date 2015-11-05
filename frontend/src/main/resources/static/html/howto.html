@@ -9,7 +9,8 @@
     <p>For windows -- it might be <a href="https://obsproject.com/">OBS (Open Broadcaster Streamer)</a></p>
 
     <h3>Configuring ffmpeg</h3>
-    <pre>ffmpeg  -f x11grab -s 1366x768 -i :0.0 -f pulse -ac 2 -i loopback.monitor -vcodec libx264 -tune zerolatency -preset ultrafast -pix_fmt yuv420p -s 1366x768 -ar 44100 -threads 0 -f flv "{{rtmpPrefix}}/live/yourprivatetoken"</pre>
+    <pre>ffmpeg -s 1366x768 -f x11grab -i :0.0 -f pulse -ac 2 -i yourcurrent.monitor -vcodec libx264 -tune zerolatency -preset ultrafast -pix_fmt yuv420p -ar 44100 -threads 0 -f flv "{{rtmpPrefix}}/live/yourprivatetoken"</pre>
+    <p>Where 1366x768 is your screen resolution and 'yourcurrent.monitor' is your pulseaudio sink monitor</p>
 
     <h3>Configuring OBS</h3>
     <pre>

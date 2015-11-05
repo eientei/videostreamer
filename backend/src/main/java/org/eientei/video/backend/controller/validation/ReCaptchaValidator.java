@@ -41,9 +41,11 @@ public class ReCaptchaValidator implements ConstraintValidator<ReCaptcha, String
         if (!captcha) {
             return true;
         }
+
         if (value == null || value.trim().isEmpty()) {
             return false;
         }
+
         MultiValueMap<String, String> data = new LinkedMultiValueMap<String, String>();
         data.add("secret", secret);
         data.add("response", value);

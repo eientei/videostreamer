@@ -1,6 +1,17 @@
 'use strict';
 
+var scopeGlobal = null;
+
+function flash_online() {
+    scopeGlobal.$broadcast('flash', true);
+}
+
+function flash_offline() {
+    scopeGlobal.$broadcast('flash', false);
+}
+
 angular.module('video').controller('play', ['$q', '$scope', '$routeParams', '$window', '$location', '$anchorScroll', 'TitleService', 'TyperService', function ($q, $scope, $routeParams, $window, $location, $anchorScroll, TitleService, TyperService) {
+    scopeGlobal = $scope;
     $scope.site = 'http://' + location.hostname + ((location.port == 80 || location.port == '') ? '' : ':' + location.port);
 
     $scope.app = $routeParams.app;

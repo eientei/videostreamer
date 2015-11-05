@@ -36,8 +36,9 @@ class Main {
 
         var parameters:Dynamic<String> = flash.Lib.current.loaderInfo.parameters;
         var videoUrl = parameters.videoUrl;
+        var stub = parameters.stub == "true";
         var buffer = Std.parseFloat(parameters.buffer);
         var idleImageUrl = parameters.idleImageUrl;
-        var player : VideoPlayer = new VideoPlayer(videoUrl, buffer, idleImageUrl);
+        var player : VideoPlayer = new VideoPlayer(videoUrl, buffer, idleImageUrl, stub);
     }
 }

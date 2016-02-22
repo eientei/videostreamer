@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.view.RedirectView;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+
 /**
  * User: iamtakingiteasy
  * Date: 2015-05-23
@@ -24,12 +27,12 @@ public class Nginx {
     private StreamService streamService;
 
     @RequestMapping("check_access")
-    public RedirectView checkAccess(Model model, @RequestParam("name") String name, @RequestParam("addr") String addr) throws TokenNotFound {
+    public RedirectView checkAccess(Model model, @RequestParam("name") String name, @RequestParam("addr") String addr) throws TokenNotFound, UnsupportedEncodingException {
         Stream stream = streamService.getStreamByToken(name);
         if (stream != null) {
             streamService.updateRemote(stream, addr);
             model.asMap().clear();
-            return new RedirectView(stream.getName(), false, false, false);
+            return new RedirectView(URLEncoder.encode(stream.getName(), "UTF-8").replace("_", "_5F").replace("+", "_20").replace("%", "_"), false, false, false);
         }
         throw new TokenNotFound();
     }

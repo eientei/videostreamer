@@ -19,7 +19,7 @@
 <div class="playercontainer">
     <div class="player" ng-if="showvideo" >
         <div style="background-image: url('{{stream.image}}'); flex-grow: 1; background-size: cover; display: flex">
-            <div flashplayer="" vars="videoUrl={{config.rtmpPrefix}}/{{app}}/{{name}}&amp;buffer={{bufflen}}&idleImageUrl={{site}}/img/spinner.gif" src="/swf/yukkuplayer.swf"></div>
+            <div flashplayer="" vars="videoUrl={{config.rtmpPrefix}}/{{app}}/{{name | escape}}&amp;buffer={{bufflen}}&idleImageUrl={{site}}/img/spinner.gif" src="/swf/yukkuplayer.swf"></div>
         </div>
         <div resize="vert" class="verticaldragger drag"></div>
     </div>

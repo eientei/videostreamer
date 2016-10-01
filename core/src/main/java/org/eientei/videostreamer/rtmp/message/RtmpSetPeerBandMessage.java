@@ -39,4 +39,9 @@ public class RtmpSetPeerBandMessage extends RtmpMessage {
         data.writeInt((int) getSize());
         data.writeByte(getType());
     }
+
+    @Override
+    protected RtmpMessage dupInternal() {
+        return new RtmpSetPeerBandMessage(size, type);
+    }
 }

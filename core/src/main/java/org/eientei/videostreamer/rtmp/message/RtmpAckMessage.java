@@ -33,4 +33,9 @@ public class RtmpAckMessage extends RtmpMessage {
     public void serialize(ByteBuf data) {
         data.writeInt((int) getSize());
     }
+
+    @Override
+    public RtmpMessage dupInternal() {
+        return new RtmpAckMessage(size);
+    }
 }

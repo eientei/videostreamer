@@ -3,19 +3,29 @@ package org.eientei.videostreamer.rtmp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.ReplayingDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 /**
  * Created by Alexander Tumin on 2016-09-24
  */
-public class RtmpHandshakeHandler extends ChannelInboundHandlerAdapter {
+public class RtmpHandshakeHandler extends ReplayingDecoder<RtmpHandshakeHandler.Stage>{
+
+    public enum Stage {
+        STAGE0,
+        STAGE1,
+        STAGE2
+    }
+
+    private Logger log = LoggerFactory.getLogger(RtmpHandshakeHandler.class);
+    private final static int HANDSHAKE_DIGEST_LENGTH = 32;
     private final static int HANDSHAKE_LENGTH = 1536;
     private final static byte[] CLIENT_KEY = {
             'G', 'e', 'n', 'u', 'i', 'n', 'e', ' ', 'A', 'd', 'o', 'b', 'e', ' ',
@@ -51,171 +61,131 @@ public class RtmpHandshakeHandler extends ChannelInboundHandlerAdapter {
             (byte) 0x0D, (byte) 0x0E, (byte) 0x0A, (byte) 0x0D
     };
 
-    private final Logger log = LoggerFactory.getLogger(RtmpHandshakeHandler.class);
-    private final ByteBuf buf = Unpooled.buffer(HANDSHAKE_LENGTH+1, HANDSHAKE_LENGTH+1);
-    private final Object mutex = new Object();
-    private boolean complete;
-    private int stage = 0;
+    private final byte[] buf = new byte[HANDSHAKE_LENGTH];
+    private long epoch = 0;
+
+    public RtmpHandshakeHandler() {
+        super(Stage.STAGE0);
+    }
+
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object raw) throws Exception {
-        if (!(raw instanceof ByteBuf)) {
-            ctx.fireChannelRead(raw);
-            return;
-        }
-
-        ByteBuf msg = (ByteBuf) raw;
-
-        synchronized (mutex) {
-            if (complete) {
-                return;
-            }
-
-            try {
-                switch (stage) {
-                    case 0:
-                        stage0(ctx, msg);
-                        break;
-                    case 2:
-                        stage2(ctx, msg);
-                        break;
-                }
-                if (!complete) {
-                    msg.release();
-                }
-            } catch (Exception e) {
-                log.error("Error during handshake", e);
-                complete = true;
-                ctx.close();
-                msg.release();
-            }
+    protected void decode(ChannelHandlerContext ctx, ByteBuf bmsg, List<Object> out) throws Exception {
+        switch (state()) {
+            case STAGE0:
+                stage0(ctx, bmsg);
+                break;
+            case STAGE1:
+                stage1(ctx, bmsg);
+                break;
+            case STAGE2:
+                stage2(ctx, bmsg);
+                break;
         }
     }
 
-    /* pre-condition: connection was opened for handshaking | handshake data is being read
-     * post-condition: handshake data was read
-     */
-    private void stage0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-        if (!readfull(msg)) {
-            return;
-        }
-
-        // terminator
-        stage1(ctx, msg);
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        RtmpClientContext client = ctx.channel().attr(RtmpServer.RTMP_CLIENT_CONTEXT).get();;
+        log.info("Client {} failed handshake", client.getId());
+        ctx.close();
     }
 
-    /* pre-condition: handshake data was read
-     * post-condition: handshake reply was written
-     */
-    private void stage1(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-        if (buf.getByte(0) != 0x03) {
-            throw new Exception("First byte of C0 was not 0x03");
-        }
-
-        byte[] data = new byte[HANDSHAKE_LENGTH];
-        buf.getBytes(1, data);
-        int roffs = findDigest(data, 772);
-        if (roffs == -1) {
-            roffs = findDigest(data, 8);
-            if (roffs == -1) {
-                throw new Exception("Digest was not found in C0");
-            }
-        }
-
-        byte[] digest = makeDigest(Arrays.copyOfRange(data, roffs, roffs+32), SERVER_KEY, -1);
-        System.arraycopy(SERVER_VERSION, 0, data, 4, SERVER_VERSION.length);
-        byte[] random = new byte[data.length-8];
-        Random randomgen = new Random();
-        randomgen.nextBytes(random);
-        System.arraycopy(random, 0, data, 8, random.length);
-        int woffs = 0;
-        for (int n = 8; n < 12; n++) {
-            woffs += unsign(data[n]);
-        }
-
-        woffs = (woffs % 728) + 12;
-        byte[] intermdigest = makeDigest(data, SERVER_KEY_TEXT, woffs);
-        System.arraycopy(intermdigest, 0, data, woffs, intermdigest.length);
-
-        buf.retain();
-        buf.resetReaderIndex();
-        buf.resetWriterIndex();
-        buf.writeByte(0x03);
-        buf.writeBytes(data);
-        ctx.writeAndFlush(buf).sync();
-
-        randomgen.nextBytes(data);
-        System.arraycopy(makeDigest(data, digest, HANDSHAKE_LENGTH-32), 0, data, HANDSHAKE_LENGTH-32, 32);
-
-        buf.retain();
-        buf.resetReaderIndex();
-        buf.resetWriterIndex();
-        buf.writeByte(0x03);
-        buf.writeBytes(data);
-        buf.skipBytes(1);
-        ctx.writeAndFlush(buf).sync();
-
-        buf.resetWriterIndex();
-        buf.writeByte(0x03);
-
-        // terminator
-        stage2(ctx, msg);
-    }
-
-    /* pre-condition: handshake reply is written | handhshake re-reply is being read
-     * post-condition: handhsake re-reply was read and verified, hadshake is fully complete,
-     *                 handshake handler was removed from pipeline
-     */
-    private void stage2(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-        stage = 2;
-        if (!readfull(msg)) {
-            return;
-        }
-
-        // terminator
-        complete = true;
-        buf.release();
-        msg.discardReadBytes();
-        ctx.fireChannelRead(msg);
+    private void stage2(ChannelHandlerContext ctx, ByteBuf bmsg) {
+        bmsg.readBytes(buf);
+        RtmpClientContext client = ctx.channel().attr(RtmpServer.RTMP_CLIENT_CONTEXT).get();
+        log.info("Client {} connected", client.getId());
         ctx.pipeline().remove(this);
-        ctx.channel().attr(RtmpServer.RTMP_CONNECTION_CONTEXT).get().open();
     }
 
-    private boolean readfull(ByteBuf msg) {
-        msg.readBytes(buf, Math.min(msg.readableBytes(), buf.writableBytes()));
-        return !buf.isWritable();
+    private void stage1(ChannelHandlerContext ctx, ByteBuf bmsg) throws Exception {
+        epoch = bmsg.getUnsignedInt(0);
+        bmsg.readBytes(buf);
+
+        int offset = findDigest(772, CLIENT_KEY_TEXT);
+        if (offset == -1) {
+            offset = findDigest(8, CLIENT_KEY_TEXT);
+        }
+
+        byte[] digest = null;
+        byte[] oldbuf = null;
+        if (offset != -1) {
+            byte[] slice = Arrays.copyOfRange(buf, offset, offset + HANDSHAKE_DIGEST_LENGTH);
+            digest = makeDigest(slice, -1, SERVER_KEY);
+        } else {
+            oldbuf = Arrays.copyOf(buf, buf.length);
+        }
+
+
+        for (int i = 0; i < 4; i++) {
+            buf[i] = 0;
+        }
+        System.arraycopy(SERVER_VERSION, 0, buf, 4, 4);
+        randomize(buf, 8);
+        writeDigest(buf, SERVER_KEY_TEXT);
+
+        ctx.writeAndFlush(Unpooled.wrappedBuffer(new byte[] { 0x03 })).sync();
+        ctx.writeAndFlush(Unpooled.wrappedBuffer(buf)).sync();
+
+        if (digest != null) {
+            randomize(buf, 8);
+            digest = makeDigest(buf, HANDSHAKE_LENGTH - HANDSHAKE_DIGEST_LENGTH, digest);
+            System.arraycopy(digest, 0, buf, HANDSHAKE_LENGTH - HANDSHAKE_DIGEST_LENGTH, HANDSHAKE_DIGEST_LENGTH);
+            ctx.writeAndFlush(Unpooled.wrappedBuffer(buf)).sync();
+        }
+
+        if (oldbuf != null) {
+            ctx.writeAndFlush(Unpooled.wrappedBuffer(oldbuf)).sync();
+        }
+
+        state(Stage.STAGE2);
     }
 
+    private void randomize(byte[] buf, int from) {
+        Random random = new Random();
+        for (int i = from; i < buf.length; i++) {
+            buf[i] = (byte) random.nextInt(8);
+        }
+    }
 
-    private int findDigest(byte[] data, int mod) throws Exception {
+    private void writeDigest(byte[] buf, byte[] key) throws Exception {
+        int offset = 0;
+        for (int n = 8; n < 12; n++) {
+            offset += getUnsignedByte(buf, n);
+        }
+        offset = (offset % 728) + 12;
+        byte[] digest = makeDigest(buf, offset, key);
+        System.arraycopy(digest, 0, buf, offset, HANDSHAKE_DIGEST_LENGTH);
+    }
+
+    private int findDigest(int base, byte[] peerKey) throws Exception {
         int offset = 0;
         for (int n = 0; n < 4; n++) {
-            offset += unsign(data[mod+n]);
+            offset += getUnsignedByte(buf, base+n);
         }
 
-        offset = (offset % 728) + mod + 4;
-        byte[] digest = makeDigest(data, CLIENT_KEY_TEXT, offset);
-        byte[] range = Arrays.copyOfRange(data, offset, offset+32);
-        if (!Arrays.equals(range, digest)) {
-            offset = -1;
+        offset = (offset % 728) + base + 4;
+        byte[] digest = makeDigest(buf, offset, peerKey);
+        byte[] reference = new byte[HANDSHAKE_DIGEST_LENGTH];
+        System.arraycopy(buf, offset, reference, 0, HANDSHAKE_DIGEST_LENGTH);
+        if (Arrays.equals(digest, reference)) {
+            return offset;
         }
-        return offset;
+        return -1;
     }
 
-    private int unsign(byte b) {
-        return ((int)b << 24) >>> 24;
+    private int getUnsignedByte(byte[] buf, int i) {
+        return buf[i] & 0xFF;
     }
 
-    private byte[] makeDigest(byte[] data, byte[] key, int offset) throws Exception {
+    private byte[] makeDigest(byte[] data, int offset, byte[] peerKey) throws Exception {
         Mac sha256hmac = Mac.getInstance("HmacSHA256");
-        sha256hmac.init(new SecretKeySpec(key, "HmacSHA256"));
-        if (offset >= 0 && offset < data.length) {
+        sha256hmac.init(new SecretKeySpec(peerKey, "HmacSHA256"));
+        if (offset >= 0 && offset <= HANDSHAKE_LENGTH) {
             if (offset != 0) {
-                byte[] bs = Arrays.copyOfRange(data, 0, offset);
-                sha256hmac.update(bs);
+                sha256hmac.update(data, 0, offset);
             }
-            if (data.length != offset + 32) {
-                byte[] bs = Arrays.copyOfRange(data, offset+32, data.length);
-                sha256hmac.update(bs);
+            if (offset + HANDSHAKE_DIGEST_LENGTH != HANDSHAKE_LENGTH) {
+                sha256hmac.update(data, offset + HANDSHAKE_DIGEST_LENGTH, buf.length - offset - HANDSHAKE_DIGEST_LENGTH);
             }
         } else {
             sha256hmac.update(data);
@@ -223,4 +193,13 @@ public class RtmpHandshakeHandler extends ChannelInboundHandlerAdapter {
         return sha256hmac.doFinal();
     }
 
+    private void stage0(ChannelHandlerContext ctx, ByteBuf bmsg) throws Exception {
+        int first = bmsg.readUnsignedByte();
+        if (first != 0x03) {
+            throw new Exception("First byte of C0 was not 0x03, but was " + first);
+        }
+        RtmpClientContext client = ctx.channel().attr(RtmpServer.RTMP_CLIENT_CONTEXT).get();
+        log.info("Client {} started handshake", client.getId());
+        state(Stage.STAGE1);
+    }
 }

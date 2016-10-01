@@ -13,7 +13,7 @@ public class RtmpProperties {
 
     @Min(0)
     @Max(65536)
-    private int port = 1934;
+    private int port = 1935;
 
     public boolean isEnabled() {
         return enabled;

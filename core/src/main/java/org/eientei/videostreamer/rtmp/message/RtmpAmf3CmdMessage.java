@@ -1,5 +1,6 @@
 package org.eientei.videostreamer.rtmp.message;
 
+import org.eientei.videostreamer.rtmp.RtmpMessage;
 import org.eientei.videostreamer.rtmp.RtmpMessageParser;
 import org.eientei.videostreamer.rtmp.RtmpUnchunkedMessage;
 
@@ -18,5 +19,10 @@ public class RtmpAmf3CmdMessage extends RtmpAmfCmdMessage {
     };
     public RtmpAmf3CmdMessage(List<Object> values) {
         super(values, Type.AMF3_CMD);
+    }
+
+    @Override
+    protected RtmpMessage dupInternal() {
+        return new RtmpAmf3CmdMessage(getValues());
     }
 }

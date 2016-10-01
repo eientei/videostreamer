@@ -4,6 +4,7 @@ package org.eientei.videostreamer.rtmp;
  * Created by Alexander Tumin on 2016-09-24
  */
 public class RtmpHeader {
+
     public enum Size {
         FULL(0),
         MEDIUM(1),
@@ -33,12 +34,22 @@ public class RtmpHeader {
     private long timestamp;
     private int length;
     private long streamid;
+    private Size forceSize = null;
+    private long timeDiff;
+
+    public void setTimeDiff(long timeDiff) {
+        this.timeDiff = timeDiff;
+    }
+
+    public long getTimeDiff() {
+        return timeDiff;
+    }
 
     public RtmpHeader(int chunkid) {
         this.chunkid = chunkid;
     }
 
-    public RtmpHeader(int chunkid, int streamid, RtmpMessage.Type type) {
+    public RtmpHeader(int chunkid, long streamid, RtmpMessage.Type type) {
         this.chunkid = chunkid;
         this.type = type;
         this.streamid = streamid;
@@ -50,6 +61,7 @@ public class RtmpHeader {
         this.length = header.getLength();
         this.type = header.getType();
         this.streamid = header.getStreamid();
+        this.timeDiff = header.getTimeDiff();
     }
 
     public int getChunkid() {
@@ -90,5 +102,18 @@ public class RtmpHeader {
 
     public void setStreamid(long streamid) {
         this.streamid = streamid;
+    }
+
+    public Size getForceSize() {
+        return forceSize;
+    }
+
+    public void setForceSize(Size forceSize) {
+        this.forceSize = forceSize;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + timestamp + "] <" + chunkid + "," + streamid + "> " + type + " " + length;
     }
 }

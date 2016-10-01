@@ -22,4 +22,9 @@ public class RtmpNullMessage extends RtmpMessage {
     @Override
     public void serialize(ByteBuf buf) {
     }
+
+    @Override
+    protected RtmpMessage dupInternal() {
+        return new RtmpNullMessage();
+    }
 }

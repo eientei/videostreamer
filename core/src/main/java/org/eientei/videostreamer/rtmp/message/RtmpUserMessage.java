@@ -54,7 +54,7 @@ public class RtmpUserMessage extends RtmpMessage {
     private final long second;
 
     public RtmpUserMessage(Event event, long first, long second) {
-        super(0, 0, Type.USER);
+        super(2, 0, Type.USER);
         this.event = event;
         this.first = first;
         this.second = second;
@@ -76,6 +76,13 @@ public class RtmpUserMessage extends RtmpMessage {
     public void serialize(ByteBuf data) {
         data.writeShort(getEvent().getValue());
         data.writeInt((int) getFirst());
-        data.writeInt((int) getSecond());
+        if (event == Event.SET_BUFFER_LENGTH) {
+            data.writeInt((int) getSecond());
+        }
+    }
+
+    @Override
+    protected RtmpMessage dupInternal() {
+        return new RtmpUserMessage(event, first, second);
     }
 }

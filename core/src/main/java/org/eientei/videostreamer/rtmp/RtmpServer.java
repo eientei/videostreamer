@@ -25,15 +25,16 @@ import javax.annotation.PostConstruct;
 public class RtmpServer implements Runnable {
     private Logger log = LoggerFactory.getLogger(RtmpServer.class);
     private final RtmpProperties rtmp;
-    public final static AttributeKey<RtmpClientContext> RTMP_CONNECTION_CONTEXT = AttributeKey.valueOf("rtmp_connection_context");
+    private final RtmpServerContext serverContext;
     public final static int RTMP_CHUNK_MAX = 65599;
+    public final static AttributeKey<RtmpClientContext> RTMP_CLIENT_CONTEXT = AttributeKey.valueOf("rtmp_client_context");
+    public final static AttributeKey<RtmpServerContext> RTMP_SERVER_CONTEXT = AttributeKey.valueOf("rtmp_server_context");
+    public final static AttributeKey<RtmpStreamContext> RTMP_STREAM_CONTEXT = AttributeKey.valueOf("rtmp_stream_context");
 
     @Autowired
-    private RtmpServerContext context;
-
-    @Autowired
-    public RtmpServer(VideostreamerProperties properties) {
+    public RtmpServer(VideostreamerProperties properties, RtmpServerContext context) {
         this.rtmp = properties.getRtmp();
+        this.serverContext = context;
     }
 
     @PostConstruct
@@ -53,8 +54,8 @@ public class RtmpServer implements Runnable {
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
-                            RtmpClientContext connectionContext = new RtmpClientContext(socketChannel, context);
-                            socketChannel.attr(RTMP_CONNECTION_CONTEXT).set(connectionContext);
+                            socketChannel.attr(RTMP_SERVER_CONTEXT).set(serverContext);
+                            socketChannel.attr(RTMP_CLIENT_CONTEXT).set(new RtmpClientContext(socketChannel));
                             socketChannel.pipeline().addLast(new RtmpHandshakeHandler());
                             socketChannel.pipeline().addLast(new RtmpMessageCodec());
                             socketChannel.pipeline().addLast(new RtmpMessageDecoder());

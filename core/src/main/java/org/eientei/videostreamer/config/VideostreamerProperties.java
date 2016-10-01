@@ -1,6 +1,7 @@
 package org.eientei.videostreamer.config;
 
 import org.eientei.videostreamer.config.crypto.CryptoProperties;
+import org.eientei.videostreamer.config.htlm5.Html5Properties;
 import org.eientei.videostreamer.config.mail.MailProperties;
 import org.eientei.videostreamer.config.mvc.MvcProperties;
 import org.eientei.videostreamer.config.rtmp.RtmpProperties;
@@ -22,6 +23,10 @@ public class VideostreamerProperties {
 
     @Valid
     private MvcProperties mvc;
+
+    @Valid
+    @NotNull
+    private Html5Properties html5;
 
     @Valid
     @NotNull
@@ -49,6 +54,14 @@ public class VideostreamerProperties {
 
     public void setMvc(MvcProperties mvc) {
         this.mvc = mvc;
+    }
+
+    public Html5Properties getHtml5() {
+        return html5;
+    }
+
+    public void setHtml5(Html5Properties html5) {
+        this.html5 = html5;
     }
 
     public RtmpProperties getRtmp() {

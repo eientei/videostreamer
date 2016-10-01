@@ -28,7 +28,7 @@ public class RtmpAmfMetaMessage extends RtmpMessage {
     private final List<Object> values;
 
     public RtmpAmfMetaMessage(List<Object> values) {
-        super(0, 0, Type.AMF0_META);
+        super(5, 1, Type.AMF0_META);
         this.values = values;
     }
 
@@ -41,5 +41,10 @@ public class RtmpAmfMetaMessage extends RtmpMessage {
         for (Object obj : getValues()) {
             Amf.serialize(data, obj);
         }
+    }
+
+    @Override
+    protected RtmpMessage dupInternal() {
+        return new RtmpAmfMetaMessage(values);
     }
 }

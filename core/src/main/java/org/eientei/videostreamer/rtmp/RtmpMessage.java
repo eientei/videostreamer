@@ -60,7 +60,7 @@ public abstract class RtmpMessage {
 
     private RtmpHeader header;
 
-    public RtmpMessage(int chunkid, int streamId, Type type) {
+    public RtmpMessage(int chunkid, long streamId, Type type) {
         if (chunkid < 2) {
             chunkid = 2;
         }
@@ -72,5 +72,17 @@ public abstract class RtmpMessage {
     }
 
     public abstract void serialize(ByteBuf buf);
+    protected abstract RtmpMessage dupInternal();
 
+    public RtmpMessage dup(long offsetTime) {
+        RtmpMessage msg = dupInternal();
+        msg.getHeader().setFrom(getHeader());
+        msg.getHeader().setTimestamp(offsetTime);
+        return msg;
+    }
+
+    @Override
+    public String toString() {
+        return header.toString();
+    }
 }

@@ -1,77 +1,36 @@
 package org.eientei.videostreamer.rtmp;
 
 import io.netty.channel.socket.SocketChannel;
+import org.eientei.videostreamer.rtmp.message.RtmpVideoMessage;
 
 /**
  * Created by Alexander Tumin on 2016-09-24
  */
-public class RtmpClientContext implements RtmpStreamClient {
+public class RtmpClientContext implements RtmpClient {
     private final SocketChannel socket;
-    private final RtmpServerContext context;
-    private RtmpStream stream;
-    private boolean bootstrapped = false;
-    private boolean bootstrapping = false;
 
-    public RtmpClientContext(SocketChannel socket, RtmpServerContext context) {
+    public RtmpClientContext(SocketChannel socket) {
         this.socket = socket;
-        this.context = context;
-    }
-
-    public void open() {
-        context.connect(this);
-    }
-
-    public void close() {
-        if (stream != null) {
-            if (stream.getSource().equals(this)) {
-                stream.setSource(null);
-            } else {
-                stream.getClients().remove(this);
-            }
-        }
-        context.disconnect(this);
     }
 
     public SocketChannel getSocket() {
         return socket;
     }
 
-    public String getId() {
-        return socket.id().asLongText();
-    }
-
-    public boolean publish(String streamName) {
-        stream = context.acquireStream(streamName);
-        if (stream.getSource() != null) {
-            return false;
+    @Override
+    public void accept(RtmpMessage message) {
+        if (message instanceof RtmpVideoMessage) {
+            ((RtmpVideoMessage) message).getData();
         }
-
-        stream.setSource(this);
-        return true;
-    }
-
-    public boolean play(String streamName) {
-        stream = context.acquireStream(streamName);
-        stream.getClients().add(this);
-        return true;
-    }
-
-    public RtmpStream getStream() {
-        return stream;
-    }
-
-    public synchronized void bootstrap() {
-        bootstrapping = true;
-        stream.bootstrap(this);
-        bootstrapping = false;
-        bootstrapped = true;
+        socket.writeAndFlush(message);
     }
 
     @Override
-    public void accept(RtmpMessage message) {
-        if (!bootstrapped && !bootstrapping) {
-            return;
-        }
-        socket.writeAndFlush(message);
+    public void init(String streamName) {
+
+    }
+
+    public String getId() {
+        return socket.id().asShortText();
     }
 }

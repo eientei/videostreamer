@@ -54,8 +54,11 @@ public class RtmpMessageDecoder extends ReplayingDecoder<RtmpMessageDecoder.Stat
                 ctx.writeAndFlush(new RtmpAckMessage(ackbytes));
                 ackbytes = 0;
             }
+            long last = template.getLastTime();
             RtmpMessage message = template.getCurrent().getHeader().getType().getParser().parse(template.getCurrent());
             message.getHeader().setFrom(template.getCurrent().getHeader());
+            template.setLastTime(message.getHeader().getTimestamp());
+            message.getHeader().setTimeDiff(message.getHeader().getTimestamp() - last);
             earlyMessageHandle(message);
             out.add(message);
             template.reset();
@@ -112,10 +115,5 @@ public class RtmpMessageDecoder extends ReplayingDecoder<RtmpMessageDecoder.Stat
                 return 64 + in.readUnsignedShortLE();
         }
         return chunkid;
-    }
-
-    @Override
-    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-        ctx.channel().attr(RtmpServer.RTMP_CONNECTION_CONTEXT).get().close();
     }
 }

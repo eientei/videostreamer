@@ -9,6 +9,7 @@ public class RtmpMessageAssembler {
     private RtmpUnchunkedMessage current;
     private RtmpHeader header;
     private long timeDiff = 0;
+    private long lastTime = 0;
 
 
     public RtmpMessageAssembler(int chunkid) {
@@ -58,5 +59,13 @@ public class RtmpMessageAssembler {
 
     public RtmpUnchunkedMessage getCurrent() {
         return current;
+    }
+
+    public long getLastTime() {
+        return lastTime;
+    }
+
+    public void setLastTime(long lastTime) {
+        this.lastTime = lastTime;
     }
 }

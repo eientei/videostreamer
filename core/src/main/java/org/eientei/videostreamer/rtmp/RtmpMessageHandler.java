@@ -8,6 +8,7 @@ import org.eientei.videostreamer.rtmp.message.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,40 +20,52 @@ public class RtmpMessageHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (!(msg instanceof RtmpMessage)) {
-            return;
-        }
-        RtmpClientContext connctx = ctx.channel().attr(RtmpServer.RTMP_CONNECTION_CONTEXT).get();
         RtmpMessage message = (RtmpMessage) msg;
+
         if (message instanceof RtmpAmfCmdMessage) {
-            handleAmfCmd(connctx, (RtmpAmfCmdMessage)msg);
-        } else if (message instanceof RtmpAmfMetaMessage) {
-            handleBroadcast(connctx, message);
-        } else if (message instanceof RtmpUserMessage) {
-            handleUser(connctx, (RtmpUserMessage)message);
-        } else if (message instanceof RtmpAudioMessage) {
-            handleBroadcast(connctx, message);
-        } else if (message instanceof RtmpVideoMessage) {
-            handleBroadcast(connctx, message);
+            handleCmd(ctx, (RtmpAmfCmdMessage)message);
+        } else if (message instanceof RtmpAmfMetaMessage
+                || message instanceof RtmpAudioMessage
+                || message instanceof RtmpVideoMessage) {
+            handleBroadcast(ctx, message);
         }
     }
 
-    private void handleBroadcast(RtmpClientContext connctx, RtmpMessage message) {
-        connctx.getStream().broadcast(message);
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        RtmpClientContext client = ctx.channel().attr(RtmpServer.RTMP_CLIENT_CONTEXT).get();
+        RtmpStreamContext stream = ctx.channel().attr(RtmpServer.RTMP_STREAM_CONTEXT).get();
+        if (stream != null) {
+            stream.unpublish(client);
+            stream.unsubscribe(client);
+        }
+        ctx.close();
+        if (!(cause instanceof IOException)) {
+            log.error("", cause);
+        }
     }
 
-    private void handleUser(RtmpClientContext connctx, RtmpUserMessage message) {
-
+    @Override
+    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+        RtmpClientContext client = ctx.channel().attr(RtmpServer.RTMP_CLIENT_CONTEXT).get();
+        RtmpStreamContext stream = ctx.channel().attr(RtmpServer.RTMP_STREAM_CONTEXT).get();
+        if (stream != null) {
+            stream.unpublish(client);
+            stream.unsubscribe(client);
+        }
+        log.info("Client {} disconnected", client.getId());
     }
 
-
-    private void handleAmfCmd(RtmpClientContext connctx, RtmpAmfCmdMessage msg) {
-        String name = (String) msg.getValues().get(0);
+    private void handleCmd(ChannelHandlerContext ctx, RtmpAmfCmdMessage message) throws Exception {
+        RtmpServerContext server = ctx.channel().attr(RtmpServer.RTMP_SERVER_CONTEXT).get();
+        RtmpClientContext client = ctx.channel().attr(RtmpServer.RTMP_CLIENT_CONTEXT).get();
+        String name = (String) message.getValues().get(0);
+        log.info("Client {} command {}", client.getId(), name);
         if (name.equals("connect")) {
-            double serial = (double) msg.getValues().get(1);
-            connctx.getSocket().writeAndFlush(new RtmpWinackMessage(5000000));
-            connctx.getSocket().writeAndFlush(new RtmpSetPeerBandMessage(5000000, 2));
-            connctx.getSocket().writeAndFlush(new RtmpSetChunkSizeMessage(4096));
+            double serial = (double) message.getValues().get(1);
+            client.accept(new RtmpWinackMessage(5000000));
+            client.accept(new RtmpSetPeerBandMessage(5000000, 2));
+            client.accept(new RtmpSetChunkSizeMessage(2048));
 
             List<Object> values = new ArrayList<>();
             values.add("_result");
@@ -67,13 +80,26 @@ public class RtmpMessageHandler extends ChannelInboundHandlerAdapter {
                     .put("description", "Connection succeeded.")
                     .put("objectEncoding", 3.0)
                     .build()));
-            connctx.getSocket().writeAndFlush(new RtmpAmf0CmdMessage(values));
+            RtmpAmf0CmdMessage cmd = new RtmpAmf0CmdMessage(values);
+            cmd.getHeader().setChunkid(3);
+            cmd.getHeader().setStreamid(0);
+            client.accept(cmd);
+        } else if (name.equals("createStream")) {
+            double serial = (double) message.getValues().get(1);
+            List<Object> values = new ArrayList<>();
+            values.add("_result");
+            values.add(serial);
+            values.add(null);
+            values.add(1.0);
+            RtmpAmf0CmdMessage cmd = new RtmpAmf0CmdMessage(values);
+            cmd.getHeader().setChunkid(3);
+            cmd.getHeader().setStreamid(0);
+            client.accept(cmd);
         } else if (name.equals("publish")) {
-            String streamName = (String) msg.getValues().get(3);
-            if (!connctx.publish(streamName)) {
-                connctx.getSocket().close();
-                return;
-            }
+            String streamName = (String) message.getValues().get(3);
+            RtmpStreamContext stream = server.getStream(streamName);
+            ctx.channel().attr(RtmpServer.RTMP_STREAM_CONTEXT).set(stream);
+            stream.publish(client);
 
             List<Object> values = new ArrayList<>();
             values.add("onStatus");
@@ -85,46 +111,25 @@ public class RtmpMessageHandler extends ChannelInboundHandlerAdapter {
                     .put("description", "Start publising.")
                     .build()));
             RtmpAmf0CmdMessage cmd = new RtmpAmf0CmdMessage(values);
-            //cmd.getHeader().setChunkid(5);
-            //cmd.getHeader().setStreamid(1); // ?
-            connctx.getSocket().writeAndFlush(cmd);
+            cmd.getHeader().setChunkid(5);
+            cmd.getHeader().setStreamid(0);
+            client.accept(cmd);
         } else if (name.equals("play")) {
-            String streamName = (String) msg.getValues().get(3);
-            if (!connctx.play(streamName)) {
-                return;
-            }
-            List<Object> values = new ArrayList<>();
-            values.add("onStatus");
-            values.add(0.0);
-            values.add(null);
-            values.add(Amf.makeObject(ImmutableMap.builder()
-                    .put("level", "status")
-                    .put("code", "NetStream.Play.Start")
-                    .put("description", "Start live.")
-                    .build()));
-            RtmpAmf0CmdMessage cmd = new RtmpAmf0CmdMessage(values);
-            //cmd.getHeader().setChunkid(5);
-            //cmd.getHeader().setStreamid(1);
-            connctx.getSocket().writeAndFlush(cmd);
+            String streamName = (String) message.getValues().get(3);
+            RtmpStreamContext stream = server.getStream(streamName);
+            ctx.channel().attr(RtmpServer.RTMP_STREAM_CONTEXT).set(stream);
+            stream.subscribe(client);
+        }
+    }
 
-            List<Object> metavalues = new ArrayList<>();
-            metavalues.add("|RtmpSampleAccess");
-            metavalues.add(true);
-            metavalues.add(true);
-            RtmpAmfMetaMessage meta = new RtmpAmfMetaMessage(metavalues);
-            //meta.getHeader().setChunkid(5);
-            //meta.getHeader().setChunkid(1);
-            connctx.getSocket().writeAndFlush(meta);
-
-            connctx.bootstrap();
-        } else if (name.equals("createStream")) {
-            double serial = (double) msg.getValues().get(1);
-            List<Object> values = new ArrayList<>();
-            values.add("_result");
-            values.add(serial);
-            values.add(null);
-            values.add(1.0);
-            connctx.getSocket().writeAndFlush(new RtmpAmf0CmdMessage(values));
+    private void handleBroadcast(ChannelHandlerContext ctx, RtmpMessage message) {
+        RtmpStreamContext stream = ctx.channel().attr(RtmpServer.RTMP_STREAM_CONTEXT).get();
+        if (message instanceof  RtmpAmfMetaMessage) {
+            stream.broadcastMetadata((RtmpAmfMetaMessage) message);
+        } else if (message instanceof RtmpAudioMessage) {
+            stream.broadcastAudio((RtmpAudioMessage) message);
+        } else if (message instanceof RtmpVideoMessage) {
+            stream.broadcastVideo((RtmpVideoMessage) message);
         }
     }
 }

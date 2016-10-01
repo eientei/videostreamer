@@ -32,4 +32,9 @@ public class RtmpAbortMessage extends RtmpMessage {
     public void serialize(ByteBuf data) {
         data.writeInt((int)getStream());
     }
+
+    @Override
+    public RtmpMessage dupInternal() {
+        return new RtmpAbortMessage(stream);
+    }
 }

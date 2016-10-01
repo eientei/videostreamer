@@ -1,47 +1,30 @@
 package org.eientei.videostreamer.rtmp;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Created by Alexander Tumin on 2016-09-24
  */
 @Component
 public class RtmpServerContext {
-    private Logger log = LoggerFactory.getLogger(RtmpServerContext.class);
+    private Map<String, RtmpStreamContext> streams = new ConcurrentHashMap<>();
+    private List<RtmpClient> autoclients = new CopyOnWriteArrayList<>();
 
-    private Map<String, RtmpClientContext> connections = new ConcurrentHashMap<>();
-    private Map<String, RtmpStream> streams = new ConcurrentHashMap<>();
+    @Autowired(required = false)
+    public RtmpServerContext(List<RtmpClient> autoclients) {
+        this.autoclients.addAll(autoclients);
+    }
 
-    public void close() {
-        for (RtmpClientContext conn : connections.values()) {
-            conn.close();
+    public RtmpStreamContext getStream(String name) {
+        if (!streams.containsKey(name)) {
+            streams.put(name, new RtmpStreamContext(name, autoclients));
         }
-    }
-
-    public RtmpStream acquireStream(String streamName) {
-        if (!streams.containsKey(streamName)) {
-            streams.put(streamName, new RtmpStream(this));
-        }
-
-        return streams.get(streamName);
-    }
-
-    public void releaseStream(String streamName) {
-        streams.remove(streamName);
-    }
-
-    public void connect(RtmpClientContext connectionContext) {
-        log.info("RTMP client {} connected", connectionContext.getId());
-        connections.put(connectionContext.getId(), connectionContext);
-    }
-
-    public void disconnect(RtmpClientContext connectionContext) {
-        log.info("RTMP client {} disconnected", connectionContext.getId());
-        connections.remove(connectionContext.getId());
+        return streams.get(name);
     }
 }

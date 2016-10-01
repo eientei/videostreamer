@@ -21,7 +21,7 @@ public class RtmpAudioMessage extends RtmpMessage {
     private final byte[] data;
 
     public RtmpAudioMessage(byte[] data) {
-        super(0, 0, Type.AUDIO);
+        super(4, 1, Type.AUDIO);
         this.data = data;
     }
 
@@ -32,5 +32,10 @@ public class RtmpAudioMessage extends RtmpMessage {
     @Override
     public void serialize(ByteBuf data) {
         data.writeBytes(getData());
+    }
+
+    @Override
+    protected RtmpMessage dupInternal() {
+        return new RtmpAudioMessage(data);
     }
 }

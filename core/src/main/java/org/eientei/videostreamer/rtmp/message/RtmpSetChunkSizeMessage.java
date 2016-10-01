@@ -32,4 +32,9 @@ public class RtmpSetChunkSizeMessage extends RtmpMessage {
     public void serialize(ByteBuf data) {
         data.writeInt((int)getChunkSize());
     }
+
+    @Override
+    protected RtmpMessage dupInternal() {
+        return new RtmpSetChunkSizeMessage(chunkSize);
+    }
 }

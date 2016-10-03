@@ -1,0 +1,42 @@
+<html>
+<head>
+    <title>VIDEO</title>
+    <script type="text/javascript" src="/js/broadway/Decoder.js"></script>
+    <script type="text/javascript" src="/js/broadway/YUVCanvas.js"></script>
+    <script type="text/javascript" src="/js/broadway/Player.js"></script>
+    <script type="text/javascript" src="/js/broadway/stream.js"></script>
+    <script type="text/javascript" src="/js/broadway/mp4.js"></script>
+</head>
+<body>
+<div id="player"></div>
+<script type="application/javascript">
+    var p = new Player({
+        useWorker: true,
+        workerFile: "/js/broadway/Decoder.js",
+        size: {width: 640, height: 360}
+    });
+    document.getElementById("player").appendChild(p.canvas);
+    /*
+    var p = new Decoder({});
+    p.onPictureDecoded = function (a) {
+        console.log(a);
+    };
+    */
+
+    var sock = new WebSocket("ws://" + window.location.host + "/live");
+    sock.onmessage = function (msg) {
+        var fileReader = new FileReader();
+        fileReader.onload = function() {
+            var arrayBuffer = this.result;
+            var array = new Uint8Array(arrayBuffer);
+            p.decode(array);
+        };
+        fileReader.readAsArrayBuffer(msg.data);
+    };
+    sock.onopen =function () {
+        console.log(sock);
+        sock.send("baka");
+    };
+</script>
+</body>
+</html>

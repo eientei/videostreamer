@@ -110,5 +110,18 @@
         </executions>
       </plugin>
     </plugins>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <includes>
+          <include>Broadway/Player/mp4.js</include>
+          <include>Broadway/Player/stream.js</include>
+          <include>Broadway/Player/Player.js</include>
+          <include>Broadway/Player/Decoder.js</include>
+          <include>Broadway/Player/YUVCanvas.js</include>
+          <include>app/**</include>
+        </includes>
+      </resource>
+    </resources>
   </build>
 </project>

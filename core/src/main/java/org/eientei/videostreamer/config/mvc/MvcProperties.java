@@ -10,12 +10,23 @@ public class MvcProperties {
     @Valid
     private ReCaptcha reCaptcha;
 
+    @NotNull
+    private String domain;
+
     public ReCaptcha getReCaptcha() {
         return reCaptcha;
     }
 
     public void setReCaptcha(ReCaptcha reCaptcha) {
         this.reCaptcha = reCaptcha;
+    }
+
+    public String getDomain() {
+        return domain;
+    }
+
+    public void setDomain(String domain) {
+        this.domain = domain;
     }
 
     public static class ReCaptcha {

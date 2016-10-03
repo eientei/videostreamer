@@ -50,7 +50,7 @@ public abstract class RtmpMessage {
         }
 
         public static Type parseValue(int value) {
-            if (value >= 0 || value < values().length) {
+            if (value >= 0 && value < values().length) {
                 return values()[value];
             }
             throw new IllegalArgumentException("Illegal RtmpMessage.Type value: " + value);

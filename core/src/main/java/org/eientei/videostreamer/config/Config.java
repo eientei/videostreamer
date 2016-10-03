@@ -11,5 +11,4 @@ import org.springframework.context.annotation.Configuration;
         VideostreamerProperties.class
 })
 public class Config {
-
 }

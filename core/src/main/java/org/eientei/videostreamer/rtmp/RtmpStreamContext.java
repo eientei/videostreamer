@@ -30,13 +30,10 @@ public class RtmpStreamContext {
     private RtmpAudioMessage bootaudio = null;
     private State state = State.IDLE;
     private String name;
+    private List<RtmpVideoMessage> bootkeys = new CopyOnWriteArrayList<>();
 
-    public RtmpStreamContext(String name, List<RtmpClient> autoclients) {
-        this.clients.addAll(autoclients);
+    public RtmpStreamContext(String name, RtmpServerContext serverContext) {
         this.name = name;
-        for (RtmpClient client : autoclients) {
-            client.init(name);
-        }
     }
 
     public void publish(RtmpClient source) throws Exception {
@@ -75,7 +72,6 @@ public class RtmpStreamContext {
                 bootstrap(client);
             }
             clients.add(client);
-            client.init(name);
 
             if (client instanceof RtmpClientContext) {
                 log.info("Client {} is now subscribed for {}", ((RtmpClientContext) client).getId(), name);
@@ -98,11 +94,11 @@ public class RtmpStreamContext {
         Map<String, Object> map = new HashMap<>();
         map.put("videocodecid", 0.0);
         map.put("audiocodecid", 0.0);
-        map.put("audiodatarate", data.get("audiodatarate"));
-        map.put("videodatarate", data.get("videodatarate"));
+        copy(map, data, "audiodatarate", 0.0);
+        copy(map, data, "videodatarate", 0.0);
         map.put("duration", 0.0);
+        copy(map, data, "framerate", 30.0);
         map.put("fps", data.get("framerate"));
-        map.put("framerate", data.get("framerate"));
         map.put("width", data.get("width"));
         map.put("height", data.get("height"));
         map.put("displaywidth", data.get("width"));
@@ -116,6 +112,10 @@ public class RtmpStreamContext {
         broadcast(this.metadata);
     }
 
+    private void copy(Map<String, Object> map, Map<String, Object> data, String key, Object def) {
+        map.put(key, data.get(key) == null ? def : data.get(key));
+    }
+
     public void broadcastVideo(RtmpVideoMessage video) {
         if (video.getData()[1] == 0x00) {
             bootframe = video;
@@ -124,16 +124,14 @@ public class RtmpStreamContext {
                 return;
             }
         } else if (video.getData()[0] == 0x17) {
-            if (state == State.BOOTSTAPPING) {
-                checkBootstrap();
-                return;
-            }
+            bootkeys.clear();
+            bootkeys.add(video);
         }
         broadcast(video);
     }
 
     private void checkBootstrap() {
-        if (state == State.BOOTSTAPPING && metadata != null && bootframe != null && bootaudio != null) {
+        if (state == State.BOOTSTAPPING && metadata != null && bootframe != null) {
             for (RtmpClient client : clients) {
                 bootstrap(client);
             }
@@ -186,7 +184,12 @@ public class RtmpStreamContext {
         log.info("boots {}", bootaudio);
         client.accept(metadata.dup(0));
         client.accept(bootframe.dup(0));
-        client.accept(bootaudio.dup(0));
+        for (RtmpVideoMessage msg : bootkeys) {
+            client.accept(msg);
+        }
+        if (bootaudio != null) {
+            client.accept(bootaudio.dup(0));
+        }
         if (client instanceof RtmpClientContext) {
             log.info("Client {} is now bootstrapped on {}", ((RtmpClientContext) client).getId(), name);
         }

@@ -25,6 +25,11 @@ public class RtmpClientContext implements RtmpClient {
         socket.writeAndFlush(message);
     }
 
+    @Override
+    public void close() {
+        socket.close();
+    }
+
     public String getId() {
         return socket.id().asShortText();
     }

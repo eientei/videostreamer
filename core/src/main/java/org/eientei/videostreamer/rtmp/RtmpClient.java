@@ -5,4 +5,5 @@ package org.eientei.videostreamer.rtmp;
  */
 public interface RtmpClient {
     void accept(RtmpMessage message);
+    void close();
 }

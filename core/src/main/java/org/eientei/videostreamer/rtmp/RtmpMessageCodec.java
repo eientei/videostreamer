@@ -24,6 +24,7 @@ public class RtmpMessageCodec extends MessageToByteEncoder<RtmpMessage> {
         RtmpUnchunkedMessage unchunked = new RtmpUnchunkedMessage(msg.getHeader());
         msg.serialize(unchunked.getData());
         unchunked.getHeader().setLength(unchunked.getData().readableBytes());
+        //log.info("{}", unchunked.getHeader().getTimestamp());
         //log.info("sending {} {}", client.getId(), unchunked.getHeader());
         boolean oktocompress = msg instanceof RtmpVideoMessage || msg instanceof RtmpAudioMessage;
         for (int i  = 0; i < unchunked.getHeader().getLength();) {

@@ -1,42 +1,153 @@
 <html>
 <head>
     <title>VIDEO</title>
-    <script type="text/javascript" src="/js/broadway/Decoder.js"></script>
-    <script type="text/javascript" src="/js/broadway/YUVCanvas.js"></script>
-    <script type="text/javascript" src="/js/broadway/Player.js"></script>
-    <script type="text/javascript" src="/js/broadway/stream.js"></script>
-    <script type="text/javascript" src="/js/broadway/mp4.js"></script>
 </head>
 <body>
-<div id="player"></div>
+<video width="640" height="360"></video>
 <script type="application/javascript">
-    var p = new Player({
-        useWorker: true,
-        workerFile: "/js/broadway/Decoder.js",
-        size: {width: 640, height: 360}
+    var video = document.querySelector("video");
+    var mimeCodec = 'video/mp4; codecs="avc1.42C01F"';
+    video.addEventListener('canplay', function () {
+        console.log('playable');
+        video.play();
+        video.pause();
     });
-    document.getElementById("player").appendChild(p.canvas);
-    /*
-    var p = new Decoder({});
-    p.onPictureDecoded = function (a) {
-        console.log(a);
-    };
-    */
+    if ("MediaSource" in window && MediaSource.isTypeSupported(mimeCodec)) {
+        var mediaSource = new MediaSource();
+        video.src = URL.createObjectURL(mediaSource);
+        mediaSource.addEventListener("sourceopen", function () {
+            var mediaSource = this;
+            var sourceBuffer = mediaSource.addSourceBuffer(mimeCodec);
+            var sock = new WebSocket("ws://" + window.location.host + "/live");
+            sock.binaryType = 'arraybuffer';
+            sock.onopen =function () {
+                console.log(sock);
+                sock.send("{\"action\": \"play\", \"stream\": \"baka\"}");
+            };
+            var pending = [];
+            var appending = false;
+            var fcc = null;
+            sourceBuffer.addEventListener('updateend', function () {
+                appending = false;
+                drain();
+            });
+            sourceBuffer.addEventListener('error', function (a,b,c) {
+                console.log("buffer ", a,b,c);
+            });
+            mediaSource.addEventListener('error', function (a,b,c) {
+                console.log('media ', a,b,c);
+            });
 
-    var sock = new WebSocket("ws://" + window.location.host + "/live");
-    sock.onmessage = function (msg) {
-        var fileReader = new FileReader();
-        fileReader.onload = function() {
-            var arrayBuffer = this.result;
-            var array = new Uint8Array(arrayBuffer);
-            p.decode(array);
-        };
-        fileReader.readAsArrayBuffer(msg.data);
-    };
-    sock.onopen =function () {
-        console.log(sock);
-        sock.send("baka");
-    };
+            function drain() {
+                //video.pause();
+                //console.log('drain '  + appending + ' ' + pending.length);
+                if (pending.length == 0) {
+                    return;
+                }
+                if (appending) {
+                    return;
+                }
+
+                var buf = pending.shift();
+
+                function readInt(arr, off) {
+                    return (arr[off+0] << 24 | arr[off+1] << 16 | arr[off+2] << 8 | arr[off+3]);
+                }
+
+                function readFCC(arr, off) {
+                    return  String.fromCharCode(arr[off+0]) +
+                            String.fromCharCode(arr[off+1]) +
+                            String.fromCharCode(arr[off+2]) +
+                            String.fromCharCode(arr[off+3]);
+                }
+
+                appending = true;
+                var arr = new Uint8Array(buf);
+                sourceBuffer.appendBuffer(arr);
+                var str = arr.length;
+                for (var i = 0; i < arr.length;) {
+                    str += '\n  ';
+                    var len = readInt(arr, i);
+                    fcc = readFCC(arr,i+4);
+                    str += len + '@' + fcc;
+                    i += len;
+                }
+                //console.log(str);
+                //sourceBuffer.timestampOffset = 1;
+                //var fileReader = new FileReader();
+                //fileReader.onload = function() {
+                  //  var arrayBuffer = this.result;
+                    //var arr = new Uint8Array(arrayBuffer);
+
+                    /*
+
+                    var str = arr.length;
+                    for (var i = 0; i < arr.length;) {
+                        str += '\n  ';
+                        var len = readInt(arr, i);
+                        str += len + '@' + readFCC(arr,i+4);
+                        i += len;
+                    }
+                    console.log(str);
+                    */
+                    //sourceBuffer.appendBuffer(arrayBuffer);
+                //};
+                //fileReader.readAsArrayBuffer(next);
+                drain();
+            }
+
+            sock.onmessage = function (msg) {
+                pending.push(msg.data);
+                drain();
+            };
+    /*
+            var pending = [];
+            var updating = false;
+            var init = false;
+            sourceBuffer.addEventListener('updateend', function () {
+                console.log('endupd');
+                updating = false;
+                trydrain();
+            });
+
+            function trydrain() {
+                console.log('drain');
+                if (pending.length == 0) {
+                    return;
+                }
+                if (updating) {
+                    setTimeout(10, trydrain);
+                    return;
+                }
+                var next = pending[0];
+                pending.shift();
+                console.log('append');
+                sourceBuffer.appendBuffer(next);
+                updating = true;
+            }
+
+
+            sock.onmessage = function (msg) {
+                var fileReader = new FileReader();
+                fileReader.onload = function() {
+                    var arrayBuffer = this.result;
+                    if (init) {
+                        pending.push(arrayBuffer);
+                        trydrain();
+                    } else {
+                        console.log('append');
+                        sourceBuffer.appendBuffer(arrayBuffer);
+                        init = true;
+                        updating = true;
+                    }
+                };
+                fileReader.readAsArrayBuffer(msg.data);
+            };
+     */
+        });
+    } else {
+        console.log("sorry");
+    }
 </script>
 </body>
 </html>

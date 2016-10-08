@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -31,6 +32,8 @@ public class RtmpStreamContext {
     private State state = State.IDLE;
     private String name;
     private List<RtmpVideoMessage> bootkeys = new CopyOnWriteArrayList<>();
+    private long published;
+    private Map<RtmpClient, Long> clientmap = new ConcurrentHashMap<>();
 
     public RtmpStreamContext(String name, RtmpServerContext serverContext) {
         this.name = name;
@@ -58,7 +61,10 @@ public class RtmpStreamContext {
             this.bootaudio = null;
             for (RtmpClient client : clients) {
                 client.accept(new RtmpUserMessage(RtmpUserMessage.Event.STREAM_EOF, 1, 0));
+                //unsubscribe(client);
             }
+            bootkeys.clear();
+            clientmap.clear();
             state = State.IDLE;
             if (source instanceof RtmpClientContext) {
                 log.info("Client {} is no longer publishing on stream {}", ((RtmpClientContext) source).getId(), name);
@@ -82,6 +88,7 @@ public class RtmpStreamContext {
     public void unsubscribe(RtmpClient client) {
         if (clients.contains(client)) {
             clients.remove(client);
+            client.close();
             if (client instanceof RtmpClientContext) {
                 log.info("Client {} is now unsubscribed for {}", ((RtmpClientContext) client).getId(), name);
             }
@@ -118,16 +125,29 @@ public class RtmpStreamContext {
 
     public void broadcastVideo(RtmpVideoMessage video) {
         if (video.getData()[1] == 0x00) {
+            published = System.currentTimeMillis();
             bootframe = video;
             if (state == State.BOOTSTAPPING) {
                 checkBootstrap();
                 return;
             }
-        } else if (video.getData()[0] == 0x17) {
-            bootkeys.clear();
-            bootkeys.add(video);
+        } else if (isImportant(video)) {
+            if (isKey(video)) {
+                bootkeys.clear();
+            }
         }
+        bootkeys.add(video);
         broadcast(video);
+    }
+
+    private boolean isKey(RtmpVideoMessage video) {
+        int frametype = (video.getData()[0] & 0xf0) >> 4;
+        return frametype == 1;
+    }
+
+    private boolean isImportant(RtmpVideoMessage video) {
+        int frametype = (video.getData()[0] & 0xf0) >> 4;
+        return frametype != 2 && frametype != 3;
     }
 
     private void checkBootstrap() {
@@ -182,13 +202,19 @@ public class RtmpStreamContext {
         log.info("boots {}", metadata);
         log.info("boots {}", bootframe);
         log.info("boots {}", bootaudio);
-        client.accept(metadata.dup(0));
-        client.accept(bootframe.dup(0));
-        for (RtmpVideoMessage msg : bootkeys) {
-            client.accept(msg);
+        clientmap.put(client, System.currentTimeMillis());
+        client.accept(metadata.dup(meta.getHeader().getTimestamp()));
+        client.accept(bootframe.dup(bootframe.getHeader().getTimestamp()));
+        if (!bootkeys.isEmpty()) {
+            int t = 0;
+            for (RtmpVideoMessage msg : bootkeys) {
+                //client.accept(msg.dup(msg.getHeader().getTimestamp()));
+                //client.accept(msg.dup(t));
+                //t += msg.getHeader().getTimeDiff();
+            }
         }
         if (bootaudio != null) {
-            client.accept(bootaudio.dup(0));
+            client.accept(bootaudio.dup(bootaudio.getHeader().getTimestamp()));
         }
         if (client instanceof RtmpClientContext) {
             log.info("Client {} is now bootstrapped on {}", ((RtmpClientContext) client).getId(), name);
@@ -209,7 +235,10 @@ public class RtmpStreamContext {
         }
 
         for (RtmpClient client : clients) {
+            //long diff = clientmap.get(client) - published;
+            //RtmpMessage d = message.dup(Math.max(message.getHeader().getTimestamp() - diff, 0));
             RtmpMessage d = message.dup(message.getHeader().getTimestamp());
+            //log.info("{}", d.getHeader().getTimestamp());
             client.accept(d);
         }
     }

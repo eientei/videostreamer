@@ -53,7 +53,7 @@ public abstract class RtmpMessage {
             if (value >= 0 && value < values().length) {
                 return values()[value];
             }
-            throw new IllegalArgumentException("Illegal RtmpMessage.Type value: " + value);
+            throw new IllegalArgumentException("Illegal RtmpMessage.TrackType value: " + value);
         }
     }
 

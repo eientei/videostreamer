@@ -22,13 +22,13 @@ public class HrdParameters extends BitParser {
 
     public HrdParameters(BitInput in) throws IOException {
         super(in);
-        cpbCntMinusOne = parseUE();
+        cpbCntMinusOne = parseUE()+1;
         bitRateScale = parseInt(4);
         cpbSizeScale = parseInt(4);
         bitRateValueMinusOne = new int[cpbCntMinusOne];
         cpbSizeValueMinusOne = new int[cpbCntMinusOne];
         cbrFlag = new int[cpbCntMinusOne];
-        for (int i = 0; i <= cpbCntMinusOne; i++) {
+        for (int i = 0; i < cpbCntMinusOne; i++) {
             bitRateValueMinusOne[i] = parseUE();
             cpbSizeValueMinusOne[i] = parseUE();
             cbrFlag[i] = parseInt(1);

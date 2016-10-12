@@ -170,7 +170,7 @@ public class Amf {
             if (value >= 0 && value < values().length) {
                 return values()[value];
             }
-            throw new IllegalArgumentException("Illegal Amf.Type value: " + value);
+            throw new IllegalArgumentException("Illegal Amf.TrackType value: " + value);
         }//
 
         public static Type parseObject(Object object) {

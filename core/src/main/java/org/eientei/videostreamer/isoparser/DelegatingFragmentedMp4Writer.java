@@ -1,5 +1,6 @@
 package org.eientei.videostreamer.isoparser;
 
+import org.eientei.videostreamer.h264.SliceNalUnit;
 import org.mp4parser.Box;
 import org.mp4parser.IsoFile;
 import org.mp4parser.boxes.iso14496.part12.MovieFragmentBox;
@@ -55,6 +56,12 @@ public class DelegatingFragmentedMp4Writer extends FragmentedMp4Writer implement
         ByteBuffer sampleBuffer = (ByteBuffer) streamingSample.getContent().rewind();
         while (sampleBuffer.remaining() > 0) {
             int len = streamingSample.getContent().getInt(streamingSample.getContent().position())+4;
+            SliceNalUnit slice = new SliceNalUnit((ByteBuffer) sampleBuffer.slice().position(4));
+            if (slice.sliceType == 0) {
+                sampleBuffer.position(sampleBuffer.position()+len);
+                continue;
+            }
+
             MovieFragmentBox moof = (MovieFragmentBox) createMoof(streamingTrack, Collections.singletonList(streamingSample));
             Box mdat = createMdat((ByteBuffer) sampleBuffer.slice().limit(len));
             moof.getBox(sink);

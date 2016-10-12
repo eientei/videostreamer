@@ -3,21 +3,25 @@
     <title>VIDEO</title>
 </head>
 <body>
-<video width="640" height="360"></video>
+<video controls autoplay width="640" height="360"></video>
 <script type="application/javascript">
     var video = document.querySelector("video");
-    var mimeCodec = 'video/mp4; codecs="avc1.42C01F"';
+    //var mimeCodec = 'video/mp4; codecs="avc1.42C01F"';
+    var mimeCodec = 'video/mp4; codecs="avc1.42E01E"';
     video.addEventListener('canplay', function () {
         console.log('playable');
-        video.play();
-        video.pause();
+        //video.play();
+        //video.pause();
     });
     if ("MediaSource" in window && MediaSource.isTypeSupported(mimeCodec)) {
         var mediaSource = new MediaSource();
         video.src = URL.createObjectURL(mediaSource);
         mediaSource.addEventListener("sourceopen", function () {
             var mediaSource = this;
+            //console.log(mediaSource.activeSourceBuffers);
             var sourceBuffer = mediaSource.addSourceBuffer(mimeCodec);
+            sourceBuffer.mode = 'sequence';
+            //sourceBuffer.timestampOffset = 0;
             var sock = new WebSocket("ws://" + window.location.host + "/live");
             sock.binaryType = 'arraybuffer';
             sock.onopen =function () {
@@ -27,12 +31,18 @@
             var pending = [];
             var appending = false;
             var fcc = null;
+            var t = -1;
+            var first = true;
+            var ts = -1;
             sourceBuffer.addEventListener('updateend', function () {
                 appending = false;
                 drain();
             });
             sourceBuffer.addEventListener('error', function (a,b,c) {
                 console.log("buffer ", a,b,c);
+                console.log(sourceBuffer.error);
+                console.log(video.error);
+                console.log(mediaSource.error);
             });
             mediaSource.addEventListener('error', function (a,b,c) {
                 console.log('media ', a,b,c);
@@ -41,13 +51,21 @@
             function drain() {
                 //video.pause();
                 //console.log('drain '  + appending + ' ' + pending.length);
-                if (pending.length == 0) {
+                if (pending.length < 2) {
                     return;
                 }
                 if (appending) {
                     return;
                 }
 
+                /*
+                var jsn = JSON.parse(pending.shift());
+                var delay = jsn.seq / jsn.fps;
+                if (delay != 0) {
+                    delay -= 1;
+                }
+                console.log(jsn, delay);
+                */
                 var buf = pending.shift();
 
                 function readInt(arr, off) {
@@ -63,6 +81,14 @@
 
                 appending = true;
                 var arr = new Uint8Array(buf);
+                //console.log(video.currentTime);
+                if (video.buffered.length == 0) {
+                    //sourceBuffer.timestampOffset = 0;
+                } else {
+                    //sourceBuffer.timestampOffset = video.buffered.end(video.buffered.length - 1);
+                }
+                //sourceBuffer.timestampOffset = video.currentTime;
+                //sourceBuffer.timestampOffset = delay;
                 sourceBuffer.appendBuffer(arr);
                 var str = arr.length;
                 for (var i = 0; i < arr.length;) {
@@ -72,7 +98,7 @@
                     str += len + '@' + fcc;
                     i += len;
                 }
-                //console.log(str);
+                console.log(str);
                 //sourceBuffer.timestampOffset = 1;
                 //var fileReader = new FileReader();
                 //fileReader.onload = function() {

@@ -19,4 +19,12 @@ public class SliceNalUnit extends NalUnit {
         picParameterSetId = parseUE();
         frameNum = parseInt(sps.log2MaxFrameNumMinus4+4);
     }
+
+    public SliceNalUnit(ByteBuffer buf) throws IOException {
+        super(buf);
+        firstMbInSlice = parseUE();
+        sliceType = parseUE();
+        picParameterSetId = parseUE();
+        frameNum = 0;
+    }
 }

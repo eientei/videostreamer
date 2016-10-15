@@ -31,25 +31,39 @@
         };
     }
 
+    function reinit() {
+        var video = document.querySelector("video");
+        var mediaSource = new MediaSource();
+        video.src = URL.createObjectURL(mediaSource);
+        mediaSource.addEventListener("sourceopen", playStream);
+    }
 
+    reinit();
 
-    var video = document.querySelector("video");
-    var mediaSource = new MediaSource();
-    video.src = URL.createObjectURL(mediaSource);
-    mediaSource.addEventListener("sourceopen", function () {
+    function playStream() {
         var mediaSource = this;
         var sourceBuffer = mediaSource.addSourceBuffer("video/mp4; codecs=\"avc1.42C01F\"");
-        var sock = new WebSocket("ws://" + window.location.host + "/live");
         var appending = false;
-        sock.binaryType = 'arraybuffer';
-        sock.onopen = function () {
-            console.log(sock);
-            sock.send("{\"action\": \"play\", \"stream\": \"baka\"}");
-        };
-        sock.onmessage = function (msg) {
-            pending.push(msg.data);
-            drain();
-        };
+
+        setupSock();
+
+        function setupSock() {
+            var sock = new WebSocket("ws://" + window.location.host + "/live");
+
+            sock.binaryType = 'arraybuffer';
+            sock.onopen = function () {
+                console.log(sock);
+                sock.send("{\"action\": \"play\", \"stream\": \"baka\"}");
+            };
+            sock.onmessage = function (msg) {
+                pending.push(msg.data);
+                drain();
+            };
+            sock.onclose = function () {
+                mediaSource.removeSourceBuffer(sourceBuffer);
+                reinit();
+            };
+        }
 
         var pending = [];
         sourceBuffer.addEventListener('updateend', function () {
@@ -72,7 +86,7 @@
             do {
                 box = readBox(arr, off)
                 if (box != null) {
-                    //console.log(box);
+                    console.log(box);
                     off += box.len;
                 }
             } while (box != null);
@@ -80,7 +94,7 @@
 
             sourceBuffer.appendBuffer(arr);
         }
-    });
+    }
 </script>
 </body>
 </html>

@@ -12,6 +12,7 @@ import org.eientei.videostreamer.rtmp.RtmpMessageAcceptor;
 import org.eientei.videostreamer.rtmp.RtmpStream;
 import org.eientei.videostreamer.rtmp.message.RtmpAmfMessage;
 import org.eientei.videostreamer.rtmp.message.RtmpAudioMessage;
+import org.eientei.videostreamer.rtmp.message.RtmpUserMessage;
 import org.eientei.videostreamer.rtmp.message.RtmpVideoMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,7 @@ public class WebsocketClient implements RtmpMessageAcceptor {
     private Mp4VideoTrack video;
     private Mp4Track audio;
     private FileOutputStream fos;
+    private boolean newclient = true;
 
     public WebsocketClient(WebSocketSession session, RtmpStream rtmpStream) {
         this.session = session;
@@ -82,6 +84,12 @@ public class WebsocketClient implements RtmpMessageAcceptor {
                 video.width = context.meta.width;
                 video.height = context.meta.height;
             } else {
+                if (newclient && frametype != 1) {
+                 //   return;
+                }
+
+                newclient = false;
+
                 if (context.sequence == 0) {
                     context.sequence++;
                     send(context.createHeader());
@@ -100,6 +108,14 @@ public class WebsocketClient implements RtmpMessageAcceptor {
                         send(moof, mdat);
                         frame.dispose();
                     }
+                }
+            }
+        } else if (message instanceof RtmpUserMessage) {
+            if (((RtmpUserMessage) message).getEvent() == RtmpUserMessage.Event.STREAM_EOF) {
+                try {
+                    session.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         }

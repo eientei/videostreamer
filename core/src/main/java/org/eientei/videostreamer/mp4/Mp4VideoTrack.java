@@ -56,7 +56,6 @@ public class Mp4VideoTrack extends Mp4Track {
     }
 
     private Mp4TrackFrame createFrame() {
-        System.out.println(ticks);
         Mp4TrackFrame mp4 = new Mp4TrackFrame(this, samples);
         samples.clear();
         ticks = preticks;
@@ -76,10 +75,10 @@ public class Mp4VideoTrack extends Mp4Track {
 
         if (lastFrameNum != -1 && lastFrameNum != sample.getSlice().frameNum) {
             blocks++;
-            if (samples.size() >= timescale) {
+            //if (samples.size() >= timescale) {
                 Mp4TrackFrame frame = createFrame();
                 frames.add(frame);
-            }
+            //}
             preticks += frametick;
             ByteBuf buf = Unpooled.buffer();
             buf.writeInt(sample.getNaldata().readableBytes());

@@ -24,7 +24,6 @@ public class RtmpStream {
     private RtmpMessageAcceptor publisher;
     private List<RtmpMessageAcceptor> subscribers = new CopyOnWriteArrayList<>();
     private ByteBuf videoAvcFrame;
-    private ByteBuf videoKeyFrame;
     private AmfObjectWrapper metadata;
 
     public RtmpStream(RtmpServer server, String name) {
@@ -73,7 +72,6 @@ public class RtmpStream {
         }
 
         videoAvcFrame = null;
-        videoKeyFrame = null;
         metadata = null;
     }
 
@@ -106,11 +104,6 @@ public class RtmpStream {
             if (avcpacktype == 0) {
                 videoAvcFrame = message.getData().copy();
             }
-
-            if (frametype == 1) {
-                videoKeyFrame = message.getData().copy();
-            }
-
         }
         for (RtmpMessageAcceptor client : subscribers) {
             client.accept(message.copy());
@@ -140,9 +133,6 @@ public class RtmpStream {
             client.accept(new RtmpVideoMessage(6, 1, 0, videoAvcFrame.copy()));
         }
 
-        if (videoKeyFrame != null) {
-            client.accept(new RtmpVideoMessage(6, 1, 0, videoKeyFrame.copy()));
-        }
     }
 
     public boolean isPublisher(RtmpClient client) {

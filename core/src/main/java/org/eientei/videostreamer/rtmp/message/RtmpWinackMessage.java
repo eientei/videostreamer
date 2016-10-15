@@ -1,39 +1,33 @@
 package org.eientei.videostreamer.rtmp.message;
 
 import io.netty.buffer.ByteBuf;
+import org.eientei.videostreamer.rtmp.RtmpHeader;
 import org.eientei.videostreamer.rtmp.RtmpMessage;
-import org.eientei.videostreamer.rtmp.RtmpMessageParser;
-import org.eientei.videostreamer.rtmp.RtmpUnchunkedMessage;
+import org.eientei.videostreamer.rtmp.RtmpMessageType;
 
 /**
- * Created by Alexander Tumin on 2016-09-25
+ * Created by Alexander Tumin on 2016-10-13
  */
 public class RtmpWinackMessage extends RtmpMessage {
-    public static final RtmpMessageParser<RtmpWinackMessage> PARSER = new RtmpMessageParser<RtmpWinackMessage>() {
-        @Override
-        public RtmpWinackMessage parse(RtmpUnchunkedMessage msg) {
-            long size = msg.getData().readUnsignedInt();
-            return new RtmpWinackMessage(size);
-        }
-    };
-    private final long size;
-
-    public RtmpWinackMessage(long size) {
-        super(2, 0, Type.WINACK);
-        this.size = size;
+    public RtmpWinackMessage(int chunkid, long streamid, long time, int size) {
+        super(RtmpMessageType.WINACK, chunkid, streamid, time);
+        getData().writeInt(size);
     }
 
-    public long getSize() {
-        return size;
+    public RtmpWinackMessage(int chunkid, long streamid, long time, ByteBuf data) {
+        super(RtmpMessageType.WINACK, chunkid, streamid, time, data);
     }
 
-    @Override
-    public void serialize(ByteBuf data) {
-        data.writeInt((int) getSize());
+    public RtmpWinackMessage(RtmpHeader header, ByteBuf slice) {
+        super(header, slice);
+    }
+
+    public int getSize() {
+        return getData().getInt(0);
     }
 
     @Override
-    protected RtmpMessage dupInternal() {
-        return new RtmpWinackMessage(size);
+    public RtmpMessage copy() {
+        return new RtmpWinackMessage(getHeader(), getData().retain().slice());
     }
 }

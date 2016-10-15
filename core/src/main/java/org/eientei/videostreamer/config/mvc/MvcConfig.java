@@ -1,8 +1,7 @@
 package org.eientei.videostreamer.config.mvc;
 
-import org.eientei.videostreamer.config.VideostreamerProperties;
-import org.eientei.videostreamer.html5.Html5WebsocketHandler;
-import org.eientei.videostreamer.rtmp.RtmpServerContext;
+import org.eientei.videostreamer.rtmp.server.RtmpServer;
+import org.eientei.videostreamer.websock.WebsocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,13 +19,11 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @EnableWebMvc
 @EnableWebSocket
 public class MvcConfig extends WebMvcConfigurerAdapter implements WebSocketConfigurer {
-    private final RtmpServerContext rtmpContext;
-    private final VideostreamerProperties properties;
+    private final RtmpServer rtmpServer;
 
     @Autowired
-    public MvcConfig(RtmpServerContext rtmpContext, VideostreamerProperties properties) {
-        this.rtmpContext = rtmpContext;
-        this.properties = properties;
+    public MvcConfig(RtmpServer rtmpServer) {
+        this.rtmpServer = rtmpServer;
     }
 
     @Override
@@ -35,10 +32,9 @@ public class MvcConfig extends WebMvcConfigurerAdapter implements WebSocketConfi
     }
 
     @Bean
-    public Html5WebsocketHandler websocketHandler() {
-        return new Html5WebsocketHandler(rtmpContext);
+    public WebsocketHandler websocketHandler() {
+        return new WebsocketHandler(rtmpServer);
     }
-
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {

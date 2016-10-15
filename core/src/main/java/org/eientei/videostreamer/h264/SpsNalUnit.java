@@ -1,7 +1,6 @@
 package org.eientei.videostreamer.h264;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
+import io.netty.buffer.ByteBuf;
 
 /**
  * Created by Alexander Tumin on 2016-10-07
@@ -37,8 +36,8 @@ public class SpsNalUnit extends NalUnit {
     public final int vuiParametersPresentFlag;
     public final VUIParameters vui;
 
-    public SpsNalUnit(ByteBuffer buf) throws IOException {
-        super(buf);
+    public SpsNalUnit(ByteBuf buf, int spslength) {
+        super(buf, spslength);
         profileIdc = parseInt(8);
         constraintSet0Flag = parseInt(1);
         constraintSet1Flag = parseInt(1);
@@ -68,12 +67,12 @@ public class SpsNalUnit extends NalUnit {
                 offsetForRefFrame[i] = parseSE();
             }
         } else {
-            log2MaxPicOrderCntLsbMinus4 = 0;
+            log2MaxPicOrderCntLsbMinus4 = -1;
 
-            deltaPicOrderAlwaysZero = 0;
-            offsetForNonRefPic = 0;
-            offsetForTopToBottomField = 0;
-            numRefFramesInPicOrderCntCycle = 0;
+            deltaPicOrderAlwaysZero = -1;
+            offsetForNonRefPic = -1;
+            offsetForTopToBottomField = -1;
+            numRefFramesInPicOrderCntCycle = -1;
             offsetForRefFrame = new int[0];
         }
         numrefFrames = parseUE();
@@ -84,26 +83,27 @@ public class SpsNalUnit extends NalUnit {
         if (frameMbsOnlyFlag == 0) {
             mbAdaptiveFrameFieldFlag = parseInt(1);
         } else {
-            mbAdaptiveFrameFieldFlag = 0;
+            mbAdaptiveFrameFieldFlag = -1;
         }
 
         dirct8x8InterferenceFlag = parseInt(1);
         frameCroppingFlag = parseInt(1);
-        if (frameCroppingFlag != 0) {
+        if (frameCroppingFlag == 1) {
             framecropLeftOffset = parseUE();
             framecropRightOffset = parseUE();
             framecropTopOffset = parseUE();
             framecropBottomOffset = parseUE();
         } else {
-            framecropLeftOffset = 0;
-            framecropRightOffset = 0;
-            framecropTopOffset = 0;
-            framecropBottomOffset = 0;
+            framecropLeftOffset = -1;
+            framecropRightOffset = -1;
+            framecropTopOffset = -1;
+            framecropBottomOffset = -1;
         }
 
         vuiParametersPresentFlag = parseInt(1);
-        if (vuiParametersPresentFlag != 0) {
-            vui = new VUIParameters(in);
+        if (vuiParametersPresentFlag == 1) {
+            // vui = new VUIParameters(in); // skip
+            vui = null;
         } else {
             vui = null;
         }

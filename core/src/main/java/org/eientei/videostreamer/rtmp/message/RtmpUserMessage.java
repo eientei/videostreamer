@@ -1,14 +1,15 @@
 package org.eientei.videostreamer.rtmp.message;
 
 import io.netty.buffer.ByteBuf;
+import org.eientei.videostreamer.rtmp.RtmpHeader;
 import org.eientei.videostreamer.rtmp.RtmpMessage;
-import org.eientei.videostreamer.rtmp.RtmpMessageParser;
-import org.eientei.videostreamer.rtmp.RtmpUnchunkedMessage;
+import org.eientei.videostreamer.rtmp.RtmpMessageType;
 
 /**
- * Created by Alexander Tumin on 2016-09-25
+ * Created by Alexander Tumin on 2016-10-13
  */
 public class RtmpUserMessage extends RtmpMessage {
+
     public enum Event {
         STREAM_BEGIN(0),
         STREAM_EOF(1),
@@ -19,70 +20,52 @@ public class RtmpUserMessage extends RtmpMessage {
         PING_REQUEST(6),
         PING_RESPONSE(7);
 
-        private int value;
+        private final int value;
 
         Event(int value) {
             this.value = value;
         }
 
+        public static Event dispatch(int value) {
+            return Event.values()[value & 0x7];
+        }
+
         public int getValue() {
             return value;
         }
-
-        public static Event parseValue(int value) {
-            if (value >= 0 || value < values().length) {
-                return values()[value];
-            }
-            throw new IllegalArgumentException("Illegal RtmpUserMessage.Event value: " + value);
+    }
+    
+    public RtmpUserMessage(int chunkid, long streamid, long time, Event event, int arg1, int arg2) {
+        super(RtmpMessageType.USER, chunkid, streamid, time);
+        getData().writeShort(event.getValue()).writeInt(arg1);
+        if (event == Event.SET_BUFFER_LENGTH) {
+            getData().writeInt(arg2);
         }
     }
 
-    public static final RtmpMessageParser<RtmpUserMessage> PARSER = new RtmpMessageParser<RtmpUserMessage>() {
-        @Override
-        public RtmpUserMessage parse(RtmpUnchunkedMessage msg) {
-            Event event = Event.parseValue(msg.getData().readUnsignedShort());
-            long first = msg.getData().readUnsignedInt();
-            long second = 0;
-            if (event == Event.SET_BUFFER_LENGTH) {
-                second = msg.getData().readUnsignedInt();
-            }
-            return new RtmpUserMessage(event, first, second);
-        }
-    };
-    private final Event event;
-    private final long first;
-    private final long second;
-
-    public RtmpUserMessage(Event event, long first, long second) {
-        super(2, 0, Type.USER);
-        this.event = event;
-        this.first = first;
-        this.second = second;
+    public RtmpUserMessage(int chunkid, long streamid, long time, ByteBuf data) {
+        super(RtmpMessageType.USER, chunkid, streamid, time, data);
     }
+
+    public RtmpUserMessage(RtmpHeader header, ByteBuf slice) {
+        super(header, slice);
+    }
+
+    @Override
+    public RtmpMessage copy() {
+        return new RtmpUserMessage(getHeader(), getData().retain().slice());
+    }
+
 
     public Event getEvent() {
-        return event;
+        return Event.dispatch(getData().getShort(0));
     }
 
-    public long getFirst() {
-        return first;
+    public int getArg1() {
+        return getData().getInt(2);
     }
 
-    public long getSecond() {
-        return second;
-    }
-
-    @Override
-    public void serialize(ByteBuf data) {
-        data.writeShort(getEvent().getValue());
-        data.writeInt((int) getFirst());
-        if (event == Event.SET_BUFFER_LENGTH) {
-            data.writeInt((int) getSecond());
-        }
-    }
-
-    @Override
-    protected RtmpMessage dupInternal() {
-        return new RtmpUserMessage(event, first, second);
+    public int getArg2() {
+        return getData().getInt(6);
     }
 }

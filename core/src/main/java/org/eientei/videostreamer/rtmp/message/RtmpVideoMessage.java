@@ -1,41 +1,24 @@
 package org.eientei.videostreamer.rtmp.message;
 
 import io.netty.buffer.ByteBuf;
+import org.eientei.videostreamer.rtmp.RtmpHeader;
 import org.eientei.videostreamer.rtmp.RtmpMessage;
-import org.eientei.videostreamer.rtmp.RtmpMessageParser;
-import org.eientei.videostreamer.rtmp.RtmpUnchunkedMessage;
+import org.eientei.videostreamer.rtmp.RtmpMessageType;
 
 /**
- * Created by Alexander Tumin on 2016-09-25
+ * Created by Alexander Tumin on 2016-10-13
  */
 public class RtmpVideoMessage extends RtmpMessage {
-    public static final RtmpMessageParser<RtmpVideoMessage> PARSER = new RtmpMessageParser<RtmpVideoMessage>() {
-        @Override
-        public RtmpVideoMessage parse(RtmpUnchunkedMessage msg) {
-            int length = msg.getHeader().getLength();
-            byte[] data = new byte[length];
-            msg.getData().readBytes(data);
-            return new RtmpVideoMessage(data);
-        }
-    };
-    private final byte[] data;
-
-    public RtmpVideoMessage(byte[] data) {
-        super(6, 1, Type.VIDEO);
-        this.data = data;
+    public RtmpVideoMessage(int chunkid, long streamid, long time, ByteBuf data) {
+        super(RtmpMessageType.VIDEO, chunkid, streamid, time, data);
     }
 
-    public byte[] getData() {
-        return data;
+    public RtmpVideoMessage(RtmpHeader header, ByteBuf slice) {
+        super(header, slice);
     }
 
     @Override
-    public void serialize(ByteBuf data) {
-        data.writeBytes(getData());
-    }
-
-    @Override
-    protected RtmpMessage dupInternal() {
-        return new RtmpVideoMessage(data);
+    public RtmpMessage copy() {
+        return new RtmpVideoMessage(getHeader(), getData().retain().slice());
     }
 }

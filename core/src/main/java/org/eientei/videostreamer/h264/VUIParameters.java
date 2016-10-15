@@ -3,8 +3,6 @@ package org.eientei.videostreamer.h264;
 import com.github.jinahya.bit.io.BitInput;
 import org.eientei.videostreamer.util.BitParser;
 
-import java.io.IOException;
-
 /**
  * Created by Alexander Tumin on 2016-10-07
  */
@@ -44,84 +42,84 @@ public class VUIParameters extends BitParser {
     public final int numReorderFrames;
     public final int maxDecFrameBuffering;
 
-    public VUIParameters(BitInput in) throws IOException {
+    public VUIParameters(BitInput in) {
         super(in);
 
         aspectRatioInfoPresentFlag = parseInt(1);
-        if (aspectRatioInfoPresentFlag != 0) {
+        if (aspectRatioInfoPresentFlag == 1) {
             aspectRatioIdc = parseInt(8);
             if (aspectRatioIdc == 0xFF) {
                 sarWidth = parseInt(16);
                 sarHeight = parseInt(16);
             } else {
-                sarWidth = 0;
-                sarHeight = 0;
+                sarWidth = -1;
+                sarHeight = -1;
             }
         } else {
-            aspectRatioIdc = 0;
-            sarWidth = 0;
-            sarHeight = 0;
+            aspectRatioIdc = -1;
+            sarWidth = -1;
+            sarHeight = -1;
         }
 
         overscanInfoPresentFlag = parseInt(1);
-        if (overscanInfoPresentFlag != 0) {
+        if (overscanInfoPresentFlag == 1) {
             overscanAppropriateFlag = parseInt(1);
         } else {
-            overscanAppropriateFlag = 0;
+            overscanAppropriateFlag = -1;
         }
 
         videoSignalTypePresentFlag = parseInt(1);
-        if (videoSignalTypePresentFlag != 0) {
+        if (videoSignalTypePresentFlag == 1) {
             videoFormat = parseInt(3);
             videoFullRangeFlag = parseInt(1);
             videoColourDescriptionPresentFlag = parseInt(1);
-            if (videoColourDescriptionPresentFlag != 0) {
+            if (videoColourDescriptionPresentFlag == 1) {
                 colourPrimaries = parseInt(8);
                 transferCharacteristics = parseInt(8);
                 matrixCoefficent = parseInt(8);
             } else {
-                colourPrimaries = 0;
-                transferCharacteristics = 0;
-                matrixCoefficent = 0;
+                colourPrimaries = -1;
+                transferCharacteristics = -1;
+                matrixCoefficent = -1;
             }
         } else {
-            videoFormat = 0;
-            videoFullRangeFlag = 0;
-            videoColourDescriptionPresentFlag = 0;
+            videoFormat = -1;
+            videoFullRangeFlag = -1;
+            videoColourDescriptionPresentFlag = -1;
 
-            colourPrimaries = 0;
-            transferCharacteristics = 0;
-            matrixCoefficent = 0;
+            colourPrimaries = -1;
+            transferCharacteristics = -1;
+            matrixCoefficent = -1;
         }
 
         chromaLocInfoPresentFlag = parseInt(1);
-        if (chromaLocInfoPresentFlag != 0) {
+        if (chromaLocInfoPresentFlag == 1) {
             chromaSampleLocTypeTopField = parseUE();
             chromaSampleLocTypeBottomField = parseUE();
         } else {
-            chromaSampleLocTypeTopField = 0;
-            chromaSampleLocTypeBottomField = 0;
+            chromaSampleLocTypeTopField = -1;
+            chromaSampleLocTypeBottomField = -1;
         }
         timingInfoPresentFlag = parseInt(1);
-        if (timingInfoPresentFlag != 0) {
+        if (timingInfoPresentFlag == 1) {
             numUnitsInTick = parseInt(32);
             timeScale = parseInt(32);
             fixedFrameRateFlag = parseInt(1);
         } else {
-            numUnitsInTick = 0;
-            timeScale = 0;
-            fixedFrameRateFlag = 0;
+            numUnitsInTick = -1;
+            timeScale = -1;
+            fixedFrameRateFlag = -1;
         }
 
         nalHrdParametersPresentFlag = parseInt(1);
-        if (nalHrdParametersPresentFlag != 0) {
+        if (nalHrdParametersPresentFlag == 1) {
             nalHrd = new HrdParameters(in);
         } else {
             nalHrd = null;
         }
 
         vclHrdParamtersPresentFlag = parseInt(1);
-        if (vclHrdParamtersPresentFlag != 0) {
+        if (vclHrdParamtersPresentFlag == 1) {
             vclHrd = new HrdParameters(in);
         } else {
             vclHrd = null;
@@ -130,12 +128,12 @@ public class VUIParameters extends BitParser {
         if (nalHrd != null || vclHrd != null) {
             lowDelayHrdFlag = parseInt(1);
         } else {
-            lowDelayHrdFlag = 0;
+            lowDelayHrdFlag = -1;
         }
 
         picStructPresentFlag = parseInt(1);
         bitstreamRestrictionFlag = parseInt(1);
-        if (bitstreamRestrictionFlag != 0) {
+        if (bitstreamRestrictionFlag == 1) {
             motionVectorsOverPicBoundariesFlag = parseInt(1);
             maxBytesPerPicDenom = parseUE();
             maxBitsPeMbDenom = parseUE();
@@ -144,13 +142,13 @@ public class VUIParameters extends BitParser {
             numReorderFrames = parseUE();
             maxDecFrameBuffering = parseUE();
         } else {
-            motionVectorsOverPicBoundariesFlag = 0;
-            maxBytesPerPicDenom = 0;
-            maxBitsPeMbDenom = 0;
-            log2MaxMvLengthHorizontal = 0;
-            log2MaxMvLengthVertical = 0;
-            numReorderFrames = 0;
-            maxDecFrameBuffering = 0;
+            motionVectorsOverPicBoundariesFlag = -1;
+            maxBytesPerPicDenom = -1;
+            maxBitsPeMbDenom = -1;
+            log2MaxMvLengthHorizontal = -1;
+            log2MaxMvLengthVertical = -1;
+            numReorderFrames = -1;
+            maxDecFrameBuffering = -1;
         }
     }
 }

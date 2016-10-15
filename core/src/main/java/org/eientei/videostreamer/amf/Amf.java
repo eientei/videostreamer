@@ -194,8 +194,19 @@ public class Amf {
         }
     }
 
-    public static <K,V> Map<K,V> makeObject(Map<K,V> map) {
-        return new AmfObjectWrapper<K,V>(map);
+    @SuppressWarnings("unchecked")
+    public static AmfObjectWrapper makeObject(Object... kvpairs) {
+        AmfObjectWrapper map = new AmfObjectWrapper();
+
+        for (int i = 0; i < kvpairs.length; i+=2) {
+            map.put((String) kvpairs[i], kvpairs[i+1]);
+        }
+
+        return map;
+    }
+
+    public static AmfObjectWrapper makeObject(Map<String,Object> map) {
+        return new AmfObjectWrapper(map);
     }
 
     @SuppressWarnings("unchecked")

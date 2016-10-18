@@ -35,14 +35,18 @@
         var video = document.querySelector("video");
         var mediaSource = new MediaSource();
         video.src = URL.createObjectURL(mediaSource);
-        mediaSource.addEventListener("sourceopen", playStream);
+        mediaSource.addEventListener("sourceopen", function() {
+            var ms = this;
+            setTimeout(function () {
+                playStream(ms);
+            }, 100);
+        });
     }
 
     reinit();
 
-    function playStream() {
-        var mediaSource = this;
-        var sourceBuffer = mediaSource.addSourceBuffer("video/mp4; codecs=\"avc1.42C01F\"");
+    function playStream(mediaSource ) {
+        var sourceBuffer = mediaSource.addSourceBuffer("video/mp4; codecs=\"avc1.42C01F, mp4a.40.2\"");
         var appending = false;
 
         setupSock();
@@ -86,7 +90,7 @@
             do {
                 box = readBox(arr, off)
                 if (box != null) {
-                    console.log(box);
+                    //console.log(box);
                     off += box.len;
                 }
             } while (box != null);

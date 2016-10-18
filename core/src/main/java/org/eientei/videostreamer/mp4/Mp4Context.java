@@ -12,10 +12,11 @@ import java.util.List;
 public class Mp4Context {
     public List<Mp4Track> tracks = new ArrayList<>();
     public Meta meta = new Meta();
-    public int sequence;
+    public int sequence = 1;
 
     private FtypBox ftyp;
     private MoovBox moov;
+    public boolean inited;
 
     public static class Meta {
         public int framerate;

@@ -7,15 +7,16 @@ import java.util.List;
  * Created by Alexander Tumin on 2016-10-14
  */
 public class Mp4TrackFrame {
-    public List<Mp4VideoSample> samples = new ArrayList<>();
+    public List<Mp4Sample> samples = new ArrayList<>();
     public int tfhdFlags;
     public int tfhdSampleFlags;
     public Mp4Track track;
     public int basetime;
     public int trunFlags;
     public int sizptr;
+    public int bytes;
 
-    public Mp4TrackFrame(Mp4VideoTrack track, List<Mp4VideoSample> samples) {
+    public Mp4TrackFrame(Mp4Track track, List<Mp4Sample> samples) {
         this.track = track;
         this.samples.addAll(samples);
         basetime = (int) track.ticks;
@@ -25,7 +26,7 @@ public class Mp4TrackFrame {
     }
 
     public void dispose() {
-        for (Mp4VideoSample sample : samples) {
+        for (Mp4Sample sample : samples) {
             sample.dispose();
         }
         samples.clear();

@@ -5,6 +5,7 @@ import org.eientei.videostreamer.amf.Amf;
 import org.eientei.videostreamer.amf.AmfListWrapper;
 import org.eientei.videostreamer.amf.AmfObjectWrapper;
 import org.eientei.videostreamer.rtmp.message.RtmpAmfMessage;
+import org.eientei.videostreamer.rtmp.message.RtmpAudioMessage;
 import org.eientei.videostreamer.rtmp.message.RtmpUserMessage;
 import org.eientei.videostreamer.rtmp.message.RtmpVideoMessage;
 import org.eientei.videostreamer.rtmp.server.RtmpClient;
@@ -25,6 +26,7 @@ public class RtmpStream {
     private List<RtmpMessageAcceptor> subscribers = new CopyOnWriteArrayList<>();
     private ByteBuf videoAvcFrame;
     private AmfObjectWrapper metadata;
+    private ByteBuf audioFrame;
 
     public RtmpStream(RtmpServer server, String name) {
 
@@ -72,6 +74,7 @@ public class RtmpStream {
         }
 
         videoAvcFrame = null;
+        audioFrame = null;
         metadata = null;
     }
 
@@ -102,9 +105,20 @@ public class RtmpStream {
             int avcpacktype = message.getData().getByte(1);
 
             if (avcpacktype == 0) {
+                if (videoAvcFrame != null) {
+                    videoAvcFrame.release();
+                }
                 videoAvcFrame = message.getData().copy();
             }
+        } else if (message instanceof RtmpAudioMessage) {
+            if (message.getData().getByte(1) == 0) {
+                if (audioFrame != null) {
+                    audioFrame.release();
+                }
+                audioFrame = message.getData().copy();
+            }
         }
+
         for (RtmpMessageAcceptor client : subscribers) {
             client.accept(message.copy());
         }
@@ -131,6 +145,10 @@ public class RtmpStream {
 
         if (videoAvcFrame != null) {
             client.accept(new RtmpVideoMessage(6, 1, 0, videoAvcFrame.copy()));
+        }
+
+        if (audioFrame != null) {
+            client.accept(new RtmpAudioMessage(4, 1, 0, audioFrame.copy()));
         }
 
     }

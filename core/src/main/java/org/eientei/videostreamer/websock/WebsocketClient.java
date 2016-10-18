@@ -2,6 +2,7 @@ package org.eientei.videostreamer.websock;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import org.eientei.videostreamer.aac.AacHeader;
 import org.eientei.videostreamer.amf.AmfListWrapper;
 import org.eientei.videostreamer.h264.SliceNalUnit;
 import org.eientei.videostreamer.mp4.*;
@@ -34,9 +35,14 @@ public class WebsocketClient implements RtmpMessageAcceptor {
     private final RtmpStream rtmpStream;
     private final Mp4Context context = new Mp4Context();
     private Mp4VideoTrack video;
-    private Mp4Track audio;
+    private Mp4AudioTrack audio;
     private FileOutputStream fos;
     private boolean newclient = true;
+    private int[] rates = new int[] {5512, 11025, 22050, 44100};
+    private int auds;
+    private int vids;
+    private long start = System.currentTimeMillis();
+    private int secs;
 
     public WebsocketClient(WebSocketSession session, RtmpStream rtmpStream) {
         this.session = session;
@@ -68,7 +74,46 @@ public class WebsocketClient implements RtmpMessageAcceptor {
                 log.info("{}x{} @ {}", context.meta.width, context.meta.height, context.meta.framerate);
             }
         } else if (message instanceof RtmpAudioMessage) {
-            // ignore
+            ByteBuf data = message.getData();
+
+            int fst = data.readUnsignedByte();
+            int audiocodec = (fst & 0xf0) >> 4;
+            int channels = (fst & 0x01) + 1;
+            int samplesiz = ((fst & 0x02) != 0) ? 2 : 1;
+            int samplerate = (fst & 0x0c) >> 2;
+
+            boolean x = data.readUnsignedByte() == 0;
+            if (audio == null && x) {
+                audio = new Mp4AudioTrack(context, data.copy());
+                audio.aac = new AacHeader(data);
+                audio.volume = 256;
+                audio.frametick = audio.aac.frameLenFlag == 1 ? 960 : 1024;
+                audio.timescale = audio.aac.sampleRate;
+                audio.codec = audiocodec;
+                audio.channels = audio.aac.channelConf;
+                audio.samplesiz = samplesiz * 8;
+                audio.samplerate = audio.aac.sampleRate;
+            } else {
+                if (newclient) {
+                    return;
+                }
+                audio.addSample(new Mp4AudioSample(data.copy()));
+            }
+
+            //data.readUnsignedShort()
+            /*
+            audio.aac = new AacHeader(data);
+            audio.addSample(new Mp4AudioSample(data.copy()));
+            if (audio.isCompleteFrame()) {
+                Mp4TrackFrame frame = audio.getFrame();
+                MoofBox moof = new MoofBox(context, frame);
+                MdatBox mdat = new MdatBox(context, frame);
+
+                send(moof, mdat);
+                frame.dispose();
+            }
+            */
+            auds++;
         } else if (message instanceof RtmpVideoMessage) {
             ByteBuf data = message.getData();
             int fst = data.readUnsignedByte();
@@ -85,29 +130,23 @@ public class WebsocketClient implements RtmpMessageAcceptor {
                 video.height = context.meta.height;
             } else {
                 if (newclient && frametype != 1) {
-                 //   return;
+                    return;
                 }
 
                 newclient = false;
 
-                if (context.sequence == 0) {
-                    context.sequence++;
+                if (video.prestine) {
+                    video.prestine = false;
                     send(context.createHeader());
+                    context.inited = true;
                 }
-
+                vids++;
                 while (data.isReadable()) {
                     int size = data.readInt();
                     SliceNalUnit slice = new SliceNalUnit(video.sps, data, size);
                     ByteBuf naldata = data.copy(data.readerIndex(), size);
                     data.skipBytes(size);
                     video.addSample(new Mp4VideoSample(slice, naldata));
-                    if (video.isCompleteFrame()) {
-                        Mp4TrackFrame frame = video.getFrame();
-                        MoofBox moof = new MoofBox(context, frame);
-                        MdatBox mdat = new MdatBox(context, frame);
-                        send(moof, mdat);
-                        frame.dispose();
-                    }
                 }
             }
         } else if (message instanceof RtmpUserMessage) {
@@ -119,6 +158,18 @@ public class WebsocketClient implements RtmpMessageAcceptor {
                 }
             }
         }
+
+        if (audio != null && video != null) {
+            if (audio.isCompleteFrame() || video.isCompleteFrame()) {
+                MoofBox moof = new MoofBox(context);
+                MdatBox mdat = new MdatBox(context, moof);
+                send(moof, mdat);
+            }
+        }
+
+        //log.info("a:{}, v:{}", audio == null ? 0 : audio.ticks, video == null ? 0 : video.ticks);
+        //int nsecs = (int) ((System.currentTimeMillis() - start) / 1000);
+        //log.info("a:{} v:{}", auds / nsecs, vids / nsecs);
         message.release();
     }
 
@@ -129,7 +180,13 @@ public class WebsocketClient implements RtmpMessageAcceptor {
             box.write(out);
             int after = out.writerIndex();
             if (box instanceof MoofBox) {
-                out.setInt(((MoofBox) box).frame.sizptr, after - before + 8);
+                MoofBox moof = (MoofBox) box;
+                int base = after - before + 8;
+                int off = 0;
+                for (Mp4TrackFrame frame : moof.frames) {
+                    out.setInt(frame.sizptr, base + off);
+                    off += frame.bytes;
+                }
             }
         }
         try {

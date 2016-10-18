@@ -23,12 +23,12 @@ public class Mp4VideoTrack extends Mp4Track {
     public int nalBytes;
     public SpsNalUnit sps;
     public PpsNalUnit pps;
-    public List<Mp4VideoSample> samples = new ArrayList<>();
-    public long ticks;
+    public List<Mp4Sample> samples = new ArrayList<>();
+    public boolean prestine = true;
     private long preticks;
     private int lastFrameNum = -1;
-    private int blocks;
     private Queue<Mp4TrackFrame> frames = new LinkedBlockingQueue<>();
+
 
     public Mp4VideoTrack(Mp4Context context, ByteBuf data) {
         super(context, "vide", "VideoHandler", new VmhdBox(context));
@@ -72,37 +72,37 @@ public class Mp4VideoTrack extends Mp4Track {
             return;
         }
 
-
         if (lastFrameNum != -1 && lastFrameNum != sample.getSlice().frameNum) {
-            blocks++;
-            //if (samples.size() >= timescale) {
+            //if (samples.size() * frametick >= timescale) {
                 Mp4TrackFrame frame = createFrame();
                 frames.add(frame);
             //}
             preticks += frametick;
             ByteBuf buf = Unpooled.buffer();
-            buf.writeInt(sample.getNaldata().readableBytes());
-            buf.writeBytes(sample.getNaldata());
+            buf.writeInt(sample.getData().readableBytes());
+            buf.writeBytes(sample.getData());
             samples.add(new Mp4VideoSample(sample.getSlice(), buf));
         } else if (!samples.isEmpty()) {
-            ByteBuf naldata = samples.get(samples.size()-1).getNaldata();
-            naldata.writeInt(sample.getNaldata().readableBytes());
-            naldata.writeBytes(sample.getNaldata());
+            ByteBuf naldata = samples.get(samples.size()-1).getData();
+            naldata.writeInt(sample.getData().readableBytes());
+            naldata.writeBytes(sample.getData());
         } else {
             ByteBuf buf = Unpooled.buffer();
-            buf.writeInt(sample.getNaldata().readableBytes());
-            buf.writeBytes(sample.getNaldata());
+            buf.writeInt(sample.getData().readableBytes());
+            buf.writeBytes(sample.getData());
             samples.add(new Mp4VideoSample(sample.getSlice(), buf));
         }
         lastFrameNum = sample.getSlice().frameNum;
 
     }
 
+    @Override
     public boolean isCompleteFrame() {
         return !frames.isEmpty();
     }
 
+    @Override
     public Mp4TrackFrame getFrame() {
-        return frames.remove();
+        return frames.poll();
     }
 }

@@ -41,8 +41,11 @@ public class Mp4AudioTrack extends Mp4Track {
         //if (samples.size() * frametick >= timescale) {
         //}
 
-        Mp4TrackFrame frame = createFrame();
-        frames.add(frame);
+        if (samples.size() * frametick >= timescale) {
+            Mp4TrackFrame frame = createFrame();
+            frames.add(frame);
+            //System.out.println(frames.size());
+        }
         preticks += frametick;
         samples.add(sample);
     }

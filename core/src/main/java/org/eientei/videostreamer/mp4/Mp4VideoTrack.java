@@ -4,7 +4,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.eientei.videostreamer.h264.PpsNalUnit;
 import org.eientei.videostreamer.h264.SpsNalUnit;
-import org.eientei.videostreamer.mp4.boxes.*;
+import org.eientei.videostreamer.mp4.boxes.Avc1Box;
+import org.eientei.videostreamer.mp4.boxes.VmhdBox;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +29,8 @@ public class Mp4VideoTrack extends Mp4Track {
     private long preticks;
     private int lastFrameNum = -1;
     private Queue<Mp4TrackFrame> frames = new LinkedBlockingQueue<>();
+    private boolean waskeyframe = false;
+    private boolean newclient = true;
 
 
     public Mp4VideoTrack(Mp4Context context, ByteBuf data) {
@@ -67,16 +70,23 @@ public class Mp4VideoTrack extends Mp4Track {
         return null;
     }
 
-    public void addSample(Mp4VideoSample sample) {
-        if (sample.getSlice().nalUnitType == 6) {
+    public void addSample(Mp4VideoSample sample, boolean keyframe) {
+        if (sample.getSlice().nalUnitType == 6 || sample.getSlice().nalUnitType == 12) {
             return;
         }
 
+        if (keyframe) {
+            waskeyframe = true;
+        }
         if (lastFrameNum != -1 && lastFrameNum != sample.getSlice().frameNum) {
-            //if (samples.size() * frametick >= timescale) {
-                Mp4TrackFrame frame = createFrame();
-                frames.add(frame);
-            //}
+            if (samples.size() * frametick >= timescale) {
+                if (!newclient || waskeyframe) {
+                    newclient = false;
+                    waskeyframe = false;
+                    Mp4TrackFrame frame = createFrame();
+                    frames.add(frame);
+                }
+            }
             preticks += frametick;
             ByteBuf buf = Unpooled.buffer();
             buf.writeInt(sample.getData().readableBytes());

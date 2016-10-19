@@ -31,7 +31,7 @@ import java.util.Map;
  */
 public class WebsocketClient implements RtmpMessageAcceptor {
     private final Logger log = LoggerFactory.getLogger(WebsocketClient.class);
-    private final WebSocketSession session;
+    private WebSocketSession session;
     private final RtmpStream rtmpStream;
     private final Mp4Context context = new Mp4Context();
     private Mp4VideoTrack video;
@@ -41,8 +41,10 @@ public class WebsocketClient implements RtmpMessageAcceptor {
     private int[] rates = new int[] {5512, 11025, 22050, 44100};
     private int auds;
     private int vids;
-    private long start = System.currentTimeMillis();
+    private long start;
     private int secs;
+    public ByteBuf baos = Unpooled.buffer();
+    private boolean waskeyframe = false;
 
     public WebsocketClient(WebSocketSession session, RtmpStream rtmpStream) {
         this.session = session;
@@ -124,29 +126,32 @@ public class WebsocketClient implements RtmpMessageAcceptor {
             if (avcpacktype == 0) {
                 video = new Mp4VideoTrack(context, data);
                 video.volume = 0;
-                video.frametick = 1;
-                video.timescale = context.meta.framerate;
+                video.frametick = 1000;
+                video.timescale = context.meta.framerate * 1000;
                 video.width = context.meta.width;
                 video.height = context.meta.height;
             } else {
+                if (frametype == 1) {
+                    waskeyframe = true;
+                }
                 if (newclient && frametype != 1) {
                     return;
                 }
 
-                newclient = false;
-
-                if (video.prestine) {
-                    video.prestine = false;
-                    send(context.createHeader());
-                    context.inited = true;
-                }
                 vids++;
                 while (data.isReadable()) {
                     int size = data.readInt();
-                    SliceNalUnit slice = new SliceNalUnit(video.sps, data, size);
+                    SliceNalUnit slice;
+                    try {
+                        slice = new SliceNalUnit(video.sps, data, size);
+                    } catch (Exception e) {
+                        data.skipBytes(size);
+                        continue;
+                    }
+                    //System.out.println(Arrays.toString(data.copy(0, 32).array()));
                     ByteBuf naldata = data.copy(data.readerIndex(), size);
                     data.skipBytes(size);
-                    video.addSample(new Mp4VideoSample(slice, naldata));
+                    video.addSample(new Mp4VideoSample(slice, naldata), frametype == 1);
                 }
             }
         } else if (message instanceof RtmpUserMessage) {
@@ -160,11 +165,25 @@ public class WebsocketClient implements RtmpMessageAcceptor {
         }
 
         if (audio != null && video != null) {
-            if (audio.isCompleteFrame() || video.isCompleteFrame()) {
-                MoofBox moof = new MoofBox(context);
-                MdatBox mdat = new MdatBox(context, moof);
-                send(moof, mdat);
+            //if (start == 0) {
+                //start = System.currentTimeMillis();
+            //}
+            //if (System.currentTimeMillis() - start > 3000) {
+            if (waskeyframe) {
+                newclient = false;
+                context.inited = true;
             }
+                    while (audio.isCompleteFrame() && video.isCompleteFrame()) {
+                        if (video.prestine) {
+                            video.prestine = false;
+                            send(context.createHeader());
+                        }
+                        MoofBox moof = new MoofBox(context);
+                        MdatBox mdat = new MdatBox(context, moof);
+                        send(moof, mdat);
+                    }
+                //}
+            //}
         }
 
         //log.info("a:{}, v:{}", audio == null ? 0 : audio.ticks, video == null ? 0 : video.ticks);
@@ -190,12 +209,13 @@ public class WebsocketClient implements RtmpMessageAcceptor {
             }
         }
         try {
-            fos.write(out.array(), 0, out.readableBytes());
+            session.sendMessage(new BinaryMessage(out.array(), 0, out.readableBytes(), true));
         } catch (IOException e) {
             e.printStackTrace();
         }
+
         try {
-            session.sendMessage(new BinaryMessage(out.array(), 0, out.readableBytes(), true));
+            fos.write(out.array(), 0, out.readableBytes());
         } catch (IOException e) {
             e.printStackTrace();
         }

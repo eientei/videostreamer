@@ -2,6 +2,7 @@ package org.eientei.videostreamer;
 
 import org.eientei.videostreamer.config.Config;
 import org.eientei.videostreamer.rtmp.server.RtmpServer;
+import org.eientei.videostreamer.web.Web;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -10,7 +11,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  */
 @SpringBootApplication(scanBasePackageClasses = {
         Config.class,
-        RtmpServer.class
+        RtmpServer.class,
+        Web.class
 })
 public class Launcher {
     public static void main(String[] args) {

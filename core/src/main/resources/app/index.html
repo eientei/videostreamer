@@ -3,7 +3,8 @@
     <title>VIDEO</title>
 </head>
 <body>
-<video controls autoplay width="640" height="360"></video>
+<video controls width="640" height="360">
+</video>
 <script type="application/javascript">
     function readInt(arr, off) {
         return (arr[off+0] << 24 | arr[off+1] << 16 | arr[off+2] << 8 | arr[off+3]);
@@ -38,16 +39,18 @@
         mediaSource.addEventListener("sourceopen", function() {
             var ms = this;
             setTimeout(function () {
-                playStream(ms);
+                video.pause();
+                playStream(ms, video);
             }, 100);
         });
     }
 
     reinit();
 
-    function playStream(mediaSource ) {
+    function playStream(mediaSource, video) {
         var sourceBuffer = mediaSource.addSourceBuffer("video/mp4; codecs=\"avc1.42C01F, mp4a.40.2\"");
         var appending = false;
+        var newclient = 0;
 
         setupSock();
 
@@ -56,6 +59,7 @@
 
             sock.binaryType = 'arraybuffer';
             sock.onopen = function () {
+                newclient = 0;
                 console.log(sock);
                 sock.send("{\"action\": \"play\", \"stream\": \"baka\"}");
             };
@@ -73,6 +77,11 @@
         sourceBuffer.addEventListener('updateend', function () {
             appending = false;
             drain();
+            newclient++;
+            if (newclient == 3) {
+                console.log('starting');
+                video.play();
+            }
         });
 
         function drain() {
@@ -82,13 +91,14 @@
             if (appending) {
                 return;
             }
+            console.log('drain');
             appending = true;
             var arr = new Uint8Array(pending.shift());
 
             var off = 0;
             var box = null;
             do {
-                box = readBox(arr, off)
+                box = readBox(arr, off);
                 if (box != null) {
                     //console.log(box);
                     off += box.len;

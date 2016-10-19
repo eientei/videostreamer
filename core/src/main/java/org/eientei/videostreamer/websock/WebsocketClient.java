@@ -95,7 +95,7 @@ public class WebsocketClient implements RtmpMessageAcceptor {
                 audio.channels = audio.aac.channelConf;
                 audio.samplesiz = samplesiz * 8;
                 audio.samplerate = audio.aac.sampleRate;
-            } else {
+            } else if (audio != null) {
                 if (newclient) {
                     return;
                 }
@@ -164,7 +164,7 @@ public class WebsocketClient implements RtmpMessageAcceptor {
             }
         }
 
-        if (audio != null && video != null) {
+        if (video != null) {
             //if (start == 0) {
                 //start = System.currentTimeMillis();
             //}
@@ -173,7 +173,7 @@ public class WebsocketClient implements RtmpMessageAcceptor {
                 newclient = false;
                 context.inited = true;
             }
-                    while (audio.isCompleteFrame() && video.isCompleteFrame()) {
+                    while (video.isCompleteFrame()) {
                         if (video.prestine) {
                             video.prestine = false;
                             send(context.createHeader());

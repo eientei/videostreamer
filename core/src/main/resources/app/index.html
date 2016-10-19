@@ -3,7 +3,7 @@
     <title>VIDEO</title>
 </head>
 <body>
-<video controls width="640" height="360">
+<video controls preload="auto" width="640" height="360">
 </video>
 <script type="application/javascript">
     function readInt(arr, off) {
@@ -50,7 +50,7 @@
     function playStream(mediaSource, video) {
         var sourceBuffer = mediaSource.addSourceBuffer("video/mp4; codecs=\"avc1.42C01F, mp4a.40.2\"");
         var appending = false;
-        var newclient = 0;
+        var newclient = true;
 
         setupSock();
 
@@ -59,7 +59,7 @@
 
             sock.binaryType = 'arraybuffer';
             sock.onopen = function () {
-                newclient = 0;
+                newclient = true;
                 console.log(sock);
                 sock.send("{\"action\": \"play\", \"stream\": \"baka\"}");
             };
@@ -77,10 +77,13 @@
         sourceBuffer.addEventListener('updateend', function () {
             appending = false;
             drain();
-            newclient++;
-            if (newclient == 3) {
-                console.log('starting');
-                video.play();
+            if (newclient && video.buffered.length > 0) {
+                console.log(video.currentTime, video.buffered.end(0));
+                if (video.buffered.end(0) - video.currentTime > 3) {
+                    console.log('starting');
+                    video.play();
+                    newclient = false;
+                }
             }
         });
 
@@ -104,8 +107,13 @@
                     off += box.len;
                 }
             } while (box != null);
-
-
+            if (!newclient && video.buffered.length > 0) {
+                var last = video.buffered.end(0);
+                var diff = last - video.currentTime;
+                if (diff > 5) {
+                    video.currentTime = last - 5;
+                }
+            }
             sourceBuffer.appendBuffer(arr);
         }
     }

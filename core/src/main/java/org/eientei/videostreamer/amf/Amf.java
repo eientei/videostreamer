@@ -136,7 +136,6 @@ public class Amf {
         }
     };
 
-
     public enum Type {
         NUMBER(0x00, NUMBER_SERIAL),
         BOOL(0x01, BOOL_SERIAL),
@@ -213,6 +212,15 @@ public class Amf {
     public static <T> T deserialize(ByteBuf buf) {
         int type = buf.readUnsignedByte();
         return (T) Type.parseValue(type).getSerial().deserialize(buf);
+    }
+
+    public static AmfListWrapper deserializeAll(ByteBuf data) {
+        List<Object> objects = new ArrayList<>();
+        while (data.isReadable()) {
+            objects.add(deserialize(data));
+        }
+
+        return new AmfListWrapper(objects);
     }
 
     public static void serialize(ByteBuf buf, Object obj) {

@@ -1,159 +1,169 @@
 package org.eientei.videostreamer.rtmp;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.util.internal.ConcurrentSet;
 import org.eientei.videostreamer.amf.Amf;
 import org.eientei.videostreamer.amf.AmfListWrapper;
 import org.eientei.videostreamer.amf.AmfObjectWrapper;
-import org.eientei.videostreamer.rtmp.message.RtmpAmfMessage;
 import org.eientei.videostreamer.rtmp.message.RtmpAudioMessage;
-import org.eientei.videostreamer.rtmp.message.RtmpUserMessage;
+import org.eientei.videostreamer.rtmp.message.RtmpMetaMessage;
 import org.eientei.videostreamer.rtmp.message.RtmpVideoMessage;
-import org.eientei.videostreamer.rtmp.server.RtmpClient;
-import org.eientei.videostreamer.rtmp.server.RtmpServer;
 
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Set;
 
 /**
- * Created by Alexander Tumin on 2016-10-13
+ * Created by Alexander Tumin on 2016-10-19
  */
 public class RtmpStream {
     private final RtmpServer server;
     private final String name;
 
-    private RtmpMessageAcceptor publisher;
-    private List<RtmpMessageAcceptor> subscribers = new CopyOnWriteArrayList<>();
-    private ByteBuf videoAvcFrame;
+    private RtmpSubscriber publisher;
+    private Set<RtmpSubscriber> subscribers = new ConcurrentSet<>();
     private AmfObjectWrapper metadata;
-    private ByteBuf audioFrame;
+    private ByteBuf videoinit;
+    private ByteBuf audioinit;
+
+    private boolean wasaudio;
+    private boolean wasvideo;
+    private boolean booted;
 
     public RtmpStream(RtmpServer server, String name) {
-
         this.server = server;
         this.name = name;
     }
 
-    public synchronized boolean publish(RtmpMessageAcceptor client) {
+    public void broadcastAudio(RtmpAudioMessage rtmpAudioMessage) {
+        if (wasaudio && videoinit == null) {
+            videoinit = Unpooled.EMPTY_BUFFER;
+            checkBooted();
+        }
+        if (audioinit == null && rtmpAudioMessage.getData().getByte(1) == 0) {
+            audioinit = rtmpAudioMessage.getData().copy();
+            checkBooted();
+            return;
+        }
+        for (RtmpSubscriber subscriber : subscribers) {
+            rtmpAudioMessage.getData().retain();
+            subscriber.acceptAudio(rtmpAudioMessage.getData().slice(), rtmpAudioMessage.getTime());
+        }
+        wasaudio = true;
+    }
+
+    private void checkBooted() {
+        booted = metadata != null && audioinit != null && videoinit != null;
+        if (booted) {
+            for (RtmpSubscriber client : subscribers) {
+                boot(client);
+            }
+        }
+    }
+
+    private void boot(RtmpSubscriber client) {
+        client.begin();
+        client.init(metadata, videoinit.slice(), audioinit.slice());
+    }
+
+    public void broadcastVideo(RtmpVideoMessage rtmpVideoMessage) {
+        if (wasvideo && audioinit == null) {
+            audioinit = Unpooled.EMPTY_BUFFER;
+            checkBooted();
+        }
+        if (videoinit == null && rtmpVideoMessage.getData().getByte(1) == 0) {
+            videoinit = rtmpVideoMessage.getData().copy();
+            checkBooted();
+            return;
+        }
+
+        for (RtmpSubscriber subscriber : subscribers) {
+            rtmpVideoMessage.getData().retain();
+            subscriber.acceptVideo(rtmpVideoMessage.getData().slice(), rtmpVideoMessage.getTime());
+        }
+        wasvideo = true;
+    }
+
+    @SuppressWarnings("unchecked")
+    public void broadcastMeta(RtmpMetaMessage rtmpMetaMessage) {
+        AmfListWrapper amf = Amf.deserializeAll(rtmpMetaMessage.getData());
+        Map<String, Object> data = amf.get(2);
+
+        metadata = Amf.makeObject(
+                "videocodecid", 0.0,
+                "audiocodecid", 0.0,
+                "videodatarate", data.get("videodatarate"),
+                "audiodatarate", data.get("audiodatarate"),
+                "duration", 0.0,
+                "framerate", data.get("framerate"),
+                "fps", data.get("framerate"),
+                "width", data.get("width"),
+                "height", data.get("height"),
+                "displaywidth", data.get("width"),
+                "height", data.get("height")
+        );
+
+        checkBooted();
+
+        //for (RtmpSubscriber subscriber : subscribers) {
+            //subscriber.acceptMeta(metadata, rtmpMetaMessage.getTime());
+        //}
+    }
+
+    public void publish(RtmpSubscriber client) {
         if (publisher != null) {
-            return false;
+            return;
         }
-
         publisher = client;
-
-        for (RtmpMessageAcceptor subscriber : subscribers) {
-            start(subscriber);
+        for (RtmpPublishNotifier notifier : server.getNotifiers()) {
+            notifier.publish(this);
         }
-
-        return true;
     }
 
-    public synchronized boolean subscribe(RtmpMessageAcceptor client) {
-        if (subscribers.contains(client)) {
-            return false;
+    public void subscribe(RtmpSubscriber client) {
+        if (booted) {
+            boot(client);
         }
-        tryBoot(client);
         subscribers.add(client);
-        return true;
     }
 
-    public synchronized void cleanup(RtmpMessageAcceptor client) {
-        if (publisher == client) {
-            unpublish();
+    public void unpublish(RtmpSubscriber owner) {
+        if (publisher != owner) {
+            return;
         }
-        if (subscribers.contains(client)) {
-            subscribers.remove(client);
-            stop(client);
-        }
-    }
 
-    private synchronized void unpublish() {
         publisher = null;
-        for (RtmpMessageAcceptor subscriber : subscribers) {
-            stop(subscriber);
+        for (RtmpSubscriber subscriber : subscribers) {
+            subscriber.finish();
         }
 
-        videoAvcFrame = null;
-        audioFrame = null;
+        if (videoinit != null && videoinit.refCnt() > 0) {
+            videoinit.release();
+        }
+
+        if (audioinit != null && audioinit.refCnt() > 0) {
+            audioinit.release();
+        }
+
+        wasaudio = false;
+        wasvideo = false;
+
+        booted = false;
+
         metadata = null;
-    }
+        videoinit = null;
+        audioinit = null;
 
-    public synchronized void broadcast(RtmpMessage message) {
-        boolean dispose = false;
-        if (message instanceof RtmpAmfMessage) {
-            AmfListWrapper amf = ((RtmpAmfMessage) message).getAmf();
-            Map<String, Object> data = amf.get(2);
-            metadata = Amf.makeObject(
-                    "videocodecid", 0.0,
-                    "audiocodecid", 0.0,
-                    "videodatarate", data.get("videodatarate"),
-                    "audiodatarate", data.get("audiodatarate"),
-                    "duration", 0.0,
-                    "framerate", data.get("framerate"),
-                    "fps", data.get("framerate"),
-                    "width", data.get("width"),
-                    "height", data.get("height"),
-                    "displaywidth", data.get("width"),
-                    "height", data.get("height")
-            );
-
-            message = new RtmpAmfMessage(RtmpMessageType.AMF0_META, 5, 1, 0, "onMetaData", metadata);
-            dispose = true;
-        } else if (message instanceof RtmpVideoMessage) {
-            int fmt = message.getData().getByte(0);
-            int frametype = (fmt & 0xf0) >> 4;
-            int avcpacktype = message.getData().getByte(1);
-
-            if (avcpacktype == 0) {
-                if (videoAvcFrame != null) {
-                    videoAvcFrame.release();
-                }
-                videoAvcFrame = message.getData().copy();
-            }
-        } else if (message instanceof RtmpAudioMessage) {
-            if (message.getData().getByte(1) == 0) {
-                if (audioFrame != null) {
-                    audioFrame.release();
-                }
-                audioFrame = message.getData().copy();
-            }
-        }
-
-        for (RtmpMessageAcceptor client : subscribers) {
-            client.accept(message.copy());
-        }
-
-        if (dispose) {
-            message.release();
+        for (RtmpPublishNotifier notifier : server.getNotifiers()) {
+            notifier.unpublish(this);
         }
     }
 
-    private void stop(RtmpMessageAcceptor client) {
-        client.accept(new RtmpUserMessage(2, 0, 0, RtmpUserMessage.Event.STREAM_EOF, 1, 0));
+    public void unsubscribe(RtmpSubscriber context) {
+        subscribers.remove(context);
     }
 
-
-    private void start(RtmpMessageAcceptor client) {
-        client.accept(new RtmpUserMessage(2, 0, 0, RtmpUserMessage.Event.STREAM_BEGIN, 1, 0));
-        tryBoot(client);
-    }
-
-    private void tryBoot(RtmpMessageAcceptor client) {
-        if (metadata != null) {
-            client.accept(new RtmpAmfMessage(RtmpMessageType.AMF0_META, 5, 1, 0, "onMetaData", metadata));
-        }
-
-        if (videoAvcFrame != null) {
-            client.accept(new RtmpVideoMessage(6, 1, 0, videoAvcFrame.copy()));
-        }
-
-        if (audioFrame != null) {
-            client.accept(new RtmpAudioMessage(4, 1, 0, audioFrame.copy()));
-        }
-
-    }
-
-    public boolean isPublisher(RtmpClient client) {
-        return client == publisher;
+    public String getName() {
+        return name;
     }
 }

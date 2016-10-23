@@ -3,120 +3,104 @@
     <title>VIDEO</title>
 </head>
 <body>
-<video controls preload="auto" width="640" height="360">
+<video preload="auto" width="640" height="360">
 </video>
 <script type="application/javascript">
-    function readInt(arr, off) {
-        return (arr[off+0] << 24 | arr[off+1] << 16 | arr[off+2] << 8 | arr[off+3]);
-    }
-
-    function readFCC(arr, off) {
-        if (arr.len < off+4) {
-            return null;
-        }
-        return  String.fromCharCode(arr[off+0]) +
-                String.fromCharCode(arr[off+1]) +
-                String.fromCharCode(arr[off+2]) +
-                String.fromCharCode(arr[off+3]);
-    }
-
-    function readBox(data, off) {
-        var boxlen = readInt(data, off);
-        if (boxlen == null || boxlen == 0) {
-            return null;
-        }
-        return {
-            len: boxlen,
-            name: readFCC(data, off+4),
-            data: new Uint8Array(data.slice(off, off+boxlen))
-        };
-    }
-
-    function reinit() {
+    function play(name) {
         var video = document.querySelector("video");
-        var mediaSource = new MediaSource();
-        video.src = URL.createObjectURL(mediaSource);
-        mediaSource.addEventListener("sourceopen", function() {
-            var ms = this;
-            setTimeout(function () {
-                video.pause();
-                playStream(ms, video);
-            }, 100);
-        });
-    }
-
-    reinit();
-
-    function playStream(mediaSource, video) {
-        var sourceBuffer = mediaSource.addSourceBuffer("video/mp4; codecs=\"avc1.42C01F, mp4a.40.2\"");
+        var pending = [];
         var appending = false;
+        var sourceBuffer = null;
         var newclient = true;
+        var inited = false;
 
-        setupSock();
+        connectSock();
 
-        function setupSock() {
+        function tryGetSource(codecs) {
+            console.log("initializing with codecs " + codecs);
+            if (sourceBuffer == null) {
+                var mediaSource = new MediaSource();
+                video.src = URL.createObjectURL(mediaSource);
+                mediaSource.addEventListener("sourceopen", function () {
+                    video.pause();
+
+                    sourceBuffer = mediaSource.addSourceBuffer("video/mp4; codecs=\"" + codecs + "\"");
+                    sourceBuffer.addEventListener('updateend', function () {
+                        appending = false;
+                        drain();
+
+                        if (newclient && video.buffered.length > 0) {
+                            var diff = video.buffered.end(0) - video.currentTime;
+                            console.log(diff);
+                            if (diff > 2.01) {
+                                newclient = false;
+                                console.log('starting');
+                                video.play();
+                            }
+                        }
+                    });
+                });
+            }
+        }
+
+        function connectSock() {
             var sock = new WebSocket("ws://" + window.location.host + "/live");
-
             sock.binaryType = 'arraybuffer';
             sock.onopen = function () {
-                newclient = true;
                 console.log(sock);
-                sock.send("{\"action\": \"play\", \"stream\": \"baka\"}");
+                sock.send("{\"play\": \"" + name + "\"}");
             };
+
             sock.onmessage = function (msg) {
-                pending.push(msg.data);
-                drain();
+                if (!inited) {
+                    inited = true;
+                    pending = [];
+                    tryGetSource(msg.data);
+                } else {
+                    pending.push(msg.data);
+                    drain();
+                }
             };
+
             sock.onclose = function () {
-                mediaSource.removeSourceBuffer(sourceBuffer);
-                reinit();
+                if (sourceBuffer != null) {
+                    sourceBuffer = null;
+                }
+                newclient = true;
+                inited = false;
+                setTimeout(connectSock, 1000);
             };
         }
-
-        var pending = [];
-        sourceBuffer.addEventListener('updateend', function () {
-            appending = false;
-            drain();
-            if (newclient && video.buffered.length > 0) {
-                console.log(video.currentTime, video.buffered.end(0));
-                if (video.buffered.end(0) - video.currentTime > 3) {
-                    console.log('starting');
-                    video.play();
-                    newclient = false;
-                }
-            }
-        });
 
         function drain() {
             if (pending.length == 0) {
                 return;
             }
+
             if (appending) {
                 return;
             }
+
+            if (sourceBuffer == null) {
+                return;
+            }
+
             console.log('drain');
             appending = true;
             var arr = new Uint8Array(pending.shift());
 
-            var off = 0;
-            var box = null;
-            do {
-                box = readBox(arr, off);
-                if (box != null) {
-                    //console.log(box);
-                    off += box.len;
-                }
-            } while (box != null);
-            if (!newclient && video.buffered.length > 0) {
+            if (video.buffered.length > 0) {
                 var last = video.buffered.end(0);
                 var diff = last - video.currentTime;
                 if (diff > 5) {
+                    console.log(diff, 'adjust');
                     video.currentTime = last - 5;
                 }
             }
             sourceBuffer.appendBuffer(arr);
         }
     }
+    play("baka");
 </script>
 </body>
 </html>

@@ -1,41 +1,42 @@
 package org.eientei.videostreamer.rtmp;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
 
 /**
- * Created by Alexander Tumin on 2016-10-12
+ * Created by Alexander Tumin on 2016-10-19
  */
 public abstract class RtmpMessage {
-    private final static PooledByteBufAllocator ALLOC = new PooledByteBufAllocator();
-
-    private final RtmpHeader header;
+    private final RtmpMessageType type;
+    private final int chunk;
+    private final int stream;
+    private final int time;
     private final ByteBuf data;
 
-    public RtmpMessage(RtmpHeader header, ByteBuf data) {
-        this.header = header;
+    public RtmpMessage(RtmpMessageType type, int chunk, int stream, int time, ByteBuf data) {
+        this.type = type;
+        this.chunk = chunk;
+        this.stream = stream;
+        this.time = time;
         this.data = data;
     }
 
-    public RtmpMessage(RtmpMessageType type, int chunkid, long streamid, long time, ByteBuf data) {
-        this(new RtmpHeader(type, chunkid, streamid, time), data);
+    public int getChunk() {
+        return chunk;
     }
 
-    public RtmpMessage(RtmpMessageType type, int chunkid, long streamid, long time) {
-        this(type, chunkid, streamid, time, ALLOC.buffer());
+    public int getStream() {
+        return stream;
     }
 
-    public void release() {
-        data.release();
-    }
-
-    public RtmpHeader getHeader() {
-        return header;
+    public int getTime() {
+        return time;
     }
 
     public ByteBuf getData() {
         return data;
     }
 
-    public abstract RtmpMessage copy();
+    public RtmpMessageType getType() {
+        return type;
+    }
 }

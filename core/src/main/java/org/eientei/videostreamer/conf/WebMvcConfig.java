@@ -1,9 +1,7 @@
 package org.eientei.videostreamer.conf;
 
-import org.eientei.videostreamer.mp4.Mp4Server;
-import org.eientei.videostreamer.ws.WebsocketLiveHandler;
+import org.eientei.videostreamer.ws.WebsocketCommHandler;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
@@ -20,22 +18,22 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @EnableWebMvc
 @EnableWebSocket
 public class WebMvcConfig extends WebMvcConfigurerAdapter implements WebSocketConfigurer {
+    private final WebsocketCommHandler commHandler;
+
     @Autowired
-    private Mp4Server mp4Server;
+    public WebMvcConfig(WebsocketCommHandler commHandler) {
+        this.commHandler = commHandler;
+    }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(liveHandler(), "/live").setAllowedOrigins("*");
-    }
-
-    @Bean
-    public WebsocketLiveHandler liveHandler() {
-        return new WebsocketLiveHandler(mp4Server);
+        registry.addHandler(commHandler, "/comm").setAllowedOrigins("*");
     }
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.setOrder(-2);
+        registry.addResourceHandler("/js/lib/**").addResourceLocations("classpath:META-INF/resources/webjars/");
         registry.addResourceHandler("/index.html").addResourceLocations("classpath:app/index.html");
         registry.addResourceHandler("/js/broadway/**").addResourceLocations("classpath:Broadway/Player/");
         registry.addResourceHandler("/js/app/**").addResourceLocations("classpath:app/js/");

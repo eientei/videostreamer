@@ -16,17 +16,19 @@ public class Mp4Frame {
     private boolean keyframe;
 
     public void append(Mp4Track track) {
-        List<Mp4Sample> newsamples = track.drainSamples();
-        if (samples.isEmpty()) {
-            for (Mp4Sample sample : newsamples) {
-                keyframe = keyframe || sample.isKeyframe();
+        if (track.isSamplesReady()) {
+            List<Mp4Sample> newsamples = track.drainSamples();
+            if (samples.isEmpty()) {
+                for (Mp4Sample sample : newsamples) {
+                    keyframe = keyframe || sample.isKeyframe();
+                }
             }
+            samples.put(track.id(), newsamples);
         }
-        samples.put(track.id(), newsamples);
     }
 
-    public Mp4MoofBox getMoof(Mp4Context context, Mp4Subscriber subscriber) {
-        return new Mp4MoofBox(context, this, subscriber);
+    public Mp4MoofBox getMoof(Mp4Context context, Map<Integer, Integer> ticks) {
+        return new Mp4MoofBox(context, this, ticks);
     }
 
     public Mp4MdatBox getMdat(Mp4Context context) {
@@ -58,5 +60,15 @@ public class Mp4Frame {
 
     public boolean isKeyframe() {
         return keyframe;
+    }
+
+    public int getMinTimestamp() {
+        int min = Integer.MAX_VALUE;
+        for (List<Mp4Sample> s : samples.values()) {
+            if (s.get(0).getTimestamp() < min) {
+                min = s.get(0).getTimestamp();
+            }
+        }
+        return min;
     }
 }

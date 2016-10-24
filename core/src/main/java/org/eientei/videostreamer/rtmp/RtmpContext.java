@@ -45,15 +45,6 @@ public class RtmpContext implements RtmpSubscriber {
     }
 
     @Override
-    public synchronized void init(AmfObjectWrapper metadata, ByteBuf videoro, ByteBuf audioro) {
-        channel.writeAndFlush(new RtmpMetaMessage(5, 1, 0, this, "onMetaData", metadata)).syncUninterruptibly();
-        videoro.retain();
-        channel.writeAndFlush(new RtmpVideoMessage(6, 1, 0, videoro)).syncUninterruptibly().syncUninterruptibly();
-        audioro.retain();
-        channel.writeAndFlush(new RtmpAudioMessage(4, 1, 0, audioro)).syncUninterruptibly().syncUninterruptibly();
-    }
-
-    @Override
     public synchronized void acceptVideo(ByteBuf readonly, int timestamp) {
         channel.writeAndFlush(new RtmpVideoMessage(6, 1, timestamp, readonly)).syncUninterruptibly();
     }
@@ -64,7 +55,7 @@ public class RtmpContext implements RtmpSubscriber {
     }
 
     @Override
-    public synchronized void begin() {
+    public synchronized void begin(AmfObjectWrapper metadata, ByteBuf videoro, ByteBuf audioro) {
         channel.writeAndFlush(new RtmpUserMessage(2, 0, 0, this,
                 RtmpUserMessage.Event.STREAM_BEGIN,
                 1,
@@ -95,6 +86,13 @@ public class RtmpContext implements RtmpSubscriber {
                         "description", "Start publishing."
                 )
         )).syncUninterruptibly();
+
+
+        channel.writeAndFlush(new RtmpMetaMessage(5, 1, 0, this, "onMetaData", metadata)).syncUninterruptibly();
+        videoro.retain();
+        channel.writeAndFlush(new RtmpVideoMessage(6, 1, 0, videoro)).syncUninterruptibly().syncUninterruptibly();
+        audioro.retain();
+        channel.writeAndFlush(new RtmpAudioMessage(4, 1, 0, audioro)).syncUninterruptibly().syncUninterruptibly();
     }
 
     @Override

@@ -8,10 +8,14 @@ import io.netty.buffer.ByteBuf;
 public class Mp4Sample {
     private final ByteBuf data;
     private final boolean keyframe;
+    private final int timestamp;
+    private final int duration;
 
-    public Mp4Sample(ByteBuf data, boolean keyframe) {
+    public Mp4Sample(ByteBuf data, boolean keyframe, int timestamp, int duration) {
         this.data = data;
         this.keyframe = keyframe;
+        this.timestamp = timestamp;
+        this.duration = duration;
     }
 
     public ByteBuf getData() {
@@ -24,5 +28,13 @@ public class Mp4Sample {
 
     public boolean isKeyframe() {
         return keyframe;
+    }
+
+    public int getTimestamp() {
+        return timestamp;
+    }
+
+    public int getDuration() {
+        return duration;
     }
 }

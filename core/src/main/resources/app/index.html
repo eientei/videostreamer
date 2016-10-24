@@ -3,104 +3,159 @@
     <title>VIDEO</title>
 </head>
 <body>
-<video preload="auto" width="640" height="360">
+<video width="640" height="360">
 </video>
+<audio></audio>
+<p id="status">Waiting</p>
+<p id="subscribers">Booting...</p>
+<script src="/js/lib/utf8/2.1.1/utf8.js"></script>
 <script type="application/javascript">
-    function play(name) {
-        var video = document.querySelector("video");
+    var CommType = {
+        STREAM_PLAY: 1,
+        STREAM_STOP: 2,
+        STREAM_UPDATE_AV: 3,
+        STREAM_SUBSCRIBERS: 4,
+        STREAM_UPDATE_A: 5,
+        STREAM_UPDATE_V: 6
+    };
+</script>
+<script type="application/javascript">
+    function Stream(video) {
+        var mintime = 2.5;
+        var maxtime = 4.5;
         var pending = [];
-        var appending = false;
-        var sourceBuffer = null;
-        var newclient = true;
-        var inited = false;
-
-        connectSock();
-
-        function tryGetSource(codecs) {
-            console.log("initializing with codecs " + codecs);
-            if (sourceBuffer == null) {
-                var mediaSource = new MediaSource();
-                video.src = URL.createObjectURL(mediaSource);
-                mediaSource.addEventListener("sourceopen", function () {
-                    video.pause();
-
-                    sourceBuffer = mediaSource.addSourceBuffer("video/mp4; codecs=\"" + codecs + "\"");
-                    sourceBuffer.addEventListener('updateend', function () {
-                        appending = false;
-                        drain();
-
-                        if (newclient && video.buffered.length > 0) {
-                            var diff = video.buffered.end(0) - video.currentTime;
-                            console.log(diff);
-                            if (diff > 2.01) {
-                                newclient = false;
-                                console.log('starting');
-                                video.play();
-                            }
-                        }
-                    });
-                });
-            }
-        }
-
-        function connectSock() {
-            var sock = new WebSocket("ws://" + window.location.host + "/live");
-            sock.binaryType = 'arraybuffer';
-            sock.onopen = function () {
-                console.log(sock);
-                sock.send("{\"play\": \"" + name + "\"}");
-            };
-
-            sock.onmessage = function (msg) {
-                if (!inited) {
-                    inited = true;
-                    pending = [];
-                    tryGetSource(msg.data);
-                } else {
-                    pending.push(msg.data);
-                    drain();
-                }
-            };
-
-            sock.onclose = function () {
-                if (sourceBuffer != null) {
-                    sourceBuffer = null;
-                }
-                newclient = true;
-                inited = false;
-                setTimeout(connectSock, 1000);
-            };
-        }
+        var init = true;
+        var buffer = null;
 
         function drain() {
-            if (pending.length == 0) {
+            if (pending.length == 0 || !buffer || buffer.updating) {
                 return;
             }
+            buffer.appendBuffer(pending.shift());
+        }
 
-            if (appending) {
-                return;
-            }
-
-            if (sourceBuffer == null) {
-                return;
-            }
-
-            console.log('drain');
-            appending = true;
-            var arr = new Uint8Array(pending.shift());
-
+        function timings() {
             if (video.buffered.length > 0) {
                 var last = video.buffered.end(0);
                 var diff = last - video.currentTime;
-                if (diff > 5) {
-                    console.log(diff, 'adjust');
-                    video.currentTime = last - 5;
+                if (init) {
+                    if (diff > mintime) {
+                        console.log('playing');
+                        video.play();
+                        init = false;
+                    }
+                } else {
+                    if (diff > maxtime) {
+                        console.log('adjusting time', diff);
+                        video.currentTime = last - maxtime;
+                    }
                 }
             }
-            sourceBuffer.appendBuffer(arr);
         }
+
+        this.begin = function (codecs) {
+            var mediaSource = new MediaSource();
+            video.src = URL.createObjectURL(mediaSource);
+            video.load();
+            mediaSource.addEventListener('sourceopen', function () {
+                buffer = mediaSource.addSourceBuffer("video/mp4; codecs=\"" + codecs + "\"");
+                buffer.addEventListener('updateend', drain);
+            });
+        };
+
+        this.stop = function () {
+            pending = [];
+            init = true;
+        };
+
+        this.update = function (data) {
+            pending.push(data);
+            timings();
+            drain();
+        };
     }
-    play("baka");
+</script>
+<script type="application/javascript">
+    function Comm(hostname, handlers) {
+        if (!handlers) {
+            handlers = {};
+        }
+
+        function readInt(buf, offset) {
+            if (!offset) {
+                offset = 0;
+            }
+            return (buf[offset+0] << 24) | (buf[offset+1] << 16) | (buf[offset+2] << 8) | (buf[offset+3]);
+        }
+
+        function readString(buf, offset) {
+            if (!offset) {
+                offset = 0;
+            }
+            return utf8.decode(Array.from(buf.slice(offset)).map(function(char) {return  String.fromCharCode(char)}).join(''));
+        }
+
+        var comm = new WebSocket("ws://" + hostname + "/comm");
+        comm.binaryType = "arraybuffer";
+
+        comm.onopen = function () {
+            comm.send("{\"play\": \"" + "baka" + "\"}");
+        };
+
+        comm.onclose = function () {
+            console.log('sock closed');
+        };
+
+        comm.onmessage = function (msg) {
+            var data = new Uint8Array(msg.data.slice(4));
+            var type = readInt(new Uint8Array(msg.data.slice(0, 4)));
+
+            switch (type) {
+                case CommType.STREAM_PLAY:
+                    console.log('issuing play');
+                    if (handlers.streamPlay) {
+                        handlers.streamPlay(readString(data));
+                    }
+                    break;
+                case CommType.STREAM_STOP:
+                    console.log('issuing stop');
+                    if (handlers.streamStop) {
+                        handlers.streamStop();
+                    }
+                    break;
+                case CommType.STREAM_UPDATE_AV:
+                    if (handlers.streamUpdate) {
+                        handlers.streamUpdate(data);
+                    }
+                    break;
+                case CommType.STREAM_SUBSCRIBERS:
+                    if (handlers.streamSubscribers) {
+                        handlers.streamSubscribers(readInt(data));
+                    }
+                    break;
+            }
+        };
+    }
+</script>
+<script type="application/javascript">
+    var video = document.querySelector("video");
+    var stream = new Stream(video);
+    new Comm(window.location.host, {
+        streamPlay: function (codecs) {
+            document.getElementById("status").innerText = "Playing";
+            stream.begin(codecs);
+        },
+        streamStop: function () {
+            document.getElementById("status").innerText = "Waiting";
+            stream.stop();
+        },
+        streamUpdate: function (data) {
+            stream.update(data);
+        },
+        streamSubscribers: function (count) {
+            document.getElementById("subscribers").innerText = "Subscribers: " + count;
+        }
+    });
 </script>
 </body>
 </html>

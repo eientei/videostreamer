@@ -17,6 +17,9 @@ public class ByteBufInput implements ByteInput {
 
     @Override
     public int read() throws IOException {
+        if (!buf.isReadable()) {
+            throw new IllegalStateException();
+        }
         return buf.readByte();
     }
 }

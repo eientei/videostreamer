@@ -2,16 +2,13 @@ package org.eientei.videostreamer.mp4;
 
 import io.netty.buffer.ByteBuf;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by Alexander Tumin on 2016-10-22
  */
 public abstract class Mp4Track {
-    private final List<Mp4Sample> samples = new ArrayList<>();
+    private final Deque<Mp4Sample> samples = new LinkedList<>();
     private final Mp4Context context;
     private final int volume;
     private final int width;
@@ -73,6 +70,7 @@ public abstract class Mp4Track {
         return preps.removeFirst();
     }
 
+    public abstract boolean isKnown();
     public abstract void update(ByteBuf readonly, boolean keyframe);
     public abstract void release();
     public abstract String getShortHandler();

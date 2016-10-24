@@ -17,8 +17,10 @@ public class Mp4MdatBox extends Mp4Box {
     @Override
     protected void doWrite(ByteBuf out) {
         for (Mp4Track track : context.getTracks()) {
-            for (Mp4Sample sample : frame.getSamples(track.id())) {
-                out.writeBytes(sample.getData().slice());
+            if (frame.getSamples(track.id()) != null) {
+                for (Mp4Sample sample : frame.getSamples(track.id())) {
+                    out.writeBytes(sample.getData().slice());
+                }
             }
         }
     }

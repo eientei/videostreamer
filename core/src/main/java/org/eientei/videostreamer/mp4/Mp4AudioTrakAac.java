@@ -26,8 +26,13 @@ public class Mp4AudioTrakAac extends Mp4Track {
     }
 
     @Override
+    public boolean isKnown() {
+        return true;
+    }
+
+    @Override
     public void update(ByteBuf readonly, boolean keyframe) {
-        addSample(new Mp4Sample(readonly.copy(), keyframe));
+        addSample(new Mp4Sample(readonly.copy(), keyframe, 0, 0));
     }
 
     @Override

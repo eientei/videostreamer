@@ -11,6 +11,11 @@ public class Mp4AudioTrakMp3 extends Mp4Track {
     }
 
     @Override
+    public boolean isKnown() {
+        return true;
+    }
+
+    @Override
     public void update(ByteBuf readonly, boolean b) {
 
     }

@@ -16,21 +16,21 @@ public class Mp4Server implements RtmpPublishNotifier {
 
     @Override
     public void publish(RtmpStream stream) {
-        Mp4Context context = contexts.get(stream.getName());
-        if (context == null) {
-            context = new Mp4Context();
-            contexts.put(stream.getName(), context);
-        }
-        stream.subscribe(context);
+        stream.subscribe(getContext(stream.getName()));
     }
 
     @Override
     public void unpublish(RtmpStream stream) {
-        Mp4Context context = contexts.remove(stream.getName());
-        stream.unsubscribe(context);
+        stream.unsubscribe(getContext(stream.getName()));
     }
 
     public Mp4Context getContext(String name) {
-        return contexts.get(name);
+        Mp4Context context = contexts.get(name);
+        if (context == null) {
+            context = new Mp4Context(name);
+            contexts.put(name, context);
+        }
+
+        return context;
     }
 }

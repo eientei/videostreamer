@@ -62,8 +62,7 @@ public class RtmpStream {
     }
 
     private void boot(RtmpSubscriber client) {
-        client.begin();
-        client.init(metadata, videoinit.slice(), audioinit.slice());
+        client.begin(metadata, videoinit.slice(), audioinit.slice());
     }
 
     public void broadcastVideo(RtmpVideoMessage rtmpVideoMessage) {

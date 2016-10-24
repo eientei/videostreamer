@@ -7,10 +7,8 @@ import org.eientei.videostreamer.amf.AmfObjectWrapper;
  * Created by Alexander Tumin on 2016-10-19
  */
 public interface RtmpSubscriber {
-    void init(AmfObjectWrapper metadata, ByteBuf videoro, ByteBuf audioro);
     void acceptVideo(ByteBuf readonly, int timestamp);
     void acceptAudio(ByteBuf readonly, int timestamp);
-    void begin();
+    void begin(AmfObjectWrapper metadata, ByteBuf videoro, ByteBuf audioro);
     void finish();
-    void close();
 }

@@ -27,6 +27,9 @@ public class Mp4VideoTrackH264 extends Mp4Track {
     private int lastFrameNum = -1;
     private ByteBuf lastFrameData;
     private boolean lastKeyframe;
+    private boolean known = false;
+    private int num = 0;
+    private int counter = 0;
 
     public Mp4VideoTrackH264(Mp4Context context, AmfObjectWrapper metadata, ByteBuf videoro) {
         super(context, 0,
@@ -55,8 +58,12 @@ public class Mp4VideoTrackH264 extends Mp4Track {
     }
 
     @Override
-    public void update(ByteBuf readonly, boolean keyframe) {
+    public boolean isKnown() {
+        return known;
+    }
 
+    @Override
+    public void update(ByteBuf readonly, boolean keyframe) {
         while (readonly.isReadable()) {
             int size = 0;
             switch (nalBytes) {
@@ -80,11 +87,18 @@ public class Mp4VideoTrackH264 extends Mp4Track {
                 continue;
             }
 
-            if (lastFrameNum != -1 && lastFrameNum != slice.frameNum) {
-                addSample(new Mp4Sample(lastFrameData.copy(), lastKeyframe));
+            if ((known && ++counter == num) || lastFrameNum != -1 && lastFrameNum != slice.frameNum) {
+                addSample(new Mp4Sample(lastFrameData.copy(), lastKeyframe, 0, 0));
                 lastFrameData.release();
                 lastKeyframe = false;
                 lastFrameData = getContext().ALLOC.allocSizeless();
+                if (!known) {
+                    known = true;
+                }
+                counter = 0;
+            }
+            if (!known) {
+                num++;
             }
             lastKeyframe = lastKeyframe || keyframe;
             switch (nalBytes) {

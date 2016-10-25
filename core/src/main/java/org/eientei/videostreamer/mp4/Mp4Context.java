@@ -1,12 +1,14 @@
 package org.eientei.videostreamer.mp4;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.internal.ConcurrentSet;
 import org.eientei.videostreamer.amf.AmfObjectWrapper;
 import org.eientei.videostreamer.mp4.boxes.Mp4FtypBox;
 import org.eientei.videostreamer.mp4.boxes.Mp4MoovBox;
 import org.eientei.videostreamer.rtmp.RtmpSubscriber;
 import org.eientei.videostreamer.util.AacHeader;
 import org.eientei.videostreamer.util.PooledAllocator;
+import org.eientei.videostreamer.ws.CommType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +25,7 @@ public class Mp4Context implements RtmpSubscriber {
 
     public final PooledAllocator ALLOC = new PooledAllocator();
     private final Logger log = LoggerFactory.getLogger(Mp4Context.class);
-    private final Map<Mp4Subscriber, Map<Integer, Integer>> subscribers = new ConcurrentHashMap<>();
+    private final Set<Mp4Subscriber> subscribers = new ConcurrentSet<>();
     private AmfObjectWrapper metadata;
     private Mp4Track video;
     private Mp4Track audio;
@@ -34,7 +36,8 @@ public class Mp4Context implements RtmpSubscriber {
     private volatile boolean inited = false;
     private final String name;
     private String codecs;
-    private boolean wasvideokeyframe = false;
+
+    private Map<Mp4Subscriber, Map<Mp4Track, Integer>> times = new ConcurrentHashMap<>();
 
     public Mp4Context(String name) {
         this.name = name;
@@ -67,7 +70,7 @@ public class Mp4Context implements RtmpSubscriber {
         switch (audiocodec) {
             case AUDIO_FORMAT_AAC:
                 AacHeader aacHeader = new AacHeader(audioro.slice());
-                int sampleCount = aacHeader.frameLenFlag == 1 ? 960 : 1024;
+                int sampleCount = (aacHeader.frameLenFlag == 1 ? 960 : 1024);
                 audio = new Mp4AudioTrakAac(this, channels, samplesiz * 16, aacHeader.sampleRate, sampleCount, audioro.slice());
                 break;
             case AUDIO_FORMAT_MP3:
@@ -81,46 +84,40 @@ public class Mp4Context implements RtmpSubscriber {
         }
     }
 
-    private Mp4Box[] makeHeader() {
-        if (header == null) {
-            Mp4FtypBox ftyp = new Mp4FtypBox(this, "mp42", 1, "mp42", "avc1", "iso5");
-            Mp4MoovBox moov = new Mp4MoovBox(this);
-            header = new Mp4Box[] { ftyp, moov };
-        }
-        return header;
+    private Mp4Box[] makeHeader(List<Mp4Track> tracks) {
+        Mp4FtypBox ftyp = new Mp4FtypBox(this, "mp42", 1, "mp42", "avc1", "iso5");
+        Mp4MoovBox moov = new Mp4MoovBox(this, tracks);
+        return new Mp4Box[] { ftyp, moov };
     }
 
     private synchronized void tryGetFrame() {
-        while (isReady()) {
-            Mp4Frame frame = new Mp4Frame();
-            for (Mp4Track track : tracks) {
-                frame.append(track);
-            }
-            for (Map.Entry<Mp4Subscriber, Map<Integer, Integer>> smap : subscribers.entrySet()) {
-                if (smap.getValue().isEmpty() && !frame.isKeyframe()) {
-                    continue;
-                } else if (smap.getValue().isEmpty()) {
-                    for (Mp4Track track : tracks) {
-                        smap.getValue().put(track.id(), 0);
-                    }
-                    smap.getKey().accept(makeHeader());
-                }
-                smap.getKey().accept(frame.getMoof(this, smap.getValue()), frame.getMdat(this));
-            }
-            frame.release();
-            //frames.add(frame);
-            //if (frames.size() > 3) {
-                //frames.removeFirst().release();
-            //}
+        Mp4Frame frame = new Mp4Frame();
+        for (Mp4Track track : tracks) {
+            frame.append(track);
         }
+        for (Mp4Subscriber subscriber : subscribers) {
+            if (!times.containsKey(subscriber)) {
+                continue;
+            }
+            if (times.get(subscriber).isEmpty()) {
+                for (Mp4Track track : tracks) {
+                    times.get(subscriber).put(track, 0);
+                }
+                subscriber.accept(CommType.STREAM_UPDATE_AVK, makeHeader(tracks));
+            }
+
+            subscriber.accept(frame.isKeyframe() ? CommType.STREAM_UPDATE_AVK : CommType.STREAM_UPDATE_AV, frame.getMoof(this, tracks, times.get(subscriber)), frame.getMdat(this, tracks));
+        }
+        frame.release();
     }
 
-    private boolean isReady() {
-        boolean ready = true;
-        for (Mp4Track track : tracks) {
-            ready = ready && track.isSamplesReady();
-        }
-        return ready;
+    private boolean isReady(Mp4Track track) {
+        return track == null || track.isSamplesReady();
+        //boolean ready = true;
+        //for (Mp4Track track : tracks) {
+        //ready = ready && track.isSamplesReady();
+        //}
+        //return ready;
     }
 
     @Override
@@ -131,12 +128,8 @@ public class Mp4Context implements RtmpSubscriber {
             int videocodec = fst & 0x0f;
             int avcpacktype = readonly.readByte();
             int delay = readonly.readMedium();
-
-            if (frametype == 1) {
-                wasvideokeyframe = true;
-            }
             video.update(readonly, frametype == 1);
-            tryGetFrame();
+            frameUpdate();
         }
         readonly.release();
     }
@@ -150,12 +143,20 @@ public class Mp4Context implements RtmpSubscriber {
             int samplesiz = ((fst & 0x02) != 0) ? 2 : 1;
             int samplerate = (fst & 0x0c) >> 2;
             readonly.skipBytes(1);
-            if (video.isKnown() && wasvideokeyframe) {
-                audio.update(readonly, true);
-                tryGetFrame();
-            }
+            audio.update(readonly, true);
+            frameUpdate();
         }
         readonly.release();
+    }
+
+    private void frameUpdate() {
+        while (isReady(audio) && isReady(video)) {
+            tryGetFrame();
+            /*
+            tryGetFrame(audio);
+            tryGetFrame(video);
+            */
+        }
     }
 
     @Override
@@ -183,16 +184,16 @@ public class Mp4Context implements RtmpSubscriber {
         codecs = sb.toString();
         inited = true;
 
-        for (Mp4Subscriber subscriber : subscribers.keySet()) {
+        for (Mp4Subscriber subscriber : subscribers) {
             subscriber.begin(codecs);
         }
     }
 
     @Override
     public void finish() {
-        for (Map.Entry<Mp4Subscriber, Map<Integer, Integer>> subscriber : subscribers.entrySet()) {
-            subscriber.getKey().finish();
-            subscriber.getValue().clear();
+        for (Mp4Subscriber subscriber : subscribers) {
+            subscriber.finish();
+            times.put(subscriber, new HashMap<Mp4Track, Integer>());
         }
 
         for (Mp4Track track : tracks) {
@@ -209,13 +210,15 @@ public class Mp4Context implements RtmpSubscriber {
         //for (Mp4Frame prevframe : frames) {
             //subscriber.accept(prevframe.getMoof(this, subscriber), prevframe.getMdat(this));
         //}
-        subscribers.put(subscriber, new HashMap<Integer, Integer>());
+        subscribers.add(subscriber);
+
+        times.put(subscriber, new HashMap<Mp4Track, Integer>());
 
         if (inited) {
             subscriber.begin(codecs);
         }
 
-        for (Mp4Subscriber s : subscribers.keySet()) {
+        for (Mp4Subscriber s : subscribers) {
             s.count(subscribers.size());
         }
 
@@ -232,8 +235,9 @@ public class Mp4Context implements RtmpSubscriber {
     }
 
     public synchronized void unsubsribe(Mp4Subscriber subscriber) {
+        times.remove(subscriber);
         subscribers.remove(subscriber);
-        for (Mp4Subscriber s : subscribers.keySet()) {
+        for (Mp4Subscriber s : subscribers) {
             s.finish();
         }
     }

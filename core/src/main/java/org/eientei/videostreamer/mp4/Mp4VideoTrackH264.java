@@ -1,12 +1,13 @@
 package org.eientei.videostreamer.mp4;
 
 import io.netty.buffer.ByteBuf;
+import org.eientei.videostreamer.amf.AmfObjectWrapper;
 import org.eientei.videostreamer.h264.PpsNalUnit;
 import org.eientei.videostreamer.h264.SliceNalUnit;
 import org.eientei.videostreamer.h264.SpsNalUnit;
-import org.eientei.videostreamer.amf.AmfObjectWrapper;
 import org.eientei.videostreamer.mp4.boxes.Mp4Avc1Box;
 import org.eientei.videostreamer.mp4.boxes.Mp4VmhdBox;
+import org.eientei.videostreamer.ws.CommType;
 
 /**
  * Created by Alexander Tumin on 2016-10-22
@@ -27,9 +28,6 @@ public class Mp4VideoTrackH264 extends Mp4Track {
     private int lastFrameNum = -1;
     private ByteBuf lastFrameData;
     private boolean lastKeyframe;
-    private boolean known = false;
-    private int num = 0;
-    private int counter = 0;
 
     public Mp4VideoTrackH264(Mp4Context context, AmfObjectWrapper metadata, ByteBuf videoro) {
         super(context, 0,
@@ -58,11 +56,6 @@ public class Mp4VideoTrackH264 extends Mp4Track {
     }
 
     @Override
-    public boolean isKnown() {
-        return known;
-    }
-
-    @Override
     public void update(ByteBuf readonly, boolean keyframe) {
         while (readonly.isReadable()) {
             int size = 0;
@@ -87,18 +80,11 @@ public class Mp4VideoTrackH264 extends Mp4Track {
                 continue;
             }
 
-            if ((known && ++counter == num) || lastFrameNum != -1 && lastFrameNum != slice.frameNum) {
+            if (lastFrameNum != -1 && lastFrameNum != slice.frameNum) {
                 addSample(new Mp4Sample(lastFrameData.copy(), lastKeyframe, 0, 0));
                 lastFrameData.release();
                 lastKeyframe = false;
                 lastFrameData = getContext().ALLOC.allocSizeless();
-                if (!known) {
-                    known = true;
-                }
-                counter = 0;
-            }
-            if (!known) {
-                num++;
             }
             lastKeyframe = lastKeyframe || keyframe;
             switch (nalBytes) {
@@ -144,6 +130,20 @@ public class Mp4VideoTrackH264 extends Mp4Track {
     @Override
     public Mp4Box getMhd() {
         return mhd;
+    }
+
+    @Override
+    public CommType getType(Mp4Frame frame) {
+        if (frame == null || frame.isKeyframe()) {
+            return CommType.STREAM_UPDATE_VK;
+        } else {
+            return CommType.STREAM_UPDATE_V;
+        }
+    }
+
+    @Override
+    public int getStart() {
+        return 0;
     }
 
     public ByteBuf getAvc() {

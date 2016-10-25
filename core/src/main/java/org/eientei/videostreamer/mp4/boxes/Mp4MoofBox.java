@@ -12,18 +12,16 @@ import java.util.Map;
  * Created by Alexander Tumin on 2016-10-22
  */
 public class Mp4MoofBox extends Mp4Box {
-    private final Mp4Frame frame;
     private final Mp4MfhdBox mfhd;
     private final List<Mp4TrafBox> trafs = new ArrayList<>();
     private final Map<Integer,Integer> offsets = new HashMap<>();
 
-    public Mp4MoofBox(Mp4Context context, Mp4Frame frame, Map<Integer, Integer> ticks) {
+    public Mp4MoofBox(Mp4Context context, List<Mp4Track> tracks, Mp4Frame frame, Map<Mp4Track, Integer> times) {
         super("moof", context);
-        this.frame = frame;
         this.mfhd = new Mp4MfhdBox(context);
-        for (Mp4Track track : context.getTracks()) {
-            if (frame.getSamples(track.id()) != null) {
-                trafs.add(new Mp4TrafBox(context, frame, track, ticks));
+        for (Mp4Track track : tracks) {
+            if (frame.getSamples(track) != null) {
+                trafs.add(new Mp4TrafBox(context, frame, track, times));
             }
         }
     }

@@ -23,7 +23,7 @@ public class Mp4Mp4aBox extends Mp4Box {
         out.writeInt(0);
         out.writeShort(0);
 
-        out.writeShort(track.id());
+        out.writeShort(1);
 
         out.writeInt(0);
         out.writeInt(0);

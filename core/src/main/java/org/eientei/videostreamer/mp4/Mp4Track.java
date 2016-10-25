@@ -1,6 +1,7 @@
 package org.eientei.videostreamer.mp4;
 
 import io.netty.buffer.ByteBuf;
+import org.eientei.videostreamer.ws.CommType;
 
 import java.util.*;
 
@@ -32,6 +33,7 @@ public abstract class Mp4Track {
 
     public int id() {
         return context.getTracks().indexOf(this)+1;
+        //return 1;
     }
 
     public int getVolume() {
@@ -70,11 +72,12 @@ public abstract class Mp4Track {
         return preps.removeFirst();
     }
 
-    public abstract boolean isKnown();
     public abstract void update(ByteBuf readonly, boolean keyframe);
     public abstract void release();
     public abstract String getShortHandler();
     public abstract String getLongHandler();
     public abstract Mp4Box getInit();
     public abstract Mp4Box getMhd();
+    public abstract CommType getType(Mp4Frame frame);
+    public abstract int getStart();
 }

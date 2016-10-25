@@ -9,7 +9,9 @@ public enum CommType {
     STREAM_UPDATE_AV(3),
     STREAM_SUBSCRIBERS(4),
     STREAM_UPDATE_A(5),
-    STREAM_UPDATE_V(6);
+    STREAM_UPDATE_V(6),
+    STREAM_UPDATE_VK(7),
+    STREAM_UPDATE_AVK(8);
 
     private final int num;
 

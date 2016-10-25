@@ -14,9 +14,9 @@ import java.util.List;
 public class Mp4MvexBox extends Mp4Box {
     private List<Mp4TrexBox> trexes = new ArrayList<>();
 
-    public Mp4MvexBox(Mp4Context context) {
+    public Mp4MvexBox(Mp4Context context, List<Mp4Track> tracks) {
         super("mvex", context);
-        for (Mp4Track track : context.getTracks()) {
+        for (Mp4Track track : tracks) {
             trexes.add(new Mp4TrexBox(context, track.id()));
         }
     }

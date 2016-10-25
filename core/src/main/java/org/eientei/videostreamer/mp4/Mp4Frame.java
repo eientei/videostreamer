@@ -12,7 +12,7 @@ import java.util.Map;
  */
 public class Mp4Frame {
     private Mp4MdatBox mdat;
-    private Map<Integer, List<Mp4Sample>> samples = new HashMap<>();
+    private Map<Mp4Track, List<Mp4Sample>> samples = new HashMap<>();
     private boolean keyframe;
 
     public void append(Mp4Track track) {
@@ -23,28 +23,28 @@ public class Mp4Frame {
                     keyframe = keyframe || sample.isKeyframe();
                 }
             }
-            samples.put(track.id(), newsamples);
+            samples.put(track, newsamples);
         }
     }
 
-    public Mp4MoofBox getMoof(Mp4Context context, Map<Integer, Integer> ticks) {
-        return new Mp4MoofBox(context, this, ticks);
+    public Mp4MoofBox getMoof(Mp4Context context, List<Mp4Track> tracks, Map<Mp4Track, Integer> times) {
+        return new Mp4MoofBox(context, tracks, this, times);
     }
 
-    public Mp4MdatBox getMdat(Mp4Context context) {
+    public Mp4MdatBox getMdat(Mp4Context context, List<Mp4Track> tracks) {
         if (mdat == null) {
-            mdat = new Mp4MdatBox(context, this);
+            mdat = new Mp4MdatBox(context, tracks, this);
         }
         return mdat;
     }
 
-    public List<Mp4Sample> getSamples(int id) {
-        return samples.get(id);
+    public List<Mp4Sample> getSamples(Mp4Track track) {
+        return samples.get(track);
     }
 
-    public int getTotalSize(int id) {
+    public int getTotalSize(Mp4Track track) {
         int size = 0;
-        for (Mp4Sample sample : getSamples(id)) {
+        for (Mp4Sample sample : getSamples(track)) {
             size += sample.getData().readableBytes();
         }
         return size;

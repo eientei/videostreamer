@@ -16,13 +16,13 @@ public class Mp4MoovBox extends Mp4Box {
     private final List<Mp4TrakBox> traks = new ArrayList<>();
     private final Mp4MvexBox mvex;
 
-    public Mp4MoovBox(Mp4Context context) {
+    public Mp4MoovBox(Mp4Context context, List<Mp4Track> tracks) {
         super("moov", context);
-        this.mvhd = new Mp4MvhdBox(context);
-        for (Mp4Track track : context.getTracks()) {
+        this.mvhd = new Mp4MvhdBox(context, tracks);
+        for (Mp4Track track : tracks) {
             traks.add(new Mp4TrakBox(context, track));
         }
-        this.mvex = new Mp4MvexBox(context);
+        this.mvex = new Mp4MvexBox(context, tracks);
     }
 
     @Override

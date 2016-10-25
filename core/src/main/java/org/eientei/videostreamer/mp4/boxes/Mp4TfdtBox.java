@@ -13,9 +13,9 @@ import java.util.Map;
 public class Mp4TfdtBox extends Mp4BoxFull {
     private final int time;
 
-    public Mp4TfdtBox(Mp4Context context, Mp4Track track, Map<Integer, Integer> ticks) {
+    public Mp4TfdtBox(Mp4Context context, Mp4Track track, Map<Mp4Track, Integer> times) {
         super("tfdt", context, 0, 0);
-        time = ticks.get(track.id());
+        time = times.get(track);
     }
 
     @Override

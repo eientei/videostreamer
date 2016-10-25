@@ -3,6 +3,7 @@ package org.eientei.videostreamer.mp4;
 import io.netty.buffer.ByteBuf;
 import org.eientei.videostreamer.mp4.boxes.Mp4Mp4aBox;
 import org.eientei.videostreamer.mp4.boxes.Mp4SmhdBox;
+import org.eientei.videostreamer.ws.CommType;
 
 /**
  * Created by Alexander Tumin on 2016-10-22
@@ -23,11 +24,6 @@ public class Mp4AudioTrakAac extends Mp4Track {
         this.aac = audioro.copy(audioro.readerIndex(), 2);
         this.init = new Mp4Mp4aBox(context, this);
         this.mhd = new Mp4SmhdBox(context);
-    }
-
-    @Override
-    public boolean isKnown() {
-        return true;
     }
 
     @Override
@@ -58,6 +54,17 @@ public class Mp4AudioTrakAac extends Mp4Track {
     @Override
     public Mp4Box getMhd() {
         return mhd;
+    }
+
+    @Override
+    public CommType getType(Mp4Frame frame) {
+        return CommType.STREAM_UPDATE_A;
+    }
+
+    @Override
+    public int getStart() {
+        return 2112;
+        //return 0;
     }
 
     public int getChannels() {

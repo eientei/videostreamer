@@ -6,6 +6,9 @@ import org.eientei.videostreamer.mp4.*;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 /**
@@ -15,10 +18,15 @@ public class WebsocketCommContext implements Mp4Subscriber {
     private final WebSocketSession session;
     private final Mp4Server mp4Server;
     private Mp4Context context;
+    private FileOutputStream fos;
 
     public WebsocketCommContext(WebSocketSession session, Mp4Server mp4Server) {
         this.session = session;
         this.mp4Server = mp4Server;
+        try {
+            fos = new FileOutputStream(new File("dump.mp4"));
+        } catch (FileNotFoundException ignore) {
+        }
     }
 
     public void process(String action, String params) {
@@ -67,10 +75,14 @@ public class WebsocketCommContext implements Mp4Subscriber {
     }
 
     @Override
-    public void accept(Mp4Box... boxes) {
-        ByteBuf buf = buffer(CommType.STREAM_UPDATE_AV);
+    public void accept(CommType type, Mp4Box... boxes) {
+        ByteBuf buf = buffer(type);
         for (Mp4Box box : boxes) {
             box.write(buf);
+        }
+        try {
+            fos.write(buf.array(), buf.arrayOffset()+buf.readerIndex()+4, buf.readableBytes()-4);
+        } catch (IOException ignore) {
         }
         send(buf);
     }

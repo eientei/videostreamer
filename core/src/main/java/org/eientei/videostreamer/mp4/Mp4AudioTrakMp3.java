@@ -1,6 +1,7 @@
 package org.eientei.videostreamer.mp4;
 
 import io.netty.buffer.ByteBuf;
+import org.eientei.videostreamer.ws.CommType;
 
 /**
  * Created by Alexander Tumin on 2016-10-22
@@ -8,11 +9,6 @@ import io.netty.buffer.ByteBuf;
 public class Mp4AudioTrakMp3 extends Mp4Track {
     public Mp4AudioTrakMp3(Mp4Context context, int channels, int sampleRate, int sampleCount, ByteBuf slice) {
         super(context, 1, 0, 0, sampleRate, sampleCount);
-    }
-
-    @Override
-    public boolean isKnown() {
-        return true;
     }
 
     @Override
@@ -43,5 +39,15 @@ public class Mp4AudioTrakMp3 extends Mp4Track {
     @Override
     public Mp4Box getMhd() {
         return null;
+    }
+
+    @Override
+    public CommType getType(Mp4Frame frame) {
+        return CommType.STREAM_UPDATE_A;
+    }
+
+    @Override
+    public int getStart() {
+        return 0;
     }
 }

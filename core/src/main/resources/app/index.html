@@ -16,15 +16,14 @@
         STREAM_UPDATE_AV: 3,
         STREAM_SUBSCRIBERS: 4,
         STREAM_UPDATE_A: 5,
-        STREAM_UPDATE_V: 6
+        STREAM_UPDATE_V: 6,
+        STREAM_UPDATE_VK: 7,
+        STREAM_UPDATE_AVK: 8
     };
 </script>
 <script type="application/javascript">
-    function Stream(video) {
-        var mintime = 2.5;
-        var maxtime = 4.5;
+    function Stream(mediael) {
         var pending = [];
-        var init = true;
         var buffer = null;
 
         function drain() {
@@ -34,43 +33,22 @@
             buffer.appendBuffer(pending.shift());
         }
 
-        function timings() {
-            if (video.buffered.length > 0) {
-                var last = video.buffered.end(0);
-                var diff = last - video.currentTime;
-                if (init) {
-                    if (diff > mintime) {
-                        console.log('playing');
-                        video.play();
-                        init = false;
-                    }
-                } else {
-                    if (diff > maxtime) {
-                        console.log('adjusting time', diff);
-                        video.currentTime = last - maxtime;
-                    }
-                }
-            }
-        }
-
         this.begin = function (codecs) {
             var mediaSource = new MediaSource();
-            video.src = URL.createObjectURL(mediaSource);
-            video.load();
+            mediael.src = URL.createObjectURL(mediaSource);
+            mediael.load();
             mediaSource.addEventListener('sourceopen', function () {
-                buffer = mediaSource.addSourceBuffer("video/mp4; codecs=\"" + codecs + "\"");
+                buffer = mediaSource.addSourceBuffer(codecs);
                 buffer.addEventListener('updateend', drain);
             });
         };
 
         this.stop = function () {
             pending = [];
-            init = true;
         };
 
         this.update = function (data) {
             pending.push(data);
-            timings();
             drain();
         };
     }
@@ -104,12 +82,14 @@
 
         comm.onclose = function () {
             console.log('sock closed');
+            setTimeout(function () {
+                new Comm(hostname, handlers);
+            }, 1000);
         };
 
         comm.onmessage = function (msg) {
             var data = new Uint8Array(msg.data.slice(4));
             var type = readInt(new Uint8Array(msg.data.slice(0, 4)));
-
             switch (type) {
                 case CommType.STREAM_PLAY:
                     console.log('issuing play');
@@ -123,14 +103,18 @@
                         handlers.streamStop();
                     }
                     break;
-                case CommType.STREAM_UPDATE_AV:
-                    if (handlers.streamUpdate) {
-                        handlers.streamUpdate(data);
-                    }
-                    break;
                 case CommType.STREAM_SUBSCRIBERS:
                     if (handlers.streamSubscribers) {
                         handlers.streamSubscribers(readInt(data));
+                    }
+                    break;
+                case CommType.STREAM_UPDATE_AV:
+                case CommType.STREAM_UPDATE_A:
+                case CommType.STREAM_UPDATE_V:
+                case CommType.STREAM_UPDATE_VK:
+                case CommType.STREAM_UPDATE_AVK:
+                    if (handlers.streamUpdate) {
+                        handlers.streamUpdate(data, type);
                     }
                     break;
             }
@@ -138,19 +122,131 @@
     }
 </script>
 <script type="application/javascript">
-    var video = document.querySelector("video");
-    var stream = new Stream(video);
+    //var video = document.querySelector("video");
+    //var audio = document.querySelector("audio");
+    //var astream = new Stream(audio);
+    //var vstream = new Stream(video);
+    var avideo = document.querySelector("video");
+    var avstream = new Stream(avideo);
+    var init = true;
+    var minlate = 3;
+    var maxlate = 6;
+    var lastkey = 0;
+
+    function timesync() {
+        console.log('timesync');
+        var newcur = null;
+
+        if (avideo.buffered.length > 0) {
+            var last = avideo.buffered.end(0);
+            var difflate = last - avideo.currentTime;
+            if (init) {
+                if (difflate > minlate) {
+                    init = false;
+                    //minlate = avideo.buffered.end(0) - lastkey;
+                    //maxlate = minlate * 2;
+                    avideo.currentTime = last - minlate;
+                    avideo.play();
+                    console.log('starting with', minlate, maxlate);
+                    document.getElementById("status").innerText = "Playing";
+                }
+                lastkey = avideo.buffered.end(0);
+            } else {
+                if (difflate > maxlate) {
+                    console.log('adjusting late', difflate);
+                    newcur = last - minlate;
+                }
+            }
+        }
+
+        if (newcur) {
+            avideo.currentTime = newcur;
+        }
+/*
+        var maxcur = Math.max(audio.currentTime, video.currentTime);
+        var mincur = Math.min(audio.currentTime, video.currentTime);
+        var diffcur = maxcur - mincur;
+
+        var newaud = null;
+        var newcur = null;
+        if (diffcur > 0.2) {
+            newaud = video.currentTime;
+            console.log('adjusting sync', diffcur);
+        }
+*/
+        /*
+        var newaud = null;
+        var newcur = null;
+        if (diffcur > 0.3) {
+            console.log('adjusting sync', diffcur);
+            mincur + diffcur / 2
+        }
+        */
+/*
+        if (audio.buffered.length > 0 && video.buffered.length > 0) {
+            var last = Math.min(audio.buffered.end(0), video.buffered.end(0));
+            var difflate = last - video.currentTime;
+            if (init) {
+                if (lastkey > 0 && difflate > minlate) {
+                    init = false;
+                    minlate = video.buffered.end(0) - lastkey;
+                    maxlate = minlate * 2;
+                    video.currentTime = audio.currentTime = last - minlate;
+                    audio.play();
+                    video.play();
+                    console.log('starting with', minlate, maxlate);
+                    document.getElementById("status").innerText = "Playing";
+                }
+                lastkey = video.buffered.end(0);
+            } else {
+                if (difflate > maxlate) {
+                    console.log('adjusting late', difflate);
+                    newcur = last - minlate;
+                }
+            }
+        }
+*/
+/*
+        if (newcur) {
+            video.currentTime = audio.currentTime = newcur;
+        } else if (newaud) {
+            audio.currentTime = newaud;
+        }
+        */
+    }
+
     new Comm(window.location.host, {
         streamPlay: function (codecs) {
-            document.getElementById("status").innerText = "Playing";
-            stream.begin(codecs);
+            document.getElementById("status").innerText = "Buffering";
+            //astream.begin('audio/mp4; codecs="mp4a.40.2"');
+            //vstream.begin('video/mp4; codecs="avc1.42E01E"');
+            avstream.begin('video/mp4; codecs="' + codecs + '"');
         },
         streamStop: function () {
             document.getElementById("status").innerText = "Waiting";
-            stream.stop();
+            //astream.stop();
+            //vstream.stop();
+            avstream.stop();
+            init = true;
         },
-        streamUpdate: function (data) {
-            stream.update(data);
+        streamUpdate: function (data, type) {
+            switch (type) {
+                case CommType.STREAM_UPDATE_AVK:
+                    timesync();
+                case CommType.STREAM_UPDATE_AV:
+                    avstream.update(data);
+                    break;
+                /*
+                case CommType.STREAM_UPDATE_A:
+                    //astream.update(data);
+                    break;
+                case CommType.STREAM_UPDATE_VK:
+                    //timesync();
+                case CommType.STREAM_UPDATE_V:
+                    //vstream.update(data);
+                    break;
+                */
+            }
         },
         streamSubscribers: function (count) {
             document.getElementById("subscribers").innerText = "Subscribers: " + count;

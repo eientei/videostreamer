@@ -46,7 +46,7 @@ public class WebsocketCommContext implements Mp4Subscriber {
         }
     }
 
-    private void send(ByteBuf data) {
+    private synchronized void send(ByteBuf data) {
         try {
             session.sendMessage(new BinaryMessage(data.array(), data.arrayOffset() + data.readerIndex(), data.readableBytes(), true));
         } catch (IOException ignore) {

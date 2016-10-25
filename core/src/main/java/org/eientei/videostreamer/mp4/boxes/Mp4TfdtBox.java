@@ -15,7 +15,7 @@ public class Mp4TfdtBox extends Mp4BoxFull {
 
     public Mp4TfdtBox(Mp4Context context, Mp4Track track, Map<Mp4Track, Integer> times) {
         super("tfdt", context, 0, 0);
-        time = times.get(track);
+        time = times.get(track) + track.getStart();
     }
 
     @Override

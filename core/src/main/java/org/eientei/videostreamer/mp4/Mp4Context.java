@@ -106,7 +106,9 @@ public class Mp4Context implements RtmpSubscriber {
                 subscriber.accept(CommType.STREAM_UPDATE_AVK, makeHeader(tracks));
             }
 
-            subscriber.accept(frame.isKeyframe() ? CommType.STREAM_UPDATE_AVK : CommType.STREAM_UPDATE_AV, frame.getMoof(this, tracks, times.get(subscriber)), frame.getMdat(this, tracks));
+            if (times.containsKey(subscriber)) {
+                subscriber.accept(frame.isKeyframe() ? CommType.STREAM_UPDATE_AVK : CommType.STREAM_UPDATE_AV, frame.getMoof(this, tracks, times.get(subscriber)), frame.getMdat(this, tracks));
+            }
         }
         frame.release();
     }

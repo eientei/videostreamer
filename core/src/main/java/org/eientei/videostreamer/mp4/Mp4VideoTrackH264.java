@@ -58,51 +58,56 @@ public class Mp4VideoTrackH264 extends Mp4Track {
     @Override
     public void update(ByteBuf readonly, boolean keyframe) {
         while (readonly.isReadable()) {
-            int size = 0;
-            switch (nalBytes) {
-                case 1:
-                    size = readonly.readUnsignedByte();
-                    break;
-                case 2:
-                    size = readonly.readUnsignedShort();
-                    break;
-                case 3:
-                    size = readonly.readUnsignedMedium();
-                    break;
-                case 4:
-                    size = (int) readonly.readUnsignedInt();
-                    break;
-            }
+            try {
+                int size = 0;
+                switch (nalBytes) {
+                    case 1:
+                        size = readonly.readUnsignedByte();
+                        break;
+                    case 2:
+                        size = readonly.readUnsignedShort();
+                        break;
+                    case 3:
+                        size = readonly.readUnsignedMedium();
+                        break;
+                    case 4:
+                        size = (int) readonly.readUnsignedInt();
+                        break;
+                }
 
-            SliceNalUnit slice = new SliceNalUnit(sps, readonly, size);
-            if (slice.nalUnitType == H264_SEI_SLICE || slice.nalUnitType == H264_FILLER_SLICE) {
-                readonly.skipBytes(size);
-                continue;
-            }
+                SliceNalUnit slice = new SliceNalUnit(sps, readonly, size);
+                if (slice.nalUnitType == H264_SEI_SLICE || slice.nalUnitType == H264_FILLER_SLICE) {
+                    readonly.skipBytes(size);
+                    continue;
+                }
 
-            if (lastFrameNum != -1 && lastFrameNum != slice.frameNum) {
-                addSample(new Mp4Sample(lastFrameData.copy(), lastKeyframe, 0, 0));
-                lastFrameData.release();
-                lastKeyframe = false;
-                lastFrameData = getContext().ALLOC.allocSizeless();
+                if (lastFrameNum != -1 && lastFrameNum != slice.frameNum) {
+                    addSample(new Mp4Sample(lastFrameData.copy(), lastKeyframe, 0, 0));
+                    lastFrameData.release();
+                    lastKeyframe = false;
+                    lastFrameData = getContext().ALLOC.allocSizeless();
+                }
+                lastKeyframe = lastKeyframe || keyframe;
+                switch (nalBytes) {
+                    case 1:
+                        lastFrameData.writeByte(size);
+                        break;
+                    case 2:
+                        lastFrameData.writeShort(size);
+                        break;
+                    case 3:
+                        lastFrameData.writeMedium(size);
+                        break;
+                    case 4:
+                        lastFrameData.writeInt(size);
+                        break;
+                }
+
+                lastFrameData.writeBytes(readonly, size);
+                lastFrameNum = slice.frameNum;
+            } catch (Exception ignore) {
+
             }
-            lastKeyframe = lastKeyframe || keyframe;
-            switch (nalBytes) {
-                case 1:
-                    lastFrameData.writeByte(size);
-                    break;
-                case 2:
-                    lastFrameData.writeShort(size);
-                    break;
-                case 3:
-                    lastFrameData.writeMedium(size);
-                    break;
-                case 4:
-                    lastFrameData.writeInt(size);
-                    break;
-            }
-            lastFrameData.writeBytes(readonly, size);
-            lastFrameNum = slice.frameNum;
         }
     }
 

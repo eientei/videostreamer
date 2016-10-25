@@ -8,6 +8,7 @@
 <audio></audio>
 <p id="status">Waiting</p>
 <p id="subscribers">Booting...</p>
+Sources: <a href="https://github.com/eientei/videostreamer/tree/nextgen">https://github.com/eientei/videostreamer/tree/nextgen</a>
 <script src="/js/lib/utf8/2.1.1/utf8.js"></script>
 <script type="application/javascript">
     var CommType = {
@@ -70,7 +71,11 @@
             if (!offset) {
                 offset = 0;
             }
-            return utf8.decode(Array.from(buf.slice(offset)).map(function(char) {return  String.fromCharCode(char)}).join(''));
+            var str = '';
+            for (var i = offset; i < buf.length; i++) {
+                str += String.fromCharCode(buf[i]);
+            }
+            return utf8.decode(str);
         }
 
         var comm = new WebSocket("ws://" + hostname + "/comm");
@@ -88,8 +93,8 @@
         };
 
         comm.onmessage = function (msg) {
-            var data = new Uint8Array(msg.data.slice(4));
-            var type = readInt(new Uint8Array(msg.data.slice(0, 4)));
+            var data = new Uint8Array(msg.data, 4);
+            var type = readInt(new Uint8Array(msg.data, 0, 4));
             switch (type) {
                 case CommType.STREAM_PLAY:
                     console.log('issuing play');

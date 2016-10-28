@@ -9,6 +9,8 @@ import org.eientei.videostreamer.mp4.boxes.Mp4Avc1Box;
 import org.eientei.videostreamer.mp4.boxes.Mp4VmhdBox;
 import org.eientei.videostreamer.ws.CommType;
 
+import java.util.List;
+
 /**
  * Created by Alexander Tumin on 2016-10-22
  */
@@ -33,7 +35,7 @@ public class Mp4VideoTrackH264 extends Mp4Track {
         super(context, 0,
                 ((Number)metadata.get("width")).intValue(),
                 ((Number)metadata.get("height")).intValue(),
-                ((Number)metadata.get("fps")).intValue(), 1);
+                1000000.0, 1000000.0/(((Number)metadata.get("fps")).intValue()));
 
 
 
@@ -56,7 +58,7 @@ public class Mp4VideoTrackH264 extends Mp4Track {
     }
 
     @Override
-    public void update(ByteBuf readonly, boolean keyframe) {
+    public void update(ByteBuf readonly, int timestamp, boolean keyframe) {
         while (readonly.isReadable()) {
             try {
                 int size = 0;
@@ -82,7 +84,7 @@ public class Mp4VideoTrackH264 extends Mp4Track {
                 }
 
                 if (lastFrameNum != -1 && lastFrameNum != slice.frameNum) {
-                    addSample(new Mp4Sample(lastFrameData.copy(), lastKeyframe, 0, 0));
+                    addSample(new Mp4Sample(lastFrameData.copy(), lastKeyframe, timestamp, getFrametick()));
                     lastFrameData.release();
                     lastKeyframe = false;
                     lastFrameData = getContext().ALLOC.allocSizeless();
@@ -128,7 +130,7 @@ public class Mp4VideoTrackH264 extends Mp4Track {
     }
 
     @Override
-    public Mp4Box getInit() {
+    public Mp4Box getInit(List<Mp4Track> tracks) {
         return init;
     }
 
@@ -147,7 +149,12 @@ public class Mp4VideoTrackH264 extends Mp4Track {
     }
 
     @Override
-    public int getStart() {
+    public double getStart() {
+        return 1.0;
+    }
+
+    @Override
+    public int getFix() {
         return 0;
     }
 

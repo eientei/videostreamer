@@ -7,7 +7,7 @@ import org.eientei.videostreamer.ws.CommType;
  */
 public interface Mp4Subscriber {
     void begin(String codecs);
-    void accept(CommType type, Mp4Box... boxes);
+    void accept(CommType type, int begin, int end, Mp4Box... boxes);
     void finish();
     void count(int subscribers);
 }

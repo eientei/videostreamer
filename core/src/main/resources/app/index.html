@@ -1,10 +1,32 @@
 <html>
 <head>
     <title>VIDEO</title>
+    <style type="text/css">
+        .spinner {
+            background: url("/app/img/yukkuri-t.gif") no-repeat center;
+            background-size: 50%;
+            position: absolute;
+            margin: auto;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            display: none;
+            width: 218px;
+            height: 253px;
+        }
+        .videocontainer {
+            position: relative;
+            width: 960px;
+            height: 540px;
+        }
+    </style>
 </head>
 <body>
-<video width="640" height="360">
-</video>
+<div class="videocontainer">
+    <video width="960" height="540"></video>
+    <div class="spinner"></div>
+</div>
 <audio></audio>
 <p id="status">Waiting</p>
 <p id="subscribers">Booting...</p>
@@ -19,19 +41,42 @@ Sources: <a href="https://github.com/eientei/videostreamer/tree/nextgen">https:/
         STREAM_UPDATE_A: 5,
         STREAM_UPDATE_V: 6,
         STREAM_UPDATE_VK: 7,
-        STREAM_UPDATE_AVK: 8
+        STREAM_UPDATE_AVK: 8,
+        STREAM_UPDATE_AK: 9
     };
 </script>
 <script type="application/javascript">
     function Stream(mediael) {
         var pending = [];
         var buffer = null;
+        var seq = 0;
+        var post = [];
+        this.ondone = null;
+        this.stalled = false;
+
+        var my = this;
+        var current = mediael.currentTime;
+        setInterval(function () {
+            if (!mediael.paused) {
+                if (!my.stalled && mediael.currentTime < current+0.02) {
+                    console.log('stall');
+                    my.stalled = true;
+                } else if (my.stalled && mediael.currentTime > current+0.02) {
+                    console.log('unstall');
+                    my.stalled = false;
+                }
+            }
+            current = mediael.currentTime;
+        }, 100);
+
 
         function drain() {
             if (pending.length == 0 || !buffer || buffer.updating) {
                 return;
             }
-            buffer.appendBuffer(pending.shift());
+            var next = pending.shift();
+            post.push(next.meta);
+            buffer.appendBuffer(next.data);
         }
 
         this.begin = function (codecs) {
@@ -40,16 +85,31 @@ Sources: <a href="https://github.com/eientei/videostreamer/tree/nextgen">https:/
             mediael.load();
             mediaSource.addEventListener('sourceopen', function () {
                 buffer = mediaSource.addSourceBuffer(codecs);
-                buffer.addEventListener('updateend', drain);
+                buffer.addEventListener('updateend', function () {
+                    drain();
+                    var meta = post.shift();
+                    if (my.ondone) {
+                        my.ondone(meta);
+                    }
+                });
             });
         };
 
         this.stop = function () {
             pending = [];
+            seq = 0;
         };
 
-        this.update = function (data) {
-            pending.push(data);
+        this.update = function (type, data, begin, end) {
+            pending.push({
+                data: data,
+                meta: {
+                    type: type,
+                    begin: begin,
+                    end: end,
+                    seq: seq++
+                }
+            });
             drain();
         };
     }
@@ -93,8 +153,10 @@ Sources: <a href="https://github.com/eientei/videostreamer/tree/nextgen">https:/
         };
 
         comm.onmessage = function (msg) {
-            var data = new Uint8Array(msg.data, 4);
+            var data = new Uint8Array(msg.data, 12);
             var type = readInt(new Uint8Array(msg.data, 0, 4));
+            var begin = readInt(new Uint8Array(msg.data, 4, 4));
+            var end = readInt(new Uint8Array(msg.data, 8, 4));
             switch (type) {
                 case CommType.STREAM_PLAY:
                     console.log('issuing play');
@@ -118,8 +180,9 @@ Sources: <a href="https://github.com/eientei/videostreamer/tree/nextgen">https:/
                 case CommType.STREAM_UPDATE_V:
                 case CommType.STREAM_UPDATE_VK:
                 case CommType.STREAM_UPDATE_AVK:
+                case CommType.STREAM_UPDATE_AK:
                     if (handlers.streamUpdate) {
-                        handlers.streamUpdate(data, type);
+                        handlers.streamUpdate(data, type, begin, end);
                     }
                     break;
             }
@@ -127,130 +190,227 @@ Sources: <a href="https://github.com/eientei/videostreamer/tree/nextgen">https:/
     }
 </script>
 <script type="application/javascript">
-    //var video = document.querySelector("video");
-    //var audio = document.querySelector("audio");
-    //var astream = new Stream(audio);
-    //var vstream = new Stream(video);
-    var avideo = document.querySelector("video");
-    var avstream = new Stream(avideo);
+    var video = document.querySelector("video");
+    var audio = document.querySelector("audio");
+    var spinner = document.querySelector(".spinner");
+    var astream = new Stream(audio);
+    var vstream = new Stream(video);
     var init = true;
-    var minlate = 3;
-    var maxlate = 6;
-    var lastkey = 0;
+    var minlate = 2;
+    var maxlate = 5;
+    var thres = 0.2;
+    var lastmeta = null;
+    var probing = false;
+    var prevtime;
+    var start = 0;
+    var auds = 0;
 
-    function timesync() {
-        console.log('timesync');
-        var newcur = null;
-
-        if (avideo.buffered.length > 0) {
-            var last = avideo.buffered.end(0);
-            var difflate = last - avideo.currentTime;
-            if (init) {
-                if (difflate > minlate) {
+    vstream.ondone = function (meta) {
+        switch (meta.type) {
+            case CommType.STREAM_UPDATE_VK:
+            case CommType.STREAM_UPDATE_AVK:
+                if (init && meta.begin > 0) {
+                    var begin = meta.begin / 1000 - minlate;
                     init = false;
-                    //minlate = avideo.buffered.end(0) - lastkey;
-                    //maxlate = minlate * 2;
-                    avideo.currentTime = last - minlate;
-                    avideo.play();
-                    console.log('starting with', minlate, maxlate);
-                    document.getElementById("status").innerText = "Playing";
-                }
-                lastkey = avideo.buffered.end(0);
-            } else {
-                if (difflate > maxlate) {
-                    console.log('adjusting late', difflate);
-                    newcur = last - minlate;
-                }
-            }
-        }
-
-        if (newcur) {
-            avideo.currentTime = newcur;
-        }
-/*
-        var maxcur = Math.max(audio.currentTime, video.currentTime);
-        var mincur = Math.min(audio.currentTime, video.currentTime);
-        var diffcur = maxcur - mincur;
-
-        var newaud = null;
-        var newcur = null;
-        if (diffcur > 0.2) {
-            newaud = video.currentTime;
-            console.log('adjusting sync', diffcur);
-        }
-*/
-        /*
-        var newaud = null;
-        var newcur = null;
-        if (diffcur > 0.3) {
-            console.log('adjusting sync', diffcur);
-            mincur + diffcur / 2
-        }
-        */
-/*
-        if (audio.buffered.length > 0 && video.buffered.length > 0) {
-            var last = Math.min(audio.buffered.end(0), video.buffered.end(0));
-            var difflate = last - video.currentTime;
-            if (init) {
-                if (lastkey > 0 && difflate > minlate) {
-                    init = false;
-                    minlate = video.buffered.end(0) - lastkey;
-                    maxlate = minlate * 2;
-                    video.currentTime = audio.currentTime = last - minlate;
-                    audio.play();
+                    video.currentTime = begin;
+                    //audio.currentTime = begin;
                     video.play();
-                    console.log('starting with', minlate, maxlate);
-                    document.getElementById("status").innerText = "Playing";
+                    //audio.play();
+                    spinner.style.display = 'none';
+                    /*
+                    var inter = setInterval(function () {
+                        if (video.currentTime > begin) {
+                            setTimeout(function () {
+                                if (!vstream.stalled) {
+                                    clearInterval(inter);
+                                    spinner.style.display = 'none';
+                                    audio.currentTime = video.currentTime;
+                                }
+                            }, maxlate * 1000);
+
+                        }
+                    }, 50);
+                    */
+                } else if (meta.begin > 0) {
+                    var dest = meta.begin/1000 - minlate;
+                    if (Math.abs(video.currentTime - dest) > 1.0) {
+                        console.log('v', dest, video.currentTime - dest);
+                        video.currentTime = dest;
+
+                        console.log('a', dest, audio.currentTime - dest);
+                        audio.currentTime = dest;
+                    }
+                    /*
+                    var diff = audio.currentTime - video.currentTime;
+                    console.log('a/v', diff);
+                    audio.currentTime -= diff/2;
+                    video.currentTime += dest/2;
+                    */
+                    /*
+                    var dest = meta.begin/1000 - minlate;
+                    console.log(dest, video.currentTime);
+                    if (dest < video.currentTime) {
+                        video.pause();
+                        setTimeout(function () {
+                            video.play();
+                            //audio.currentTime -= audio.currentTime - video.currentTime;
+                        }, (video.currentTime - dest)*1000);
+                    } else {
+                        video.currentTime = dest;
+                        //audio.currentTime -= diff/2;
+                    }
+                    */
+                    //console.log(dest);
+                    //var diff = audio.currentTime - video.currentTime;
+                    //audio.currentTime -= diff;
+                    //video.currentTime += dest/2;
                 }
-                lastkey = video.buffered.end(0);
+                break;
+            case CommType.STREAM_UPDATE_V:
+            case CommType.STREAM_UPDATE_AV:
+                break;
+        }
+    };
+
+    astream.ondone = function (meta) {
+        auds++;
+        if (auds % 8 == 0) {
+//            var dest = meta.begin/1000 - minlate;
+//            console.log('a', dest, audio.currentTime - dest);
+//            audio.currentTime = dest;
+            /*
+            console.log('aud', dest, audio.currentTime);
+            if (dest < audio.currentTime) {
+                audio.pause();
+                setTimeout(function () {
+                    audio.play();
+                    //audio.currentTime -= audio.currentTime - video.currentTime;
+                }, (audio.currentTime - dest)*1000);
             } else {
-                if (difflate > maxlate) {
-                    console.log('adjusting late', difflate);
-                    newcur = last - minlate;
-                }
+                audio.currentTime = dest;
             }
+            */
         }
-*/
-/*
-        if (newcur) {
-            video.currentTime = audio.currentTime = newcur;
-        } else if (newaud) {
-            audio.currentTime = newaud;
+    };
+
+    /*
+    var adat;
+    var vdat;
+
+    function extsync() {
+        var mintime = Math.min(audio.currentTime, video.currentTime);
+        var mindiff = Math.min(adat.begin, vdat.begin)/1000;
+
+        var na = null;
+        var nv = null;
+
+
+        if (mindiff - mintime > maxlate) {
+            var jump = mindiff - minlate;
+            console.log('a/v jump', jump);
+            na = jump;
+            nv = jump;
         }
-        */
+
+        if (na) {
+            audio.currentTime = na;
+        }
+
+        if (nv) {
+            video.currentTime = nv;
+        }
     }
+
+    function avsync() {
+        if (init) {
+            return;
+        }
+
+        var na = null;
+        var nv = null;
+
+        var apos = (na == null ? adat.begin/1000 : na) - minlate;
+        var vpos = (nv == null ? vdat.begin/1000 : nv) - minlate;
+        var avdiff = apos - vpos;
+
+        console.log(avdiff);
+        if (Math.abs(avdiff) > thres) {
+            console.log('a/v sync', avdiff);
+            na = audio.currentTime - avdiff / 2;
+            nv = video.currentTime + avdiff / 2;
+        }
+
+        if (na) {
+            audio.currentTime = na;
+        }
+
+        if (nv) {
+            video.currentTime = nv;
+        }
+    }
+
+    vstream.ondone = function (meta) {
+        lastmeta = meta;
+        switch (meta.type) {
+            case CommType.STREAM_UPDATE_VK:
+                vdat = meta;
+                if (init) {
+                    if (meta.begin/1000 > minlate) {
+                        video.currentTime = meta.begin - minlate;
+                        audio.currentTime = meta.begin - minlate;
+                        video.play();
+                        audio.play();
+                        init = false;
+                        spinner.style.display = 'none';
+                    }
+                } else {
+                    extsync();
+                    avsync();
+                }
+                break;
+            case CommType.STREAM_UPDATE_V:
+                vdat = meta;
+                break;
+        }
+    };
+    astream.ondone = function (meta) {
+        switch (meta.type) {
+            case CommType.STREAM_UPDATE_AK:
+            case CommType.STREAM_UPDATE_A:
+                adat = meta;
+                break;
+        }
+    };
+    */
 
     new Comm(window.location.host, {
         streamPlay: function (codecs) {
+            spinner.style.display = 'block';
             document.getElementById("status").innerText = "Buffering";
             //astream.begin('audio/mp4; codecs="mp4a.40.2"');
             //vstream.begin('video/mp4; codecs="avc1.42E01E"');
-            avstream.begin('video/mp4; codecs="' + codecs + '"');
+            vstream.begin('video/mp4; codecs="' + codecs + '"');
         },
         streamStop: function () {
+            spinner.style.display = 'none';
             document.getElementById("status").innerText = "Waiting";
-            //astream.stop();
-            //vstream.stop();
-            avstream.stop();
+            astream.stop();
+            vstream.stop();
             init = true;
         },
-        streamUpdate: function (data, type) {
+        streamUpdate: function (data, type, begin, end) {
+            console.log('type ' + type + ' ' + begin + '..' + end);
             switch (type) {
-                case CommType.STREAM_UPDATE_AVK:
-                    timesync();
-                case CommType.STREAM_UPDATE_AV:
-                    avstream.update(data);
-                    break;
-                /*
+                case CommType.STREAM_UPDATE_AK:
                 case CommType.STREAM_UPDATE_A:
-                    //astream.update(data);
+                    astream.update(type, data, begin, end);
                     break;
                 case CommType.STREAM_UPDATE_VK:
-                    //timesync();
                 case CommType.STREAM_UPDATE_V:
-                    //vstream.update(data);
+                case CommType.STREAM_UPDATE_AV:
+                case CommType.STREAM_UPDATE_AVK:
+                    vstream.update(type, data, begin, end);
                     break;
-                */
             }
         },
         streamSubscribers: function (count) {

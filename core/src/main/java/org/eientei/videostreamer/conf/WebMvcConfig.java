@@ -35,8 +35,7 @@ public class WebMvcConfig extends WebMvcConfigurerAdapter implements WebSocketCo
         registry.setOrder(-2);
         registry.addResourceHandler("/js/lib/**").addResourceLocations("classpath:META-INF/resources/webjars/");
         registry.addResourceHandler("/index.html").addResourceLocations("classpath:app/index.html");
-        registry.addResourceHandler("/js/broadway/**").addResourceLocations("classpath:Broadway/Player/");
-        registry.addResourceHandler("/js/app/**").addResourceLocations("classpath:app/js/");
+        registry.addResourceHandler("/app/**").addResourceLocations("classpath:app/");
         registry.addResourceHandler("/static/app/**").addResourceLocations("classpath:app/static/");
     }
 

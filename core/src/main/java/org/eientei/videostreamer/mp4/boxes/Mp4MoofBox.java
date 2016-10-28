@@ -16,12 +16,12 @@ public class Mp4MoofBox extends Mp4Box {
     private final List<Mp4TrafBox> trafs = new ArrayList<>();
     private final Map<Integer,Integer> offsets = new HashMap<>();
 
-    public Mp4MoofBox(Mp4Context context, List<Mp4Track> tracks, Mp4Frame frame, Map<Mp4Track, Integer> times) {
+    public Mp4MoofBox(Mp4Context context, List<Mp4Track> tracks, Mp4Frame frame, Mp4SubscriberContext subscriber) {
         super("moof", context);
         this.mfhd = new Mp4MfhdBox(context);
         for (Mp4Track track : tracks) {
             if (frame.getSamples(track) != null) {
-                trafs.add(new Mp4TrafBox(context, frame, track, times));
+                trafs.add(new Mp4TrafBox(context, frame, tracks, track, subscriber));
             }
         }
     }

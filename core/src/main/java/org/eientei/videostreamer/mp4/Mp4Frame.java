@@ -27,8 +27,8 @@ public class Mp4Frame {
         }
     }
 
-    public Mp4MoofBox getMoof(Mp4Context context, List<Mp4Track> tracks, Map<Mp4Track, Integer> times) {
-        return new Mp4MoofBox(context, tracks, this, times);
+    public Mp4MoofBox getMoof(Mp4Context context, List<Mp4Track> tracks, Mp4SubscriberContext subscriber) {
+        return new Mp4MoofBox(context, tracks, this, subscriber);
     }
 
     public Mp4MdatBox getMdat(Mp4Context context, List<Mp4Track> tracks) {
@@ -62,12 +62,34 @@ public class Mp4Frame {
         return keyframe;
     }
 
-    public int getMinTimestamp() {
-        int min = Integer.MAX_VALUE;
-        for (List<Mp4Sample> s : samples.values()) {
-            if (s.get(0).getTimestamp() < min) {
-                min = s.get(0).getTimestamp();
-            }
+    public double getMinTimestamp(Mp4Track track) {
+        double min = Integer.MAX_VALUE;
+        for (Mp4Sample s : samples.get(track)) {
+            min = Math.min(min, s.getTimestamp());
+        }
+        return min;
+    }
+
+    public double getMaxTimestamp(Mp4Track track) {
+        double max = 0;
+        for (Mp4Sample s : samples.get(track)) {
+            max = Math.max(max, s.getTimestamp());
+        }
+        return max;
+    }
+
+    public double getMaxTimestamp(List<Mp4Track> tracks) {
+        double max = 0;
+        for (Mp4Track track : tracks) {
+            max = Math.max(max, getMaxTimestamp(track));
+        }
+        return max;
+    }
+
+    public double getMinTimestamp(List<Mp4Track> tracks) {
+        double min = Integer.MAX_VALUE;
+        for (Mp4Track track : tracks) {
+            min = Math.min(min, getMinTimestamp(track));
         }
         return min;
     }

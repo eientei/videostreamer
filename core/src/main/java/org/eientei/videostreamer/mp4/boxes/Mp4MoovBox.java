@@ -20,7 +20,7 @@ public class Mp4MoovBox extends Mp4Box {
         super("moov", context);
         this.mvhd = new Mp4MvhdBox(context, tracks);
         for (Mp4Track track : tracks) {
-            traks.add(new Mp4TrakBox(context, track));
+            traks.add(new Mp4TrakBox(context, tracks, track));
         }
         this.mvex = new Mp4MvexBox(context, tracks);
     }

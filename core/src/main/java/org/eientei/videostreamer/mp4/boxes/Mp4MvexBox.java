@@ -17,7 +17,7 @@ public class Mp4MvexBox extends Mp4Box {
     public Mp4MvexBox(Mp4Context context, List<Mp4Track> tracks) {
         super("mvex", context);
         for (Mp4Track track : tracks) {
-            trexes.add(new Mp4TrexBox(context, track.id()));
+            trexes.add(new Mp4TrexBox(context, track.id(context.getTracks())));
         }
     }
 

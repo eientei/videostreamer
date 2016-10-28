@@ -10,15 +10,16 @@ import java.util.*;
  */
 public abstract class Mp4Track {
     private final Deque<Mp4Sample> samples = new LinkedList<>();
-    private final Mp4Context context;
+    protected final Mp4Context context;
     private final int volume;
     private final int width;
     private final int height;
-    private final int timescale;
-    private final int frametick;
+    private final double timescale;
+    private final double frametick;
     private Deque<List<Mp4Sample>> preps = new ArrayDeque<>();
+    protected double seq = 0;
 
-    protected Mp4Track(Mp4Context context, int volume, int width, int height, int timescale, int frametick) {
+    protected Mp4Track(Mp4Context context, int volume, int width, int height, double timescale, double frametick) {
         this.context = context;
         this.volume = volume;
         this.width = width;
@@ -31,9 +32,12 @@ public abstract class Mp4Track {
         return context;
     }
 
-    public int id() {
-        return context.getTracks().indexOf(this)+1;
-        //return 1;
+    public int id(List<Mp4Track> tracks) {
+        if (tracks.size() == 1) {
+            return 1;
+        } else {
+            return tracks.indexOf(this)+1;
+        }
     }
 
     public int getVolume() {
@@ -48,36 +52,44 @@ public abstract class Mp4Track {
         return height;
     }
 
-    public int getTimescale() {
+    public double getTimescale() {
         return timescale;
     }
 
-    public int getFrametick() {
+    public double getFrametick() {
         return frametick;
     }
 
     public synchronized boolean isSamplesReady() {
-        return !preps.isEmpty();
+        return samples.size() > 0;
     }
 
     public synchronized void addSample(Mp4Sample sample) {
         samples.add(sample);
+        /*
         if (samples.size() * frametick >= timescale) {
             preps.add(new ArrayList<>(samples));
             samples.clear();
+            seq += getStart();
         }
+        */
     }
 
     public synchronized List<Mp4Sample> drainSamples() {
-        return preps.removeFirst();
+        List<Mp4Sample> ss = new ArrayList<>(samples);
+        samples.clear();
+        seq += getStart();
+        return ss;
+        //return preps.removeFirst();
     }
 
-    public abstract void update(ByteBuf readonly, boolean keyframe);
+    public abstract void update(ByteBuf readonly, int timestamp, boolean keyframe);
     public abstract void release();
     public abstract String getShortHandler();
     public abstract String getLongHandler();
-    public abstract Mp4Box getInit();
+    public abstract Mp4Box getInit(List<Mp4Track> tracks);
     public abstract Mp4Box getMhd();
     public abstract CommType getType(Mp4Frame frame);
-    public abstract int getStart();
+    public abstract double getStart();
+    public abstract int getFix();
 }

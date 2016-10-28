@@ -5,6 +5,8 @@ import org.eientei.videostreamer.mp4.Mp4Box;
 import org.eientei.videostreamer.mp4.Mp4Context;
 import org.eientei.videostreamer.mp4.Mp4Track;
 
+import java.util.List;
+
 /**
  * Created by Alexander Tumin on 2016-10-22
  */
@@ -12,10 +14,10 @@ public class Mp4TrakBox extends Mp4Box {
     private final Mp4TkhdBox tkhd;
     private final Mp4MdiaBox mdia;
 
-    public Mp4TrakBox(Mp4Context context, Mp4Track track) {
+    public Mp4TrakBox(Mp4Context context, List<Mp4Track> tracks, Mp4Track track) {
         super("trak", context);
-        this.tkhd = new Mp4TkhdBox(context, track);
-        this.mdia = new Mp4MdiaBox(context, track);
+        this.tkhd = new Mp4TkhdBox(context, tracks, track);
+        this.mdia = new Mp4MdiaBox(context, tracks, track);
     }
 
     @Override

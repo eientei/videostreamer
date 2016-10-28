@@ -1,11 +1,7 @@
 package org.eientei.videostreamer.mp4.boxes;
 
 import io.netty.buffer.ByteBuf;
-import org.eientei.videostreamer.mp4.Mp4BoxFull;
-import org.eientei.videostreamer.mp4.Mp4Context;
-import org.eientei.videostreamer.mp4.Mp4Track;
-
-import java.util.Map;
+import org.eientei.videostreamer.mp4.*;
 
 /**
  * Created by Alexander Tumin on 2016-10-23
@@ -13,9 +9,10 @@ import java.util.Map;
 public class Mp4TfdtBox extends Mp4BoxFull {
     private final int time;
 
-    public Mp4TfdtBox(Mp4Context context, Mp4Track track, Map<Mp4Track, Integer> times) {
+    public Mp4TfdtBox(Mp4Context context, Mp4Frame frame, Mp4Track track, Mp4SubscriberContext subscriber) {
         super("tfdt", context, 0, 0);
-        time = times.get(track) + track.getStart();
+        //time = (int) ((int) frame.getMinTimestamp(track) - subscriber.getBegin())*1000;
+        time = subscriber.getTracktimes().get(track).intValue();
     }
 
     @Override

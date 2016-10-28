@@ -3,6 +3,8 @@ package org.eientei.videostreamer.mp4;
 import io.netty.buffer.ByteBuf;
 import org.eientei.videostreamer.ws.CommType;
 
+import java.util.List;
+
 /**
  * Created by Alexander Tumin on 2016-10-22
  */
@@ -12,7 +14,7 @@ public class Mp4AudioTrakMp3 extends Mp4Track {
     }
 
     @Override
-    public void update(ByteBuf readonly, boolean b) {
+    public void update(ByteBuf readonly, int time, boolean b) {
 
     }
 
@@ -32,7 +34,7 @@ public class Mp4AudioTrakMp3 extends Mp4Track {
     }
 
     @Override
-    public Mp4Box getInit() {
+    public Mp4Box getInit(List<Mp4Track> tracks) {
         return null;
     }
 
@@ -47,7 +49,12 @@ public class Mp4AudioTrakMp3 extends Mp4Track {
     }
 
     @Override
-    public int getStart() {
+    public double getStart() {
+        return 1.0;
+    }
+
+    @Override
+    public int getFix() {
         return 0;
     }
 }

@@ -24,7 +24,7 @@ public class Mp4MvhdBox extends Mp4BoxFull {
     protected void fullWrite(ByteBuf out) {
         out.writeInt(0); // creation time
         out.writeInt(0); // modification time
-        out.writeInt(tracks.get(0).getTimescale()); // timescale
+        out.writeInt((int)tracks.get(0).getTimescale()); // timescale
         out.writeInt(0); // duration
 
         out.writeInt(0x00010000); // rate

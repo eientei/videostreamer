@@ -8,10 +8,10 @@ import io.netty.buffer.ByteBuf;
 public class Mp4Sample {
     private final ByteBuf data;
     private final boolean keyframe;
-    private final int timestamp;
-    private final int duration;
+    private final double timestamp;
+    private final double duration;
 
-    public Mp4Sample(ByteBuf data, boolean keyframe, int timestamp, int duration) {
+    public Mp4Sample(ByteBuf data, boolean keyframe, double timestamp, double duration) {
         this.data = data;
         this.keyframe = keyframe;
         this.timestamp = timestamp;
@@ -30,11 +30,11 @@ public class Mp4Sample {
         return keyframe;
     }
 
-    public int getTimestamp() {
+    public double getTimestamp() {
         return timestamp;
     }
 
-    public int getDuration() {
+    public double getDuration() {
         return duration;
     }
 }

@@ -20,7 +20,7 @@ public class Mp4MdhdBox extends Mp4BoxFull {
     protected void fullWrite(ByteBuf out) {
         out.writeInt(0); // creation time
         out.writeInt(0); // modification time
-        out.writeInt(track.getTimescale()); // timescale
+        out.writeInt((int)track.getTimescale()); // timescale
         out.writeInt(0); // duration
         out.writeShort(0x15C7); // language
         out.writeShort(0); // reserved

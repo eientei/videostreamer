@@ -1,26 +1,26 @@
 package org.eientei.videostreamer.mp4;
 
 import io.netty.buffer.ByteBuf;
-import org.eientei.videostreamer.ws.CommType;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
- * Created by Alexander Tumin on 2016-10-22
+ * Created by Alexander Tumin on 2016-10-28
  */
 public abstract class Mp4Track {
     private final Deque<Mp4Sample> samples = new LinkedList<>();
-    protected final Mp4Context context;
+
     private final int volume;
     private final int width;
     private final int height;
-    private final double timescale;
-    private final double frametick;
-    private Deque<List<Mp4Sample>> preps = new ArrayDeque<>();
-    protected double seq = 0;
+    private final int timescale;
+    private final int frametick;
 
-    protected Mp4Track(Mp4Context context, int volume, int width, int height, double timescale, double frametick) {
-        this.context = context;
+
+    public Mp4Track(int volume, int width, int height, int timescale, int frametick) {
         this.volume = volume;
         this.width = width;
         this.height = height;
@@ -28,16 +28,8 @@ public abstract class Mp4Track {
         this.frametick = frametick;
     }
 
-    public Mp4Context getContext() {
-        return context;
-    }
-
-    public int id(List<Mp4Track> tracks) {
-        if (tracks.size() == 1) {
-            return 1;
-        } else {
-            return tracks.indexOf(this)+1;
-        }
+    public int getId(List<Mp4Track> tracks) {
+        return tracks.indexOf(this)+1;
     }
 
     public int getVolume() {
@@ -52,44 +44,33 @@ public abstract class Mp4Track {
         return height;
     }
 
-    public double getTimescale() {
+    public int getTimescale() {
         return timescale;
     }
 
-    public double getFrametick() {
+    public int getFrametick() {
         return frametick;
     }
 
-    public synchronized boolean isSamplesReady() {
-        return samples.size() > 0;
+    public boolean isSamplesReady() {
+        return !samples.isEmpty();
     }
 
-    public synchronized void addSample(Mp4Sample sample) {
+    protected void addSample(Mp4Sample sample) {
         samples.add(sample);
-        /*
-        if (samples.size() * frametick >= timescale) {
-            preps.add(new ArrayList<>(samples));
-            samples.clear();
-            seq += getStart();
-        }
-        */
     }
 
-    public synchronized List<Mp4Sample> drainSamples() {
+    public List<Mp4Sample> drainSamples() {
         List<Mp4Sample> ss = new ArrayList<>(samples);
         samples.clear();
-        seq += getStart();
         return ss;
-        //return preps.removeFirst();
     }
 
-    public abstract void update(ByteBuf readonly, int timestamp, boolean keyframe);
-    public abstract void release();
+    public abstract void update(ByteBuf data, int timestamp, boolean isKeyframe);
     public abstract String getShortHandler();
     public abstract String getLongHandler();
     public abstract Mp4Box getInit(List<Mp4Track> tracks);
-    public abstract Mp4Box getMhd();
-    public abstract CommType getType(Mp4Frame frame);
-    public abstract double getStart();
-    public abstract int getFix();
+    public abstract Mp4Box get_Mhd();
+    public abstract void release();
+
 }

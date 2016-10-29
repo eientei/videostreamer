@@ -2,15 +2,15 @@ package org.eientei.videostreamer.mp4;
 
 import io.netty.buffer.ByteBuf;
 
-/**
+/**3
  * Created by Alexander Tumin on 2016-10-22
  */
 public abstract class Mp4Box {
     protected final String fcc;
-    protected final Mp4Context context;
+    protected final Mp4RemuxerHandler context;
     protected int size;
 
-    public Mp4Box(String fcc, Mp4Context context) {
+    public Mp4Box(String fcc, Mp4RemuxerHandler context) {
         this.fcc = fcc;
         this.context = context;
     }

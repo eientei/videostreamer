@@ -2,7 +2,7 @@ package org.eientei.videostreamer.mp4.boxes;
 
 import io.netty.buffer.ByteBuf;
 import org.eientei.videostreamer.mp4.Mp4BoxFull;
-import org.eientei.videostreamer.mp4.Mp4Context;
+import org.eientei.videostreamer.mp4.Mp4RemuxerHandler;
 import org.eientei.videostreamer.mp4.Mp4Track;
 
 /**
@@ -11,7 +11,7 @@ import org.eientei.videostreamer.mp4.Mp4Track;
 public class Mp4HdlrBox extends Mp4BoxFull {
     private final Mp4Track track;
 
-    public Mp4HdlrBox(Mp4Context context, Mp4Track track) {
+    public Mp4HdlrBox(Mp4RemuxerHandler context, Mp4Track track) {
         super("hdlr", context, 0, 0);
         this.track = track;
     }

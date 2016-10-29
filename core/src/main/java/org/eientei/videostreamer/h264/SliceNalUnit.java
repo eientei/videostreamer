@@ -11,19 +11,11 @@ public class SliceNalUnit extends NalUnit {
     public final int picParameterSetId;
     public final int frameNum;
 
-    public SliceNalUnit(SpsNalUnit sps, ByteBuf buf, int slicelength) {
-        super(buf, slicelength);
+    public SliceNalUnit(SpsNalUnit sps, ByteBuf buf) {
+        super(buf);
         firstMbInSlice = parseUE();
         sliceType = parseUE();
         picParameterSetId = parseUE();
         frameNum = parseInt(sps.log2MaxFrameNumMinus4+4);
-    }
-
-    public SliceNalUnit(ByteBuf buf, int slicelength) {
-        super(buf, slicelength);
-        firstMbInSlice = parseUE();
-        sliceType = parseUE();
-        picParameterSetId = parseUE();
-        frameNum = 0;
     }
 }

@@ -2,31 +2,36 @@ package org.eientei.videostreamer.rtmp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.MessageToByteEncoder;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Created by Alexander Tumin on 2016-10-20
+ * Created by Alexander Tumin on 2016-10-29
  */
-public class RtmpCodecHandler extends ChannelOutboundHandlerAdapter {
-
-    private final RtmpContext context;
-
-    public RtmpCodecHandler(RtmpContext context) {
-        this.context = context;
-    }
+public class RtmpCodecHandler extends MessageToByteEncoder<RtmpMessage> {
+    private final Map<Integer, RtmpDisassembler> disassembly = new ConcurrentHashMap<>();
+    private int chunkout = 128;
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        if (msg instanceof RtmpMessage) {
-            RtmpMessage message = (RtmpMessage) msg;
+    protected void encode(ChannelHandlerContext ctx, RtmpMessage msg, ByteBuf out) throws Exception {
+        RtmpDisassembler disassembler = getDisassembler(msg.getChunk());
+        disassembler.disassemble(msg, out);
+    }
 
-            RtmpDisassembler disassembler = context.getDisassembler(message.getChunk());
-            ByteBuf encoded = disassembler.disassemble(message);
-            ctx.write(encoded, promise);
-            message.getData().release();
-        } else if (msg instanceof ByteBuf) {
-            ctx.write(msg, promise);
+    private RtmpDisassembler getDisassembler(int chunk) {
+        if (!disassembly.containsKey(chunk)) {
+            disassembly.put(chunk, new RtmpDisassembler(chunk, this));
         }
+        return disassembly.get(chunk);
+    }
+
+    public int getChunkout() {
+        return chunkout;
+    }
+
+    public void setChunkout(int chunkout) {
+        this.chunkout = chunkout;
     }
 }

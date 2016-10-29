@@ -1,123 +1,111 @@
 package org.eientei.videostreamer.rtmp;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
 import org.eientei.videostreamer.rtmp.message.RtmpAudioMessage;
 import org.eientei.videostreamer.rtmp.message.RtmpVideoMessage;
 
 /**
- * Created by Alexander Tumin on 2016-10-19
+ * Created by Alexander Tumin on 2016-10-29
  */
 public class RtmpDisassembler {
     private final int chunk;
-    private final RtmpContext context;
+    private final RtmpCodecHandler codec;
 
     private boolean first = true;
-
     private RtmpMessageType lastType;
     private int lastStreamid;
     private int lastTime;
     private int lastLength;
     private int lastTimediff;
 
-    public RtmpDisassembler(int chunk, RtmpContext context) {
+    public RtmpDisassembler(int chunk, RtmpCodecHandler codec) {
         this.chunk = chunk;
-        this.context = context;
+        this.codec = codec;
     }
 
-    public ByteBuf disassemble(RtmpMessage message) {
+    public void disassemble(RtmpMessage message, ByteBuf out) {
         ByteBuf data = message.getData();
 
         boolean compressable = !first && (message instanceof RtmpAudioMessage || message instanceof RtmpVideoMessage);
-
-        CompositeByteBuf compose = context.ALLOC.compose();
-
         if (compressable && notFull(message)) {
             if (notMedium(message)) {
                 if (notShort(message)) {
-                    compose.addComponent(true, makeBasicHeader(message, RtmpHeaderSize.NONE));
+                    makeBasicHeader(out, message, RtmpHeaderSize.NONE);
                     lastTime += lastTimediff;
                 } else {
-                    compose.addComponent(true, makeBasicHeader(message, RtmpHeaderSize.SHORT));
-                    compose.addComponent(true, makeShortHeader(message));
+                    makeBasicHeader(out, message, RtmpHeaderSize.SHORT);
+                    makeShortHeader(out, message);
                     lastTime += lastTimediff;
                 }
             } else {
-                compose.addComponent(true, makeBasicHeader(message, RtmpHeaderSize.MEDIUM));
-                compose.addComponent(true, makeMediumHeader(message));
+                makeBasicHeader(out, message, RtmpHeaderSize.MEDIUM);
+                makeMediumHeader(out, message);
                 lastTime += lastTimediff;
             }
         } else {
-            compose.addComponent(true, makeBasicHeader(message, RtmpHeaderSize.FULL));
-            compose.addComponent(true, makeFullHeader(message));
+            makeBasicHeader(out, message, RtmpHeaderSize.FULL);
+            makeFullHeader(out, message);
             lastTime = message.getTime();
         }
 
-        compose.addComponent(true, makeChunk(data));
+        makeChunk(out, data);
         while (data.isReadable()) {
-            compose.addComponent(true, makeBasicHeader(message, RtmpHeaderSize.NONE));
-            compose.addComponent(true, makeChunk(data));
+            makeBasicHeader(out, message, RtmpHeaderSize.NONE);
+            makeChunk(out, data);
         }
-        return compose;
     }
 
-    private ByteBuf makeChunk(ByteBuf data) {
+    private void makeChunk(ByteBuf out, ByteBuf data) {
         int remain = data.readableBytes();
-        if (remain > context.getChunkout()) {
-            remain = context.getChunkout();
+        if (remain > codec.getChunkout()) {
+            remain = codec.getChunkout();
         }
-        int pos = data.readerIndex();
-        ByteBuf slice = data.copy(pos, remain);
-        data.skipBytes(remain);
-        return slice;
+        out.ensureWritable(remain);
+        data.readBytes(out, remain);
     }
 
-    private ByteBuf makeFullHeader(RtmpMessage message) {
+    private void makeFullHeader(ByteBuf out, RtmpMessage message) {
         lastTimediff = message.getTime() - lastTime;
         lastTime = message.getTime();
         lastLength = message.getData().readableBytes();
         lastType = message.getType();
         lastStreamid = message.getStream();
 
-        ByteBuf byteBuf = context.ALLOC.alloc(lastTime >= 0xFFFFFF ? 15 : 11)
+        out
                 .writeMedium(lastTime >= 0xFFFFFF ? 0xFFFFFF : lastTime)
                 .writeMedium(lastLength)
                 .writeByte(lastType.getValue())
                 .writeIntLE(lastStreamid);
 
         if (lastTime >= 0xFFFFFF) {
-            byteBuf.writeInt(lastTime);
+            out.writeInt(lastTime);
         }
-
-        return byteBuf;
     }
 
-    private ByteBuf makeMediumHeader(RtmpMessage message) {
+    private void makeMediumHeader(ByteBuf out, RtmpMessage message) {
         lastTimediff = message.getTime() - lastTime;
         lastLength = message.getData().readableBytes();
         lastType = message.getType();
 
-        return context.ALLOC.alloc(7).writeMedium(lastTimediff).writeMedium(lastLength).writeByte(lastType.getValue());
+        out.writeMedium(lastTimediff).writeMedium(lastLength).writeByte(lastType.getValue());
     }
 
-    private ByteBuf makeShortHeader(RtmpMessage message) {
+    private void makeShortHeader(ByteBuf out, RtmpMessage message) {
         lastTimediff = message.getTime() - lastTime;
-        return context.ALLOC.alloc(3).writeMedium(lastTimediff);
+        out.writeMedium(lastTimediff);
     }
 
-    private ByteBuf makeBasicHeader(RtmpMessage message, RtmpHeaderSize size) {
+    private void makeBasicHeader(ByteBuf out, RtmpMessage message, RtmpHeaderSize size) {
         int fst = size.getValue() << 6;
-        ByteBuf alloc = context.ALLOC.alloc(getSize(message.getChunk()));
         if (message.getChunk() >= 320) {
-            alloc.writeByte(fst | 1);
-            alloc.writeShortLE(message.getChunk());
+            out.writeByte(fst | 1);
+            out.writeShortLE(message.getChunk());
         } else if (message.getChunk() >= 64) {
-            alloc.writeByte(fst);
-            alloc.writeByte(message.getChunk());
+            out.writeByte(fst);
+            out.writeByte(message.getChunk());
         } else {
-            alloc.writeByte(fst | message.getChunk());
+            out.writeByte(fst | message.getChunk());
         }
-        return alloc;
     }
 
     private int getSize(int chunkid) {

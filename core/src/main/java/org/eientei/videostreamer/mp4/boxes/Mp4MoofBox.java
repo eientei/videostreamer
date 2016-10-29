@@ -16,7 +16,7 @@ public class Mp4MoofBox extends Mp4Box {
     private final List<Mp4TrafBox> trafs = new ArrayList<>();
     private final Map<Integer,Integer> offsets = new HashMap<>();
 
-    public Mp4MoofBox(Mp4Context context, List<Mp4Track> tracks, Mp4Frame frame, Mp4SubscriberContext subscriber) {
+    public Mp4MoofBox(Mp4RemuxerHandler context, List<Mp4Track> tracks, Mp4Frame frame, Mp4SubscriberContext subscriber) {
         super("moof", context);
         this.mfhd = new Mp4MfhdBox(context);
         for (Mp4Track track : tracks) {

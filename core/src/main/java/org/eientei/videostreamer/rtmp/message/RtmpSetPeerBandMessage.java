@@ -1,7 +1,6 @@
 package org.eientei.videostreamer.rtmp.message;
 
 import io.netty.buffer.ByteBuf;
-import org.eientei.videostreamer.rtmp.RtmpContext;
 import org.eientei.videostreamer.rtmp.RtmpMessage;
 import org.eientei.videostreamer.rtmp.RtmpMessageType;
 
@@ -13,8 +12,8 @@ public class RtmpSetPeerBandMessage extends RtmpMessage {
         super(RtmpMessageType.SET_PEER_BAND, chunk, stream, time, data);
     }
 
-    public RtmpSetPeerBandMessage(int chunk, int stream, int time, RtmpContext context, int size, byte sizetype) {
-        super(RtmpMessageType.SET_PEER_BAND, chunk, stream, time, context.ALLOC.alloc(5));
+    public RtmpSetPeerBandMessage(int chunk, int stream, int time, ByteBuf buf, int size, byte sizetype) {
+        super(RtmpMessageType.SET_PEER_BAND, chunk, stream, time, buf);
         getData().writeInt(size).writeByte(sizetype);
     }
 

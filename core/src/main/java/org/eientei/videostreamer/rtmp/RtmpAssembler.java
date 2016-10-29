@@ -1,103 +1,59 @@
 package org.eientei.videostreamer.rtmp;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import org.eientei.videostreamer.rtmp.message.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 /**
- * Created by Alexander Tumin on 2016-10-19
+ * Created by Alexander Tumin on 2016-10-29
  */
 public class RtmpAssembler {
-    private final Logger log = LoggerFactory.getLogger(RtmpAssembler.class);
+    private final ChannelHandlerContext ctx;
+    private final RtmpDecoderHandler decoder;
     private final int chunk;
-    private final RtmpContext context;
 
-    private CompositeByteBuf incompleteData;
-
+    private ByteBuf incompleteBuf;
     private RtmpMessageType lastType;
     private int lastStreamid;
     private int lastTime;
     private int lastLength;
     private int lastTimediff;
 
-    public RtmpAssembler(int chunk, RtmpContext context) {
+
+    public RtmpAssembler(ChannelHandlerContext ctx, RtmpDecoderHandler decoder, int chunk) {
+        this.ctx = ctx;
+        this.decoder = decoder;
         this.chunk = chunk;
-        this.context = context;
-        this.incompleteData = context.ALLOC.compose();
-    }
 
-    public void update(ByteBuf in) {
-        append(in);
-        if (incompleteData.readableBytes() >= lastLength) {
-            if (incompleteData.readableBytes() != lastLength) {
-                log.warn("{}: too much data", this.context);
+        this.incompleteBuf = ctx.alloc().buffer();
+        ctx.channel().closeFuture().addListener(new GenericFutureListener<Future<? super Void>>() {
+            @Override
+            public void operationComplete(Future<? super Void> future) throws Exception {
+                incompleteBuf.release();
             }
-            complete();
-        }
+        });
     }
 
-    public void relase() {
-        incompleteData.release();
-    }
-
-    private void complete() {
-        switch (lastType) {
-            case SET_CHUNK_SIZE:
-                context.process(new RtmpSetChunkMessage(chunk, lastStreamid, lastTime, incompleteData));
-                break;
-            case ACK:
-                context.process(new RtmpAckMessage(chunk, lastStreamid, lastTime, incompleteData));
-                break;
-            case USER:
-                context.process(new RtmpUserMessage(chunk, lastStreamid, lastTime, incompleteData));
-                break;
-            case WINACK:
-                context.process(new RtmpWinackMessage(chunk, lastStreamid, lastTime, incompleteData));
-                break;
-            case SET_PEER_BAND:
-                context.process(new RtmpSetPeerBandMessage(chunk, lastStreamid, lastTime, incompleteData));
-                break;
-            case AUDIO:
-                context.process(new RtmpAudioMessage(chunk, lastStreamid, lastTime, incompleteData));
-                break;
-            case VIDEO:
-                context.process(new RtmpVideoMessage(chunk, lastStreamid, lastTime, incompleteData));
-                break;
-            case AMF3_CMD_ALT:
-            case AMF3_CMD:
-                incompleteData.skipBytes(1);
-                context.process(new RtmpCmdMessage(chunk, lastStreamid, lastTime, incompleteData));
-                break;
-            case AMF3_META:
-                incompleteData.skipBytes(1);
-                context.process(new RtmpMetaMessage(chunk, lastStreamid, lastTime, incompleteData));
-                break;
-            case AMF0_META:
-                context.process(new RtmpMetaMessage(chunk, lastStreamid, lastTime, incompleteData));
-                break;
-            case AMF0_CMD:
-                context.process(new RtmpCmdMessage(chunk, lastStreamid, lastTime, incompleteData));
-                break;
-            default:
-                log.info("{}: unknown message type {}", context, lastType);
-                break;
+    public void update(ByteBuf in, List<Object> out) {
+        append(in);
+        if (incompleteBuf.readableBytes() >= lastLength) {
+            complete(out);
         }
-        incompleteData.release();
-        incompleteData = context.ALLOC.compose();
     }
 
     private void append(ByteBuf in) {
-        int remain = lastLength - incompleteData.readableBytes();
-        if (remain > context.getChunkin()) {
-            remain = context.getChunkin();
+        int remain = lastLength - incompleteBuf.readableBytes();
+        if (remain > decoder.getChunkin()) {
+            remain = decoder.getChunkin();
         }
 
-        ByteBuf copy = in.copy(in.readerIndex(), remain);
-        incompleteData.addComponent(true, copy);
-        in.skipBytes(remain);
-        context.updateRead(remain);
+        incompleteBuf.ensureWritable(remain);
+        incompleteBuf.writeBytes(in, remain);
+        decoder.updateRead(remain);
     }
 
     public void parseHeader(RtmpHeaderSize size, ByteBuf in) {
@@ -122,10 +78,55 @@ public class RtmpAssembler {
                 lastTime += lastTimediff;
                 break;
             case NONE:
-                if (incompleteData.numComponents() == 0) {
+                if (incompleteBuf.readableBytes() == 0) {
                     lastTime += lastTimediff;
                 }
                 break;
         }
+    }
+
+    private void complete(List<Object> out) {
+        switch (lastType) {
+            case SET_CHUNK_SIZE:
+                out.add(new RtmpSetChunkMessage(chunk, lastStreamid, lastTime, incompleteBuf));
+                break;
+            case ACK:
+                out.add(new RtmpAckMessage(chunk, lastStreamid, lastTime, incompleteBuf));
+                break;
+            case USER:
+                out.add(new RtmpUserMessage(chunk, lastStreamid, lastTime, incompleteBuf));
+                break;
+            case WINACK:
+                out.add(new RtmpWinackMessage(chunk, lastStreamid, lastTime, incompleteBuf));
+                break;
+            case SET_PEER_BAND:
+                out.add(new RtmpSetPeerBandMessage(chunk, lastStreamid, lastTime, incompleteBuf));
+                break;
+            case AUDIO:
+                out.add(new RtmpAudioMessage(chunk, lastStreamid, lastTime, incompleteBuf));
+                break;
+            case VIDEO:
+                out.add(new RtmpVideoMessage(chunk, lastStreamid, lastTime, incompleteBuf));
+                break;
+            case AMF3_CMD_ALT:
+            case AMF3_CMD:
+                incompleteBuf.skipBytes(1);
+                out.add(new RtmpCmdMessage(chunk, lastStreamid, lastTime, incompleteBuf));
+                break;
+            case AMF3_META:
+                incompleteBuf.skipBytes(1);
+                out.add(new RtmpMetaMessage(chunk, lastStreamid, lastTime, incompleteBuf));
+                break;
+            case AMF0_META:
+                out.add(new RtmpMetaMessage(chunk, lastStreamid, lastTime, incompleteBuf));
+                break;
+            case AMF0_CMD:
+                out.add(new RtmpCmdMessage(chunk, lastStreamid, lastTime, incompleteBuf));
+                break;
+            default:
+                break;
+        }
+
+        incompleteBuf = ctx.alloc().buffer();
     }
 }

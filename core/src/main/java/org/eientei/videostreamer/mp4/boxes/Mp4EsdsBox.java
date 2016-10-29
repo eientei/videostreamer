@@ -1,9 +1,9 @@
 package org.eientei.videostreamer.mp4.boxes;
 
 import io.netty.buffer.ByteBuf;
-import org.eientei.videostreamer.mp4.Mp4AudioTrakAac;
+import org.eientei.videostreamer.mp4.Mp4AudioTrackAac;
 import org.eientei.videostreamer.mp4.Mp4BoxFull;
-import org.eientei.videostreamer.mp4.Mp4Context;
+import org.eientei.videostreamer.mp4.Mp4RemuxerHandler;
 import org.eientei.videostreamer.mp4.Mp4Track;
 
 import java.util.List;
@@ -13,9 +13,9 @@ import java.util.List;
  */
 public class Mp4EsdsBox extends Mp4BoxFull {
     private final List<Mp4Track> tracks;
-    private final Mp4AudioTrakAac track;
+    private final Mp4AudioTrackAac track;
 
-    public Mp4EsdsBox(Mp4Context context, List<Mp4Track> tracks, Mp4AudioTrakAac track) {
+    public Mp4EsdsBox(Mp4RemuxerHandler context, List<Mp4Track> tracks, Mp4AudioTrackAac track) {
         super("esds", context, 0, 0);
         this.tracks = tracks;
         this.track = track;
@@ -25,7 +25,7 @@ public class Mp4EsdsBox extends Mp4BoxFull {
     protected void fullWrite(ByteBuf out) {
         out.writeByte(0x03);
         out.writeByte(23+track.getAac().readableBytes());
-        out.writeShort(track.id(context.getTracks()));
+        out.writeShort(track.getId(tracks));
         out.writeByte(0);
 
         out.writeByte(0x04);

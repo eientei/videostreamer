@@ -2,13 +2,13 @@ package org.eientei.videostreamer.mp4.boxes;
 
 import io.netty.buffer.ByteBuf;
 import org.eientei.videostreamer.mp4.Mp4BoxFull;
-import org.eientei.videostreamer.mp4.Mp4Context;
+import org.eientei.videostreamer.mp4.Mp4RemuxerHandler;
 
 /**
  * Created by Alexander Tumin on 2016-10-23
  */
 public class Mp4StcoBox extends Mp4BoxFull {
-    public Mp4StcoBox(Mp4Context context) {
+    public Mp4StcoBox(Mp4RemuxerHandler context) {
         super("stco", context, 0, 0);
     }
 

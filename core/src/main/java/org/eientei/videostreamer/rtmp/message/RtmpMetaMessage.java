@@ -2,7 +2,6 @@ package org.eientei.videostreamer.rtmp.message;
 
 import io.netty.buffer.ByteBuf;
 import org.eientei.videostreamer.amf.Amf;
-import org.eientei.videostreamer.rtmp.RtmpContext;
 import org.eientei.videostreamer.rtmp.RtmpMessage;
 import org.eientei.videostreamer.rtmp.RtmpMessageType;
 
@@ -14,10 +13,12 @@ public class RtmpMetaMessage extends RtmpMessage {
         super(RtmpMessageType.AMF0_META, chunk, stream, time, data);
     }
 
-    public RtmpMetaMessage(int chunk, int stream, int time, RtmpContext context, Object... data) {
-        super(RtmpMessageType.AMF0_META, chunk, stream, time, context.ALLOC.allocSizeless());
+    public RtmpMetaMessage(int chunk, int stream, int time, ByteBuf buf, Object... data) {
+        super(RtmpMessageType.AMF0_META, chunk, stream, time, buf);
         for (Object obj : data) {
             Amf.serialize(getData(), obj);
         }
     }
+
+
 }

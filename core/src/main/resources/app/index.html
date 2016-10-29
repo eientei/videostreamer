@@ -36,13 +36,9 @@ Sources: <a href="https://github.com/eientei/videostreamer/tree/nextgen">https:/
     var CommType = {
         STREAM_PLAY: 1,
         STREAM_STOP: 2,
-        STREAM_UPDATE_AV: 3,
-        STREAM_SUBSCRIBERS: 4,
-        STREAM_UPDATE_A: 5,
-        STREAM_UPDATE_V: 6,
-        STREAM_UPDATE_VK: 7,
-        STREAM_UPDATE_AVK: 8,
-        STREAM_UPDATE_AK: 9
+        STREAM_SUBSCRIBERS: 3,
+        STREAM_UPDATE_AV: 4,
+        STREAM_UPDATE_AVK: 5
     };
 </script>
 <script type="application/javascript">
@@ -153,14 +149,18 @@ Sources: <a href="https://github.com/eientei/videostreamer/tree/nextgen">https:/
         };
 
         comm.onmessage = function (msg) {
-            var data = new Uint8Array(msg.data, 12);
             var type = readInt(new Uint8Array(msg.data, 0, 4));
+            /*
             var begin = readInt(new Uint8Array(msg.data, 4, 4));
             var end = readInt(new Uint8Array(msg.data, 8, 4));
+            var data = new Uint8Array(msg.data, 12);
+            */
+            var data = null;
             switch (type) {
                 case CommType.STREAM_PLAY:
                     console.log('issuing play');
                     if (handlers.streamPlay) {
+                        data = new Uint8Array(msg.data, 4);
                         handlers.streamPlay(readString(data));
                     }
                     break;
@@ -172,16 +172,16 @@ Sources: <a href="https://github.com/eientei/videostreamer/tree/nextgen">https:/
                     break;
                 case CommType.STREAM_SUBSCRIBERS:
                     if (handlers.streamSubscribers) {
+                        data = new Uint8Array(msg.data, 4);
                         handlers.streamSubscribers(readInt(data));
                     }
                     break;
                 case CommType.STREAM_UPDATE_AV:
-                case CommType.STREAM_UPDATE_A:
-                case CommType.STREAM_UPDATE_V:
-                case CommType.STREAM_UPDATE_VK:
                 case CommType.STREAM_UPDATE_AVK:
-                case CommType.STREAM_UPDATE_AK:
                     if (handlers.streamUpdate) {
+                        data = new Uint8Array(msg.data, 12);
+                        var begin = readInt(new Uint8Array(msg.data, 4, 4));
+                        var end = readInt(new Uint8Array(msg.data, 8, 4));
                         handlers.streamUpdate(data, type, begin, end);
                     }
                     break;
@@ -207,7 +207,6 @@ Sources: <a href="https://github.com/eientei/videostreamer/tree/nextgen">https:/
 
     vstream.ondone = function (meta) {
         switch (meta.type) {
-            case CommType.STREAM_UPDATE_VK:
             case CommType.STREAM_UPDATE_AVK:
                 if (init && meta.begin > 0) {
                     var begin = meta.begin / 1000 - minlate;
@@ -236,7 +235,6 @@ Sources: <a href="https://github.com/eientei/videostreamer/tree/nextgen">https:/
                     if (Math.abs(video.currentTime - dest) > 1.0) {
                         console.log('v', dest, video.currentTime - dest);
                         video.currentTime = dest;
-
                         console.log('a', dest, audio.currentTime - dest);
                         audio.currentTime = dest;
                     }
@@ -266,7 +264,6 @@ Sources: <a href="https://github.com/eientei/videostreamer/tree/nextgen">https:/
                     //video.currentTime += dest/2;
                 }
                 break;
-            case CommType.STREAM_UPDATE_V:
             case CommType.STREAM_UPDATE_AV:
                 break;
         }

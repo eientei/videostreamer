@@ -33,8 +33,8 @@ public class PpsNalUnit extends NalUnit {
     public final int constrainedIntrapredFlag;
     public final int redundatPicCntPresentFlag;
 
-    public PpsNalUnit(ByteBuf buf, int ppslength) {
-        super(buf, ppslength);
+    public PpsNalUnit(ByteBuf buf) {
+        super(buf);
         picParameterSetId = parseUE();
         seqParameterSetId = parseUE();
         entropyCodingModeFlag = parseInt(1);

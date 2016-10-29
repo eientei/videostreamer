@@ -1,4 +1,4 @@
-package org.eientei.videostreamer.util;
+package org.eientei.videostreamer.aac;
 
 import io.netty.buffer.ByteBuf;
 

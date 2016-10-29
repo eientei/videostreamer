@@ -3,59 +3,56 @@ package org.eientei.videostreamer.rtmp;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.eientei.videostreamer.rtmp.message.RtmpAckMessage;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Created by Alexander Tumin on 2016-10-20
+ * Created by Alexander Tumin on 2016-10-29
  */
 public class RtmpDecoderHandler extends ReplayingDecoder<RtmpStage> {
-    private final Logger log = LoggerFactory.getLogger(RtmpDecoderHandler.class);
-    private final RtmpContext context;
+    private int lastChunkdId;
+    private int chunkin = 128;
+    private int readBytes = 0;
+    private int ackwindow = 5000000;
+    private final Map<Integer, RtmpAssembler> assembly = new ConcurrentHashMap<>();
 
-    public RtmpDecoderHandler(RtmpContext context) {
-        super(RtmpStage.STAGE0);
-        this.context = context;
+    public RtmpDecoderHandler() {
+        super(RtmpStage.HEADER);
     }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         switch (state()) {
-            case STAGE0:
-                if (!RtmpHandshake.stage0(in)) {
-                    ctx.close();
-                }
-                checkpoint(RtmpStage.STAGE1);
-                break;
-            case STAGE1:
-                if (!RtmpHandshake.stage1(context, in)) {
-                    ctx.close();
-                }
-                checkpoint(RtmpStage.STAGE2);
-                break;
-            case STAGE2:
-                if (!RtmpHandshake.stage2(in)) {
-                    ctx.close();
-                }
-                checkpoint(RtmpStage.HEADER);
-                break;
             case HEADER:
                 int fst = in.readUnsignedByte();
                 RtmpHeaderSize size = RtmpHeaderSize.dispatch((fst >> 6) & 0x03);
                 int chunkid = readId(fst & 0x3f, in);
-                RtmpAssembler assembler = context.getAssembler(chunkid);
+                RtmpAssembler assembler = getAssembler(ctx, chunkid);
                 assembler.parseHeader(size, in);
-                context.setLastChunkin(chunkid);
+                lastChunkdId = chunkid;
                 checkpoint(RtmpStage.BODY);
                 break;
             case BODY:
-                assembler = context.getAssembler(context.getLastChunkin());
-                assembler.update(in);
+                assembler = getAssembler(ctx, lastChunkdId);
+                assembler.update(in, out);
                 checkpoint(RtmpStage.HEADER);
                 break;
         }
+
+        if (readBytes >= ackwindow) {
+            ctx.writeAndFlush(new RtmpAckMessage(2, 0, 0, ctx.alloc().buffer(), readBytes));
+            readBytes = 0;
+        }
+    }
+
+    private RtmpAssembler getAssembler(ChannelHandlerContext ctx, int chunk) {
+        if (!assembly.containsKey(chunk)) {
+            assembly.put(chunk, new RtmpAssembler(ctx, this, chunk));
+        }
+        return assembly.get(chunk);
     }
 
     private int readId(int chunkid, ByteBuf in) {
@@ -68,13 +65,24 @@ public class RtmpDecoderHandler extends ReplayingDecoder<RtmpStage> {
         return chunkid;
     }
 
-    @Override
-    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-        context.close();
+    public int getChunkin() {
+        return chunkin;
     }
 
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        log.error("", cause);
+    public void setChunkin(int chunkin) {
+        this.chunkin = chunkin;
+    }
+
+
+    public int getAckwindow() {
+        return ackwindow;
+    }
+
+    public void setAckwindow(int ackwindow) {
+        this.ackwindow = ackwindow;
+    }
+
+    public void updateRead(int remain) {
+        readBytes += remain;
     }
 }

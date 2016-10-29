@@ -13,7 +13,7 @@ public class Mp4TrunBox extends Mp4BoxFull {
     private int offset;
     private int cursiz;
 
-    public Mp4TrunBox(Mp4Context context, Mp4Frame frame, Mp4Track track, Mp4SubscriberContext subscriber) {
+    public Mp4TrunBox(Mp4RemuxerHandler context, Mp4Frame frame, Mp4Track track, Mp4SubscriberContext subscriber) {
         super("trun", context, 0, 0x01 | 0x04 | 0x100 | 0x0200);
         this.frame = frame;
         this.track = track;
@@ -27,17 +27,11 @@ public class Mp4TrunBox extends Mp4BoxFull {
         cursiz = frame.getTotalSize(track);
         out.writeInt(0); // data offset, post-baked
         out.writeInt(0x2000000); // flags
-        double diff = (frame.getMaxTimestamp(track)*1000 - frame.getMinTimestamp(track)*1000 + track.getFrametick());
-        double filler = track.getTimescale() - diff;
-        //double diff = track.getTimescale();
-        double duration = diff / frame.getSamples(track).size();
+        int diff = (frame.getMaxTimestamp(track) - frame.getMinTimestamp(track) + track.getFrametick());
+        int duration = diff / frame.getSamples(track).size();
         for (Mp4Sample sample : frame.getSamples(track)) {
-            if (frame.getSamples(track).indexOf(sample) == frame.getSamples(track).size()-1) {
-                //duration = duration + filler;
-            } else {
-            }
-            out.writeInt((int) duration); // duration
-            out.writeInt(sample.getData().readableBytes()); // size
+            out.writeInt(duration); // duration
+            out.writeInt(sample.getCopydata().readableBytes()); // size
             subscriber.getTracktimes().put(track, subscriber.getTracktimes().get(track) + duration);
         }
     }

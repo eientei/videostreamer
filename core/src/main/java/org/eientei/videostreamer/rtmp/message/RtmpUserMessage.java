@@ -1,7 +1,6 @@
 package org.eientei.videostreamer.rtmp.message;
 
 import io.netty.buffer.ByteBuf;
-import org.eientei.videostreamer.rtmp.RtmpContext;
 import org.eientei.videostreamer.rtmp.RtmpMessage;
 import org.eientei.videostreamer.rtmp.RtmpMessageType;
 
@@ -38,8 +37,8 @@ public class RtmpUserMessage extends RtmpMessage {
         super(RtmpMessageType.USER, chunk, stream, time, data);
     }
 
-    public RtmpUserMessage(int chunk, int stream, int time, RtmpContext context, Event event, int arg1, int arg2) {
-        super(RtmpMessageType.USER, chunk, stream, time, context.ALLOC.alloc(event == Event.SET_BUFFER_LENGTH ? 10 : 6));
+    public RtmpUserMessage(int chunk, int stream, int time, ByteBuf buf, Event event, int arg1, int arg2) {
+        super(RtmpMessageType.USER, chunk, stream, time, buf);
         getData().writeShort(event.getValue()).writeInt(arg1);
         if (event == Event.SET_BUFFER_LENGTH) {
             getData().writeInt(arg2);

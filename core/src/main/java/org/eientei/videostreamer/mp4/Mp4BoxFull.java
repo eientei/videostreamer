@@ -9,7 +9,7 @@ public abstract class Mp4BoxFull extends Mp4Box {
     protected final int version;
     protected final int flags;
 
-    public Mp4BoxFull(String fcc, Mp4Context context, int version, int flags) {
+    public Mp4BoxFull(String fcc, Mp4RemuxerHandler context, int version, int flags) {
         super(fcc, context);
         this.version = version;
         this.flags = flags;

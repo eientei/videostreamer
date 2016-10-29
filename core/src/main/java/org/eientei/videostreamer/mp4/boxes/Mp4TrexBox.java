@@ -2,7 +2,7 @@ package org.eientei.videostreamer.mp4.boxes;
 
 import io.netty.buffer.ByteBuf;
 import org.eientei.videostreamer.mp4.Mp4BoxFull;
-import org.eientei.videostreamer.mp4.Mp4Context;
+import org.eientei.videostreamer.mp4.Mp4RemuxerHandler;
 
 /**
  * Created by Alexander Tumin on 2016-10-22
@@ -10,7 +10,7 @@ import org.eientei.videostreamer.mp4.Mp4Context;
 public class Mp4TrexBox extends Mp4BoxFull {
     private final int id;
 
-    public Mp4TrexBox(Mp4Context context, int id) {
+    public Mp4TrexBox(Mp4RemuxerHandler context, int id) {
         super("trex", context, 0, 0);
         this.id = id;
     }

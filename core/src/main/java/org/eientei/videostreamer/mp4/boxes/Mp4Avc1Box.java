@@ -2,7 +2,7 @@ package org.eientei.videostreamer.mp4.boxes;
 
 import io.netty.buffer.ByteBuf;
 import org.eientei.videostreamer.mp4.Mp4Box;
-import org.eientei.videostreamer.mp4.Mp4Context;
+import org.eientei.videostreamer.mp4.Mp4RemuxerHandler;
 import org.eientei.videostreamer.mp4.Mp4VideoTrackH264;
 
 /**
@@ -12,7 +12,7 @@ public class Mp4Avc1Box extends Mp4Box {
     private final Mp4VideoTrackH264 track;
     private final Mp4AvcCBox avcC;
 
-    public Mp4Avc1Box(Mp4Context context, Mp4VideoTrackH264 track) {
+    public Mp4Avc1Box(Mp4RemuxerHandler context, Mp4VideoTrackH264 track) {
         super("avc1", context);
         this.track = track;
         this.avcC = new Mp4AvcCBox(context, track);

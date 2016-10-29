@@ -2,7 +2,7 @@ package org.eientei.videostreamer.mp4.boxes;
 
 import io.netty.buffer.ByteBuf;
 import org.eientei.videostreamer.mp4.Mp4BoxFull;
-import org.eientei.videostreamer.mp4.Mp4Context;
+import org.eientei.videostreamer.mp4.Mp4RemuxerHandler;
 
 /**
  * Created by Alexander Tumin on 2016-10-23
@@ -10,7 +10,7 @@ import org.eientei.videostreamer.mp4.Mp4Context;
 public class Mp4DrefBox extends Mp4BoxFull {
     private final Mp4Url_Box url_;
 
-    public Mp4DrefBox(Mp4Context context) {
+    public Mp4DrefBox(Mp4RemuxerHandler context) {
         super("dref", context, 0, 0);
         this.url_ = new Mp4Url_Box(context);
     }

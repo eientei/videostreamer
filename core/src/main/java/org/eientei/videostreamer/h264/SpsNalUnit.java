@@ -36,8 +36,8 @@ public class SpsNalUnit extends NalUnit {
     public final int vuiParametersPresentFlag;
     public final VUIParameters vui;
 
-    public SpsNalUnit(ByteBuf buf, int spslength) {
-        super(buf, spslength);
+    public SpsNalUnit(ByteBuf buf) {
+        super(buf);
         profileIdc = parseInt(8);
         constraintSet0Flag = parseInt(1);
         constraintSet1Flag = parseInt(1);

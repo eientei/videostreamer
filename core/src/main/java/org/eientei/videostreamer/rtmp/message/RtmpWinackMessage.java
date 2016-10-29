@@ -1,7 +1,6 @@
 package org.eientei.videostreamer.rtmp.message;
 
 import io.netty.buffer.ByteBuf;
-import org.eientei.videostreamer.rtmp.RtmpContext;
 import org.eientei.videostreamer.rtmp.RtmpMessage;
 import org.eientei.videostreamer.rtmp.RtmpMessageType;
 
@@ -13,8 +12,8 @@ public class RtmpWinackMessage extends RtmpMessage {
         super(RtmpMessageType.WINACK, chunk, stream, time, data);
     }
 
-    public RtmpWinackMessage(int chunk, int stream, int time, RtmpContext context, int winsize) {
-        super(RtmpMessageType.WINACK, chunk, stream, time, context.ALLOC.alloc(4));
+    public RtmpWinackMessage(int chunk, int stream, int time, ByteBuf buf, int winsize) {
+        super(RtmpMessageType.WINACK, chunk, stream, time, buf);
         getData().writeInt(winsize);
     }
 

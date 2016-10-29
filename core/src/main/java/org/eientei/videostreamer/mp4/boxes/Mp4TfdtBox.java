@@ -9,10 +9,10 @@ import org.eientei.videostreamer.mp4.*;
 public class Mp4TfdtBox extends Mp4BoxFull {
     private final int time;
 
-    public Mp4TfdtBox(Mp4Context context, Mp4Frame frame, Mp4Track track, Mp4SubscriberContext subscriber) {
+    public Mp4TfdtBox(Mp4RemuxerHandler context, Mp4Frame frame, Mp4Track track, Mp4SubscriberContext subscriber) {
         super("tfdt", context, 0, 0);
         //time = (int) ((int) frame.getMinTimestamp(track) - subscriber.getBegin())*1000;
-        time = subscriber.getTracktimes().get(track).intValue();
+        time = subscriber.getTracktimes().get(track);
     }
 
     @Override

@@ -4,26 +4,21 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Created by Alexander Tumin on 2016-10-26
+ * Created by Alexander Tumin on 2016-10-28
  */
 public class Mp4SubscriberContext {
-    private final Map<Mp4Track, Double> tracktimes = new HashMap<>();
-    private double begin;
+    private final Map<Mp4Track, Integer> tracktimes = new HashMap<>();
+    private int begin;
 
-    public Map<Mp4Track, Double> getTracktimes() {
+    public Map<Mp4Track, Integer> getTracktimes() {
         return tracktimes;
     }
 
-
-    public void clear() {
-        tracktimes.clear();
-    }
-
-    public void setBegin(double begin) {
-        this.begin = begin;
-    }
-
-    public double getBegin() {
+    public int getBegin() {
         return begin;
+    }
+
+    public void setBegin(int begin) {
+        this.begin = begin;
     }
 }

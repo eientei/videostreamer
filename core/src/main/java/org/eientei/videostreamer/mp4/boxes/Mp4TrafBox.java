@@ -13,7 +13,7 @@ public class Mp4TrafBox extends Mp4Box {
     private final Mp4TfdtBox tfdt;
     private final Mp4TrunBox trun;
 
-    public Mp4TrafBox(Mp4Context context, Mp4Frame frame, List<Mp4Track> tracks, Mp4Track track, Mp4SubscriberContext subscriber) {
+    public Mp4TrafBox(Mp4RemuxerHandler context, Mp4Frame frame, List<Mp4Track> tracks, Mp4Track track, Mp4SubscriberContext subscriber) {
         super("traf", context);
         this.tfhd = new Mp4TfhdBox(context, tracks, track);
         this.tfdt = new Mp4TfdtBox(context, frame, track, subscriber);

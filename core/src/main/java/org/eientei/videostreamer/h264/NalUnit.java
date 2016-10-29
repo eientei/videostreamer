@@ -13,7 +13,7 @@ public class NalUnit extends BitParser {
     public final int nalRefIdc;
     public final int forbiddenZeroBit;
 
-    public NalUnit(ByteBuf buf, int length) {
+    public NalUnit(ByteBuf buf) {
         super(new DefaultBitInput<>(new ByteBufInput(buf.slice())));
         forbiddenZeroBit = parseInt(1);
         nalRefIdc = parseInt(2);

@@ -2,7 +2,7 @@ package org.eientei.videostreamer.mp4.boxes;
 
 import io.netty.buffer.ByteBuf;
 import org.eientei.videostreamer.mp4.Mp4BoxFull;
-import org.eientei.videostreamer.mp4.Mp4Context;
+import org.eientei.videostreamer.mp4.Mp4RemuxerHandler;
 import org.eientei.videostreamer.mp4.Mp4Track;
 
 import java.util.List;
@@ -16,7 +16,7 @@ public class Mp4TkhdBox extends Mp4BoxFull {
     private final List<Mp4Track> tracks;
     private final Mp4Track track;
 
-    public Mp4TkhdBox(Mp4Context context, List<Mp4Track> tracks, Mp4Track track) {
+    public Mp4TkhdBox(Mp4RemuxerHandler context, List<Mp4Track> tracks, Mp4Track track) {
         super("tkhd", context, 0, 0x07);
         this.tracks = tracks;
         this.track = track;
@@ -26,7 +26,7 @@ public class Mp4TkhdBox extends Mp4BoxFull {
     protected void fullWrite(ByteBuf out) {
         out.writeInt(0); // creation time
         out.writeInt(0); // modification time
-        out.writeInt(track.id(context.getTracks())); // track id
+        out.writeInt(track.getId(tracks)); // track id
         out.writeInt(0); // reserved
         out.writeInt(0); // duration
 

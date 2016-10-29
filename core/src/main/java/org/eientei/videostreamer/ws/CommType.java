@@ -6,13 +6,9 @@ package org.eientei.videostreamer.ws;
 public enum CommType {
     STREAM_PLAY(1),
     STREAM_STOP(2),
-    STREAM_UPDATE_AV(3),
-    STREAM_SUBSCRIBERS(4),
-    STREAM_UPDATE_A(5),
-    STREAM_UPDATE_V(6),
-    STREAM_UPDATE_VK(7),
-    STREAM_UPDATE_AVK(8),
-    STREAM_UPDATE_AK(9);
+    STREAM_SUBSCRIBERS(3),
+    STREAM_UPDATE_AV(4),
+    STREAM_UPDATE_AVK(5);
 
     private final int num;
 

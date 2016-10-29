@@ -2,7 +2,7 @@ package org.eientei.videostreamer.mp4.boxes;
 
 import io.netty.buffer.ByteBuf;
 import org.eientei.videostreamer.mp4.Mp4Box;
-import org.eientei.videostreamer.mp4.Mp4Context;
+import org.eientei.videostreamer.mp4.Mp4RemuxerHandler;
 import org.eientei.videostreamer.mp4.Mp4Track;
 
 import java.util.ArrayList;
@@ -14,10 +14,10 @@ import java.util.List;
 public class Mp4MvexBox extends Mp4Box {
     private List<Mp4TrexBox> trexes = new ArrayList<>();
 
-    public Mp4MvexBox(Mp4Context context, List<Mp4Track> tracks) {
+    public Mp4MvexBox(Mp4RemuxerHandler context, List<Mp4Track> tracks) {
         super("mvex", context);
         for (Mp4Track track : tracks) {
-            trexes.add(new Mp4TrexBox(context, track.id(context.getTracks())));
+            trexes.add(new Mp4TrexBox(context, track.getId(tracks)));
         }
     }
 

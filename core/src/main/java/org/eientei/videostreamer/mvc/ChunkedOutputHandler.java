@@ -16,6 +16,7 @@ public class ChunkedOutputHandler extends ChannelOutboundHandlerAdapter {
     private final OutputStream outputStream;
     private int audioTime = 0;
     private int videoTime = 0;
+    private ByteBuf init;
 
     public ChunkedOutputHandler(OutputStream outputStream) {
         this.outputStream = outputStream;
@@ -26,20 +27,35 @@ public class ChunkedOutputHandler extends ChannelOutboundHandlerAdapter {
         if (msg instanceof ByteBuf) {
             ByteBuf init = (ByteBuf) msg;
             try {
-                writeOut(init);
-                outputStream.flush();
+                this.init = init;
+                //outputStream.flush();
             } catch (Throwable t) {
                 t.printStackTrace();
                 outputStream.close();
                 ctx.close();
             } finally {
-                init.release();
+                //init.release();
             }
             return;
         }
         BinaryFrame binaryFrame = (BinaryFrame) msg;
+        if (init != null) {
+            if (!binaryFrame.isKey()) {
+                binaryFrame.release();
+                return;
+            }
+        }
         try {
+            if (init != null) {
+                writeOut(init);
+                outputStream.flush();
+                init.release();
+                init = null;
+            }
             writeOut(binaryFrame);
+            outputStream.flush();
+            audioTime += binaryFrame.getAudioAdvance();
+            videoTime += binaryFrame.getVideoAdvance();
         } catch (Throwable t) {
             t.printStackTrace();
             outputStream.close();
@@ -55,9 +71,6 @@ public class ChunkedOutputHandler extends ChannelOutboundHandlerAdapter {
         writeOut(binaryFrame.getP2());
         writeOut(binaryFrame.getVideoTime(videoTime));
         writeOut(binaryFrame.getP3());
-        outputStream.flush();
-        audioTime += binaryFrame.getAudioAdvance();
-        videoTime += binaryFrame.getVideoAdvance();
     }
 
     private void writeOut(int time) throws IOException {

@@ -12,7 +12,7 @@ import org.junit.Test;
 public class StreamContextTest {
     @Test
     public void testStreamContextInit() {
-        StreamContext context = new StreamContext("test", new DefaultEventExecutor());
+        StreamContext context = new StreamContext(new GlobalContext(), "test", new DefaultEventExecutor());
         context.publish(new Message(new Header(2, 0, Message.Type.AMF0_META, 1), Unpooled.buffer()));
         context.publish(new Message(new Header(2, 0, Message.Type.AUDIO, 1), Unpooled.buffer()));
         context.publish(new Message(new Header(2, 0, Message.Type.VIDEO, 1), Unpooled.buffer()));
@@ -21,7 +21,7 @@ public class StreamContextTest {
 
     @Test
     public void testStreamContextSubscriber() {
-        StreamContext context = new StreamContext("test", new DefaultEventExecutor());
+        StreamContext context = new StreamContext(new GlobalContext(), "test", new DefaultEventExecutor());
         EmbeddedChannel channelBefore = new EmbeddedChannel();
         context.addRtmpSubscriber(channelBefore);
 
@@ -51,7 +51,7 @@ public class StreamContextTest {
 
     @Test
     public void testStreamContextTouch() {
-        StreamContext context = new StreamContext("test", new DefaultEventExecutor());
+        StreamContext context = new StreamContext(new GlobalContext(), "test", new DefaultEventExecutor());
         Assert.assertSame(context, context.touch());
     }
 }

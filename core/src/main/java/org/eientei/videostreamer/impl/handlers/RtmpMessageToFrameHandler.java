@@ -174,6 +174,7 @@ public class RtmpMessageToFrameHandler extends ChannelOutboundHandlerAdapter {
         if (alist.isEmpty() || vlist.isEmpty()) {
             return false;
         }
+        /*
         if (group.isEmpty()) {
             for (Sample sample : alist) {
                 sample.release();
@@ -184,7 +185,7 @@ public class RtmpMessageToFrameHandler extends ChannelOutboundHandlerAdapter {
             }
             vlist.clear();
             return true;
-        }
+        }*/
         SampleList al = new SampleList(audio.getFrametick(), alist);
         SampleList vl = new SampleList(video.getFrametick(), vlist);
         alist.clear();

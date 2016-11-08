@@ -4,6 +4,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.concurrent.DefaultEventExecutor;
+import org.eientei.videostreamer.impl.core.GlobalContext;
 import org.eientei.videostreamer.impl.core.Header;
 import org.eientei.videostreamer.impl.core.Message;
 import org.eientei.videostreamer.impl.core.StreamContext;
@@ -16,7 +17,7 @@ import org.junit.Test;
 public class RtmpMessageInboundBroadcastHandlerTest {
     @Test
     public void testRtmpMessageBroadcaster() {
-        StreamContext context = new StreamContext("test", new DefaultEventExecutor());
+        StreamContext context = new StreamContext(new GlobalContext(), "test", new DefaultEventExecutor());
 
         EmbeddedChannel subscriber1 = new EmbeddedChannel(DefaultChannelId.newInstance());
         context.addRtmpSubscriber(subscriber1);

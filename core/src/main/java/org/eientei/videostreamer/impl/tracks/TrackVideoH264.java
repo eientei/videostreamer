@@ -123,10 +123,10 @@ public class TrackVideoH264 extends Track implements TrackVideo {
             /*int sliceType = parseUE(bit);*/
             /*int frameNum = parseInt(bit, frameNumbits);*/
 
-            if (nalUnitType == H264_SEI_SLICE || nalUnitType == H264_FILLER_SLICE) {
-                data.skipBytes(data.readableBytes());
-                return null;
-            }
+            //if (nalUnitType == H264_SEI_SLICE || nalUnitType == H264_FILLER_SLICE) {
+              //  data.skipBytes(data.readableBytes());
+                //return null;
+            //}
 
             data.skipBytes(size);
             length += nalLenlen + size;

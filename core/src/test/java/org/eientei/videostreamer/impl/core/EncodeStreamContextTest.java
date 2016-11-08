@@ -17,12 +17,12 @@ public class EncodeStreamContextTest {
 
     @Test
     public void testName() {
-        Assert.assertEquals("name", new StreamContext("name", new DefaultEventExecutor()).getName());
+        Assert.assertEquals("name", new StreamContext(new GlobalContext(), "name", new DefaultEventExecutor()).getName());
     }
 
     @Test
     public void testPublisher() {
-        StreamContext stream = new StreamContext("name", new DefaultEventExecutor());
+        StreamContext stream = new StreamContext(new GlobalContext(), "name", new DefaultEventExecutor());
         Assert.assertEquals(null, stream.getPublisher());
         stream.setPublisher(null);
         Assert.assertEquals(null, stream.getPublisher());
@@ -36,7 +36,7 @@ public class EncodeStreamContextTest {
 
     @Test
     public void propMeta() {
-        StreamContext context = new StreamContext("test", new DefaultEventExecutor());
+        StreamContext context = new StreamContext(new GlobalContext(), "test", new DefaultEventExecutor());
         EmbeddedChannel channel = new EmbeddedChannel(new RtmpMessageInboundBroadcastHandler(context));
         channel.writeInbound(new Message(new Header(2, 0, Message.Type.AMF0_META, 1), Unpooled.buffer()));
 
@@ -44,14 +44,14 @@ public class EncodeStreamContextTest {
 
     @Test
     public void propVideo() {
-        StreamContext context = new StreamContext("test", new DefaultEventExecutor());
+        StreamContext context = new StreamContext(new GlobalContext(), "test", new DefaultEventExecutor());
         EmbeddedChannel channel = new EmbeddedChannel(new RtmpMessageInboundBroadcastHandler(context));
         channel.writeInbound(new Message(new Header(2, 0, Message.Type.VIDEO, 1), Unpooled.buffer()));
     }
 
     @Test
     public void propAudio() {
-        StreamContext context = new StreamContext("test", new DefaultEventExecutor());
+        StreamContext context = new StreamContext(new GlobalContext(), "test", new DefaultEventExecutor());
         EmbeddedChannel channel = new EmbeddedChannel(new RtmpMessageInboundBroadcastHandler(context));
         channel.writeInbound(new Message(new Header(2, 0, Message.Type.AUDIO, 1), Unpooled.buffer()));
     }

@@ -27,22 +27,25 @@
     <video autoplay width="960" height="540"></video>
     <div class="spinner"></div>
 </div>
+<p>Subscribers: <span id="subscribers">0</span></p>
 <p>
     Sources: <a href="https://github.com/eientei/videostreamer/tree/nextgen">https://github.com/eientei/videostreamer/tree/nextgen</a>
 </p>
+<script type="application/javascript" src="/app/js/chunked-request.js"></script>
 <script type="application/javascript">
     var mimeType = 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
-    var comm = new WebSocket("ws://" + window.location.host + "/comm");
     var video = document.querySelector('video');
     var spinner = document.querySelector(".spinner");
+    var playing = false;
     video.ontimeupdate = function () {
         if (video.buffered.length < 1) {
             return;
         }
         console.log('timeupd', video.buffered.end(0));
-        video.duration = -1;
-        if (video.currentTime > 2 && video.buffered.end(0) - video.currentTime > 4) {
-            video.currentTime = video.buffered.end(0) - 2;
+        //video.duration = -1;
+        if (video.currentTime > 0 && video.buffered.end(0) - video.currentTime > 3) {
+            console.log('adjusting');
+            video.currentTime = video.buffered.end(0) - 3;
         }
     };
     video.oncanplaythrough = function () {
@@ -57,15 +60,30 @@
     video.onplaying = function () {
         spinner.style.display = 'none';
     };
-
-    comm.onmessage = function (ev) {
-        var data = JSON.parse(ev.data);
-        if (data.action == 'play') {
-            play(data.stream);
-        } else if (data.action == 'stop') {
-            stop(data.stream);
-        }
+    video.onstalled = function () {
+        spinner.style.display = 'block';
     };
+
+    go();
+
+    function go() {
+        var comm = new WebSocket("ws://" + window.location.host + "/comm");
+        comm.onmessage = function (ev) {
+            var data = JSON.parse(ev.data);
+            if (data.action == 'play') {
+                play(data.stream);
+                playing = true;
+            } else if (data.action == 'stop') {
+                stop(data.stream);
+                playing = false;
+            } else if (data.action == 'subscribers') {
+                document.getElementById('subscribers').innerText = data.count;
+            }
+        };
+        comm.onclose = function () {
+            setTimeout(go, 2000);
+        };
+    }
 
     function play(stream) {
         console.log('play', stream);
@@ -84,29 +102,30 @@
                     if (chunks.length == 0 || !sourceBuffer || sourceBuffer.updating) {
                         return;
                     }
-                    console.log('pushing');
                     var chunk = chunks.shift();
                     sourceBuffer.appendBuffer(chunk);
                 }
-                fetch(url).then(function (r) {
-                    var reader = r.body.getReader();
-                    return pump();
-                    function pump() {
-                        return reader.read().then(function (ev) {
-                            if (ev.done) {
-                                return;
-                            }
-                            chunks.push(ev.value);
+                reconnect();
+                function reconnect() {
+                    chunkedRequest({
+                        url: url,
+                        method: 'GET',
+                        chunkParser: function (raw) {
+                            return [ raw, {} ];
+                        },
+                        onChunk: function (err, msg) {
+                            chunks.push(msg);
                             trypush();
-                            return pump();
-                        });
-                    }
-                });
+                        }
+                    });
+                }
             });
         } else {
+            console.log('old');
             video.src = url;
             video.type = mimeType;
             video.load();
+            video.play();
         }
     }
 

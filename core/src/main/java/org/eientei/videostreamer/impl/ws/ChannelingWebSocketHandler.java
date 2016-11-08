@@ -24,6 +24,7 @@ public class ChannelingWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         WebSocketContext context = new WebSocketContext(globalContext, session);
         globalContext.addEventListner(context);
+        globalContext.addPubsubListener(context);
         contexts.put(session.getId(), context);
     }
 
@@ -36,6 +37,7 @@ public class ChannelingWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         WebSocketContext context = contexts.remove(session.getId());
         globalContext.removeEventListener(context);
+        globalContext.removePubsubListener(context);
         context.release();
     }
 }

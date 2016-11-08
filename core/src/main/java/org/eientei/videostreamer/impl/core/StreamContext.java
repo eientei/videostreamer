@@ -23,6 +23,7 @@ public class StreamContext extends AbstractReferenceCounted {
     private final EmbeddedChannel remuxer = new EmbeddedChannel(DefaultChannelId.newInstance());
     private final ChannelGroup rtmpGroup;
     private final ChannelGroup remuxGroup;
+    private final GlobalContext globalContext;
     private final String name;
     private final RtmpMessageToFrameHandler handler;
     private Channel publisher;
@@ -30,12 +31,13 @@ public class StreamContext extends AbstractReferenceCounted {
     private Message videoInit;
     private Message audioInit;
 
-    public StreamContext(String name, EventExecutor executor) {
+    public StreamContext(GlobalContext globalContext, String name, EventExecutor executor) {
+        this.globalContext = globalContext;
         this.name = name;
         this.rtmpGroup = new DefaultChannelGroup(executor);
         this.remuxGroup = new DefaultChannelGroup(executor);
 
-        remuxer.pipeline().addLast(handler = new RtmpMessageToFrameHandler(remuxGroup, 1000));
+        remuxer.pipeline().addLast(handler = new RtmpMessageToFrameHandler(remuxGroup, 500));
     }
 
     public String getName() {
@@ -151,10 +153,16 @@ public class StreamContext extends AbstractReferenceCounted {
             channel.writeAndFlush(init);
         }
         remuxGroup.add(channel);
+        for (StreamPubsubListener listener : globalContext.getStreamPubsubListeners()) {
+            listener.peers(subscribers());
+        }
         channel.closeFuture().addListener(new GenericFutureListener<Future<? super Void>>() {
             @Override
             public void operationComplete(Future<? super Void> future) throws Exception {
                 remuxGroup.remove(channel); // TODO: do we need that?
+                for (StreamPubsubListener listener : globalContext.getStreamPubsubListeners()) {
+                    listener.peers(subscribers());
+                }
             }
         });
     }
@@ -239,5 +247,9 @@ public class StreamContext extends AbstractReferenceCounted {
     @Override
     public ReferenceCounted touch(Object hint) {
         return this;
+    }
+
+    public int subscribers() {
+        return remuxGroup.size();
     }
 }

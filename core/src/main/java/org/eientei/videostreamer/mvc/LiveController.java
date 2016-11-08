@@ -30,7 +30,7 @@ public class LiveController {
     }
 
     @ResponseBody
-    @RequestMapping(value = "{name}")
+    @RequestMapping(value = "{name}.mp4")
     public Object stream(HttpServletResponse res, @PathVariable String name) {
         final StreamContext stream = globalContext.stream(name);
         if (stream == null) {

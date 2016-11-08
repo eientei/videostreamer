@@ -6,10 +6,10 @@ import org.eientei.videostreamer.impl.ws.ChannelingWebSocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
-import org.springframework.web.servlet.config.annotation.EnableWebMvc;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.web.servlet.config.annotation.*;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
@@ -21,8 +21,20 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @Configuration
 @EnableWebMvc
 @EnableWebSocket
+@EnableAsync
 public class WebMvcConfig extends WebMvcConfigurerAdapter implements WebSocketConfigurer {
     private final GlobalContext globalContext;
+
+    @Override
+    public void configureAsyncSupport(AsyncSupportConfigurer configurer) {
+        configurer.setDefaultTimeout(-1);
+        configurer.setTaskExecutor(asyncTaskExecutor());
+    }
+
+    @Bean
+    public AsyncTaskExecutor asyncTaskExecutor() {
+        return new SimpleAsyncTaskExecutor("async");
+    }
 
     @Autowired
     public WebMvcConfig(GlobalContext globalContext) {

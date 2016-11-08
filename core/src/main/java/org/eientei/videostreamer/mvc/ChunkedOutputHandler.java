@@ -24,32 +24,40 @@ public class ChunkedOutputHandler extends ChannelOutboundHandlerAdapter {
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (msg instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) msg;
+            ByteBuf init = (ByteBuf) msg;
             try {
-                writeOut(buf);
+                writeOut(init);
                 outputStream.flush();
             } catch (Throwable t) {
+                t.printStackTrace();
+                outputStream.close();
                 ctx.close();
             } finally {
-                buf.release();
+                init.release();
             }
             return;
         }
         BinaryFrame binaryFrame = (BinaryFrame) msg;
         try {
-            writeOut(binaryFrame.getP1());
-            writeOut(binaryFrame.getAudioTime(audioTime));
-            writeOut(binaryFrame.getP2());
-            writeOut(binaryFrame.getVideoTime(videoTime));
-            writeOut(binaryFrame.getP3());
-            outputStream.flush();
-            audioTime += binaryFrame.getAudioAdvance();
-            videoTime += binaryFrame.getVideoAdvance();
+            writeOut(binaryFrame);
         } catch (Throwable t) {
+            t.printStackTrace();
+            outputStream.close();
             ctx.close();
         } finally {
             binaryFrame.release();
         }
+    }
+
+    private void writeOut(BinaryFrame binaryFrame) throws IOException {
+        writeOut(binaryFrame.getP1());
+        writeOut(binaryFrame.getAudioTime(audioTime));
+        writeOut(binaryFrame.getP2());
+        writeOut(binaryFrame.getVideoTime(videoTime));
+        writeOut(binaryFrame.getP3());
+        outputStream.flush();
+        audioTime += binaryFrame.getAudioAdvance();
+        videoTime += binaryFrame.getVideoAdvance();
     }
 
     private void writeOut(int time) throws IOException {
@@ -61,10 +69,5 @@ public class ChunkedOutputHandler extends ChannelOutboundHandlerAdapter {
 
     private void writeOut(ByteBuf buf) throws IOException {
         outputStream.write(buf.array(), buf.arrayOffset()+buf.readerIndex(), buf.readableBytes());
-    }
-
-    @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        outputStream.close();
     }
 }

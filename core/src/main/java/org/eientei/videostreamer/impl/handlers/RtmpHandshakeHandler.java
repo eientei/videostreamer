@@ -189,8 +189,8 @@ public class RtmpHandshakeHandler extends ReplayingDecoder<RtmpHandshakeHandler.
 
         commonHandshake(ctx, buf);
 
+
         ctx.channel().writeAndFlush(echo).syncUninterruptibly();
-        echo.release();
     }
 
     private static void newHandshake(ChannelHandlerContext ctx, ByteBuf buf, byte[] digest) throws InvalidKeyException, NoSuchAlgorithmException {

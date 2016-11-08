@@ -194,9 +194,11 @@ public class RtmpMessageToFrameHandler extends ChannelOutboundHandlerAdapter {
         } else {
             frame = new Frame(frame, al, vl);
         }
-        frame.retain();
+//        frame.retain();
         BinaryFrame binaryFrame = new BinaryFrame(ctx.alloc(), frame);
+        //binaryFrame.retain(group.size());
         group.writeAndFlush(binaryFrame);
+        //binaryFrame.release();
         return true;
     }
 

@@ -35,7 +35,7 @@ public class StreamContext extends AbstractReferenceCounted {
         this.rtmpGroup = new DefaultChannelGroup(executor);
         this.remuxGroup = new DefaultChannelGroup(executor);
 
-        remuxer.pipeline().addLast(handler = new RtmpMessageToFrameHandler(remuxGroup, 500));
+        remuxer.pipeline().addLast(handler = new RtmpMessageToFrameHandler(remuxGroup, 1000));
     }
 
     public String getName() {

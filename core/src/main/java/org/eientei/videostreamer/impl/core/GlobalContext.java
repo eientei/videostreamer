@@ -5,6 +5,7 @@ import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.internal.ConcurrentSet;
 import org.eientei.videostreamer.impl.exceptions.StreamAlreadyPublishingException;
 import org.eientei.videostreamer.impl.exceptions.StreamAlreadySubscribedException;
 import org.eientei.videostreamer.impl.handlers.RtmpMessageDisposerHandler;
@@ -24,6 +25,7 @@ import java.util.Set;
 public class GlobalContext {
     private final EventExecutor executor = new DefaultEventExecutor(new NamedThreadFactory("RTMP-RESTREAM"));
     private Map<String, StreamContext> streams = new HashMap<>();
+    private Set<StreamEventListener> streamEventListeners = new ConcurrentSet<>();
 
     private StreamContext getOrCreateStream(String name) {
         StreamContext context = streams.get(name);
@@ -49,8 +51,16 @@ public class GlobalContext {
                 if (context.sizeRtmpSubscribers() == 0) {
                     streams.remove(name).release();
                 }
+
+                for (StreamEventListener listener : streamEventListeners) {
+                    listener.stop(name);
+                }
             }
         });
+
+        for (StreamEventListener listener : streamEventListeners) {
+            listener.play(name);
+        }
     }
 
     public void subscribe(final String name, final Channel channel) throws StreamAlreadySubscribedException {
@@ -77,5 +87,13 @@ public class GlobalContext {
 
     public StreamContext stream(String name) {
         return streams.get(name);
+    }
+
+    public void addEventListner(StreamEventListener listener) {
+        streamEventListeners.add(listener);
+    }
+
+    public void removeEventListener(StreamEventListener listener) {
+        streamEventListeners.remove(listener);
     }
 }

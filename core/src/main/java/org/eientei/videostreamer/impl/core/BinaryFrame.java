@@ -19,11 +19,10 @@ public class BinaryFrame extends AbstractReferenceCounted {
     private final int videoAdvance;
 
     private final ByteBuf data;
-    private final Frame frame;
+    private final boolean key;
 
     public BinaryFrame(ByteBufAllocator alloc, Frame frame) {
         data = alloc.heapBuffer();
-        this.frame = frame;
 
         int[] offsets = Box.moof(data, frame);
         Box.mdat(data, frame);
@@ -37,6 +36,12 @@ public class BinaryFrame extends AbstractReferenceCounted {
         p1 = data.slice(0, offsets[0]);
         p2 = data.slice(offsets[0]+4, offsets[1] - offsets[0] - 4);
         p3 = data.slice(offsets[1]+4, data.readableBytes() - offsets[1] - 4);
+
+        key = frame.isKey();
+    }
+
+    public boolean isKey() {
+        return key;
     }
 
     public ByteBuf getP1() {
@@ -70,7 +75,6 @@ public class BinaryFrame extends AbstractReferenceCounted {
     @Override
     protected void deallocate() {
         data.release();
-        frame.release();
     }
 
     @Override

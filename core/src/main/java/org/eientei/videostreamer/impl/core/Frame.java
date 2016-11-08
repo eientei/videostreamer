@@ -35,6 +35,10 @@ public class Frame extends AbstractReferenceCounted {
         previous.release();
     }
 
+    public boolean isKey() {
+        return videoList.isKey();
+    }
+
     public SampleList getAudioList() {
         return audioList;
     }

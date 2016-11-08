@@ -24,14 +24,95 @@
 </head>
 <body>
 <div class="videocontainer">
-    <video width="960" height="540">
-        <source src="/live/baka" type="video/mp4">
-    </video>
+    <video autoplay width="960" height="540"></video>
     <div class="spinner"></div>
 </div>
-<audio></audio>
-<p id="status">Waiting</p>
-<p id="subscribers">Booting...</p>
-Sources: <a href="https://github.com/eientei/videostreamer/tree/nextgen">https://github.com/eientei/videostreamer/tree/nextgen</a>
+<p>
+    Sources: <a href="https://github.com/eientei/videostreamer/tree/nextgen">https://github.com/eientei/videostreamer/tree/nextgen</a>
+</p>
+<script type="application/javascript">
+    var mimeType = 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
+    var comm = new WebSocket("ws://" + window.location.host + "/comm");
+    var video = document.querySelector('video');
+    var spinner = document.querySelector(".spinner");
+    video.ontimeupdate = function () {
+        if (video.buffered.length < 1) {
+            return;
+        }
+        console.log('timeupd', video.buffered.end(0));
+        video.duration = -1;
+        if (video.currentTime > 2 && video.buffered.end(0) - video.currentTime > 4) {
+            video.currentTime = video.buffered.end(0) - 2;
+        }
+    };
+    video.oncanplaythrough = function () {
+        video.play();
+    };
+    video.onloadstart = function () {
+        spinner.style.display = 'block';
+    };
+    video.onpause = function () {
+        spinner.style.display = 'block';
+    };
+    video.onplaying = function () {
+        spinner.style.display = 'none';
+    };
+
+    comm.onmessage = function (ev) {
+        var data = JSON.parse(ev.data);
+        if (data.action == 'play') {
+            play(data.stream);
+        } else if (data.action == 'stop') {
+            stop(data.stream);
+        }
+    };
+
+    function play(stream) {
+        console.log('play', stream);
+        var url = '/live/' + stream + '.mp4';
+        if ('MediaSource' in window && 'fetch' in window) {
+            var mediaSource = new MediaSource;
+            video.src = URL.createObjectURL(mediaSource);
+            mediaSource.addEventListener('sourceopen', function () {
+                var mediaSource = this;
+                var sourceBuffer = mediaSource.addSourceBuffer(mimeType);
+                var chunks = [];
+                sourceBuffer.addEventListener('updateend', function () {
+                    trypush();
+                });
+                function trypush() {
+                    if (chunks.length == 0 || !sourceBuffer || sourceBuffer.updating) {
+                        return;
+                    }
+                    console.log('pushing');
+                    var chunk = chunks.shift();
+                    sourceBuffer.appendBuffer(chunk);
+                }
+                fetch(url).then(function (r) {
+                    var reader = r.body.getReader();
+                    return pump();
+                    function pump() {
+                        return reader.read().then(function (ev) {
+                            if (ev.done) {
+                                return;
+                            }
+                            chunks.push(ev.value);
+                            trypush();
+                            return pump();
+                        });
+                    }
+                });
+            });
+        } else {
+            video.src = url;
+            video.type = mimeType;
+            video.load();
+        }
+    }
+
+    function stop(stream) {
+        console.log('stop', stream);
+    }
+</script>
 </body>
 </html>

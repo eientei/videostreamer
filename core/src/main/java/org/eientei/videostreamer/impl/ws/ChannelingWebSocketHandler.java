@@ -22,7 +22,9 @@ public class ChannelingWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        contexts.put(session.getId(), new WebSocketContext(globalContext, session));
+        WebSocketContext context = new WebSocketContext(globalContext, session);
+        globalContext.addEventListner(context);
+        contexts.put(session.getId(), context);
     }
 
     @Override
@@ -32,6 +34,8 @@ public class ChannelingWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        contexts.remove(session.getId()).release();
+        WebSocketContext context = contexts.remove(session.getId());
+        globalContext.removeEventListener(context);
+        context.release();
     }
 }

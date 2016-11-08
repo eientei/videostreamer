@@ -1,6 +1,8 @@
 package org.eientei.videostreamer;
 
 import org.eientei.videostreamer.conf.Config;
+import org.eientei.videostreamer.impl.core.GlobalContext;
+import org.eientei.videostreamer.mvc.LiveController;
 import org.eientei.videostreamer.server.Server;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -10,7 +12,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  */
 @SpringBootApplication(scanBasePackageClasses = {
         Config.class,
-        Server.class
+        Server.class,
+        GlobalContext.class,
+        LiveController.class
 })
 public class Launcher {
     public static void main(String[] args) {

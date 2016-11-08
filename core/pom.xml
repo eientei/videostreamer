@@ -23,6 +23,10 @@
       <artifactId>junit</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-all</artifactId>
       <version>4.1.5.Final</version>
@@ -33,13 +37,12 @@
       <version>1.3.4</version>
     </dependency>
     <dependency>
-      <groupId>org.webjars.npm</groupId>
-      <artifactId>utf8</artifactId>
-      <version>2.1.1</version>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot</artifactId>
+      <artifactId>spring-boot-starter-test</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -126,18 +129,5 @@
         </executions>
       </plugin>
     </plugins>
-    <resources>
-      <resource>
-        <directory>src/main/resources</directory>
-        <includes>
-          <include>Broadway/Player/mp4.js</include>
-          <include>Broadway/Player/stream.js</include>
-          <include>Broadway/Player/Player.js</include>
-          <include>Broadway/Player/Decoder.js</include>
-          <include>Broadway/Player/YUVCanvas.js</include>
-          <include>app/**</include>
-        </includes>
-      </resource>
-    </resources>
   </build>
 </project>

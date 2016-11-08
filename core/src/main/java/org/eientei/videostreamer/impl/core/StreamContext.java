@@ -146,25 +146,27 @@ public class StreamContext extends AbstractReferenceCounted {
         return message;
     }
 
+
+
     public void addRemuxSubscriber(final Channel channel) {
         ByteBuf init = handler.getInit();
         if (init != null) {
             init.retain();
             channel.writeAndFlush(init);
         }
-        remuxGroup.add(channel);
-        for (StreamPubsubListener listener : globalContext.getStreamPubsubListeners()) {
-            listener.peers(subscribers());
-        }
         channel.closeFuture().addListener(new GenericFutureListener<Future<? super Void>>() {
             @Override
             public void operationComplete(Future<? super Void> future) throws Exception {
                 remuxGroup.remove(channel); // TODO: do we need that?
-                for (StreamPubsubListener listener : globalContext.getStreamPubsubListeners()) {
-                    listener.peers(subscribers());
+                for (StreamEventListener listener : globalContext.getStreamEventListeners()) {
+                    listener.subscribers(subscribers());
                 }
             }
         });
+        remuxGroup.add(channel);
+        for (StreamEventListener listener : globalContext.getStreamEventListeners()) {
+            listener.subscribers(subscribers());
+        }
     }
 
     public void addRtmpSubscriber(Channel channel) {

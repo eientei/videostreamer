@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -31,7 +32,7 @@ public class LiveController {
 
     @ResponseBody
     @RequestMapping(value = "{name}.mp4")
-    public Object stream(HttpServletResponse res, @PathVariable String name) {
+    public Object stream(HttpServletResponse res, AsyncContext asyncContext, @PathVariable String name) {
         final StreamContext stream = globalContext.stream(name);
         if (stream == null) {
             return ResponseEntity.notFound().build();
@@ -40,7 +41,8 @@ public class LiveController {
         return new StreamingResponseBody() {
             @Override
             public void writeTo(OutputStream outputStream) throws IOException {
-                EmbeddedChannel embed = new EmbeddedChannel(DefaultChannelId.newInstance(), new ChunkedOutputHandler(outputStream));
+                EmbeddedChannel embed = new EmbeddedChannel(DefaultChannelId.newInstance());
+                embed.pipeline().addLast(new ChunkedOutputHandler(embed, outputStream));
                 stream.addRemuxSubscriber(embed);
                 while (embed.isOpen()) {
                     try {

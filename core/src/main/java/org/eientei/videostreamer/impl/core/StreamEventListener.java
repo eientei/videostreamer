@@ -6,4 +6,5 @@ package org.eientei.videostreamer.impl.core;
 public interface StreamEventListener {
     void play(String name);
     void stop(String name);
+    void subscribers(int num);
 }

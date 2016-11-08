@@ -24,7 +24,7 @@
 </head>
 <body>
 <div class="videocontainer">
-    <video autoplay width="960" height="540"></video>
+    <video controls width="960" height="540"></video>
     <div class="spinner"></div>
 </div>
 <p>Subscribers: <span id="subscribers">0</span></p>
@@ -43,13 +43,10 @@
         }
         console.log('timeupd', video.buffered.end(0));
         //video.duration = -1;
-        if (video.currentTime > 0 && video.buffered.end(0) - video.currentTime > 3) {
+        if (video.currentTime > 3 && video.buffered.end(0) - video.currentTime > 6) {
             console.log('adjusting');
             video.currentTime = video.buffered.end(0) - 3;
         }
-    };
-    video.oncanplaythrough = function () {
-        video.play();
     };
     video.onloadstart = function () {
         spinner.style.display = 'block';
@@ -91,6 +88,13 @@
         if ('MediaSource' in window && 'fetch' in window) {
             var mediaSource = new MediaSource;
             video.src = URL.createObjectURL(mediaSource);
+            video.load();
+            setTimeout(function () {
+                if (video.buffered.length > 0) {
+                    video.currentTime = Math.max(0, video.buffered.end(0) - 3);
+                }
+                video.play();
+            }, 5000);
             mediaSource.addEventListener('sourceopen', function () {
                 var mediaSource = this;
                 var sourceBuffer = mediaSource.addSourceBuffer(mimeType);
@@ -125,7 +129,7 @@
             video.src = url;
             video.type = mimeType;
             video.load();
-            video.play();
+            //video.play();
         }
     }
 

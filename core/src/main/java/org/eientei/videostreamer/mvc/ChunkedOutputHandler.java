@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.embedded.EmbeddedChannel;
 import org.eientei.videostreamer.impl.core.BinaryFrame;
 
 import java.io.IOException;
@@ -14,11 +15,13 @@ import java.io.OutputStream;
  */
 public class ChunkedOutputHandler extends ChannelOutboundHandlerAdapter {
     private final OutputStream outputStream;
+    private final EmbeddedChannel embed;
     private int audioTime = 0;
     private int videoTime = 0;
     private ByteBuf init;
 
-    public ChunkedOutputHandler(OutputStream outputStream) {
+    public ChunkedOutputHandler(EmbeddedChannel embed, OutputStream outputStream) {
+        this.embed = embed;
         this.outputStream = outputStream;
     }
 
@@ -30,7 +33,8 @@ public class ChunkedOutputHandler extends ChannelOutboundHandlerAdapter {
                 this.init = init;
                 //outputStream.flush();
             } catch (Throwable t) {
-                t.printStackTrace();
+                //t.printStackTrace();
+                embed.close();
                 outputStream.close();
                 ctx.close();
             } finally {
@@ -57,7 +61,8 @@ public class ChunkedOutputHandler extends ChannelOutboundHandlerAdapter {
             audioTime += binaryFrame.getAudioAdvance();
             videoTime += binaryFrame.getVideoAdvance();
         } catch (Throwable t) {
-            t.printStackTrace();
+            //t.printStackTrace();
+            embed.close();
             outputStream.close();
             ctx.close();
         } finally {

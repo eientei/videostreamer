@@ -26,7 +26,6 @@ public class GlobalContext {
     private final EventExecutor executor = new DefaultEventExecutor(new NamedThreadFactory("RTMP-RESTREAM"));
     private Map<String, StreamContext> streams = new HashMap<>();
     private Set<StreamEventListener> streamEventListeners = new ConcurrentSet<>();
-    private Set<StreamPubsubListener> streamPubsubListeners = new ConcurrentSet<>();
 
     private StreamContext getOrCreateStream(String name) {
         StreamContext context = streams.get(name);
@@ -98,15 +97,7 @@ public class GlobalContext {
         streamEventListeners.remove(listener);
     }
 
-    public void addPubsubListener(StreamPubsubListener listener) {
-        streamPubsubListeners.add(listener);
-    }
-
-    public void removePubsubListener(StreamPubsubListener listener) {
-        streamPubsubListeners.remove(listener);
-    }
-
-    public Set<StreamPubsubListener> getStreamPubsubListeners() {
-        return streamPubsubListeners;
+    public Set<StreamEventListener> getStreamEventListeners() {
+        return streamEventListeners;
     }
 }

@@ -26,6 +26,15 @@
     </tr>
     <tr>
         <td>
+            Sources:
+        </td>
+        <td width="20px"></td>
+        <td>
+            <a href="https://github.com/eientei/videostreamer/tree/golang">https://github.com/eientei/videostreamer/tree/golang</a>
+        </td>
+    </tr>
+    <tr>
+        <td>
             Buffer:
         </td>
         <td width="20px"></td>
@@ -53,11 +62,15 @@
         const diff = end - current;
         buffer.innerText = diff;
         if (diff > 1.000) {
-            wsvid.play();
-            console.log('play');
+            if (wsvid.paused) {
+                wsvid.play();
+                console.log('play');
+            }
         } else if (diff < 0.500) {
-            wsvid.pause();
-            console.log('pause');
+            if (!wsvid.paused) {
+                wsvid.pause();
+                console.log('pause');
+            }
         }
     };
     function converse() {

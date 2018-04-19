@@ -235,12 +235,13 @@ func ServeStream(stream *Stream) {
 
 func RtmpProcessAmf(server *Server, client *RtmpClient, amf []Amf) {
 	if len(amf) == 0 || amf[0].Id() != String {
+		fmt.Println("Invalid AMF!", amf)
 		return
 	}
 	switch amf[0].(*AmfString).Value {
 	case "connect":
 		ackbuf := make([]byte, 4)
-		binary.BigEndian.PutUint32(ackbuf, 5000000)
+		binary.BigEndian.PutUint32(ackbuf, client.Acksize)
 		client.OutMessageQueue <- &RtmpMessage{
 			Chunk:     0x03,
 			Timestamp: 0,
@@ -252,7 +253,7 @@ func RtmpProcessAmf(server *Server, client *RtmpClient, amf []Amf) {
 			Full:      true,
 		}
 		bandbuf := make([]byte, 5)
-		binary.BigEndian.PutUint32(bandbuf, 0xFFFFF)
+		binary.BigEndian.PutUint32(bandbuf, client.Acksize)
 		bandbuf[4] = 0x01
 		client.OutMessageQueue <- &RtmpMessage{
 			Chunk:     0x03,
@@ -504,6 +505,8 @@ func RtmpConverse(server *Server, client *RtmpClient) error {
 
 	l := int(message.Length) - len(message.Data)
 	if l < 0 {
+		fmt.Println("Invalid chunk!", message.Length, len(message.Data))
+		message.Data = message.Data[:0]
 		return nil
 	}
 	if l > len(client.InChunk) {
@@ -521,6 +524,7 @@ func RtmpConverse(server *Server, client *RtmpClient) error {
 		message.Data = message.Data[:0]
 	}
 
+	fmt.Println(message.Length, uint32(len(message.Data)), message.Length == uint32(len(message.Data)), client.Unacked, client.Acksize)
 	if client.Acksize > 0 && client.Acksize <= client.Unacked {
 		ackbuf := make([]byte, 4)
 		binary.BigEndian.PutUint32(ackbuf, client.Unacked)
@@ -644,6 +648,7 @@ func RtmpServe(server *Server, conn net.Conn) {
 		OutMessageQueue: make(chan *RtmpMessage, 8),
 		Assembly: make(map[uint16]*RtmpMessage),
 		Remember: make(map[uint16]*RtmpMessage),
+		Acksize: 0xFFFFFF,
 	}
 	messageToChunkDone := make(chan struct{})
 	go RtmpMessageToChunk(server, client, messageToChunkDone)
@@ -653,7 +658,9 @@ func RtmpServe(server *Server, conn net.Conn) {
 		}
 	}
 	if client.Stream != "" {
-		close(server.Streams[client.Stream].Data)
+		if _, ok := server.Streams[client.Stream]; ok {
+			close(server.Streams[client.Stream].Data)
+		}
 		delete(server.Streams, client.Stream)
 	}
 	close(client.OutMessageQueue)

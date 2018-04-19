@@ -3,6 +3,8 @@ package server
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
+	"math"
 )
 
 const timeBase = 1000
@@ -39,13 +41,15 @@ type Frame struct {
 type AVData struct {
 	AudioFrames []*Frame
 	VideoFrames []*Frame
-	FrameRate uint32
-	AudioSampleRate uint32
 	AudioTime uint64
 	VideoTime uint64
+	Media *Media
 }
 
 type Media struct {
+	PrevFrameNum uint64
+	FrameNumBits uint64
+	LengthSize uint64
 	Height uint32
 	Width uint32
 	FrameRate uint32
@@ -86,9 +90,9 @@ func AvcAudio(server *Server, client *RtmpClient, message *RtmpMessage) {
 			client.Media.LastVideoTime,
 		}
 		*/
-		client.Media.LastAudioTime = uint64(message.Timestamp + (timeBase*timeScale)/(client.Media.AudioSampleRate/1000))
+		client.Media.LastAudioTime = uint64(message.Timestamp * timeScale + (timeBase*timeScale)/(client.Media.AudioSampleRate/1000))
 		//server.Streams[client.Stream].Data <- av
-		client.Media.AudioFrames = append(client.Media.AudioFrames, &Frame{uint64(message.Timestamp), datacopy})
+		client.Media.AudioFrames = append(client.Media.AudioFrames, &Frame{uint64(message.Timestamp * timeScale), datacopy})
 	}
 }
 
@@ -128,18 +132,18 @@ func AvcVideo(server *Server, client *RtmpClient, message *RtmpMessage) {
 					av := &AVData{
 						client.Media.AudioFrames,
 						[]*Frame{{ uint64(message.Timestamp), datacopy}},
-						client.Media.FrameRate,
-						client.Media.AudioSampleRate,
 						client.Media.LastAudioTime,
 						client.Media.LastVideoTime,
+						client.Media,
 					}
-					client.Media.LastVideoTime = uint64(message.Timestamp + (timeBase * timeScale) / av.FrameRate)
+					//fmt.Println("put av", client.Media.LastAudioTime, client.Media.LastVideoTime)
+					client.Media.LastVideoTime = uint64(message.Timestamp * timeScale + (timeBase * timeScale) / client.Media.FrameRate)
 					server.Streams[client.Stream].Data <- av
 					client.Media.AudioFrames = nil
 					client.Media.VideoFrames = nil
 					//}
 				} else {
-					client.Media.VideoFrames = append(client.Media.VideoFrames, &Frame{ uint64(message.Timestamp), datacopy})
+					client.Media.VideoFrames = append(client.Media.VideoFrames, &Frame{ uint64(message.Timestamp * timeScale), datacopy})
 					TryGetVideoInit(server, client)
 				}
 			}
@@ -149,6 +153,7 @@ func AvcVideo(server *Server, client *RtmpClient, message *RtmpMessage) {
 
 func AvcMeta(server *Server, client *RtmpClient, data []byte) {
 	amf := AmfReadAll(bytes.NewReader(data))
+	fmt.Println(amf)
 	client.Media = &Media{
 		Height: uint32(amf[2].(*AmfArray).Value["height"].(*AmfNumber).Value),
 		Width: uint32(amf[2].(*AmfArray).Value["width"].(*AmfNumber).Value),
@@ -313,8 +318,22 @@ func DistributeInitAvc(server *Server, client *RtmpClient, avcCdata []byte) {
 	}
 
 	if _, ok := server.Streams[client.Stream]; ok {
+		client.Conn.Close()
 		return
 	}
+
+	client.Media.LengthSize = uint64(avcCdata[4] & 3) + 1
+	p := uint16(6)
+	for i := byte(0); i < avcCdata[5] & 0x1f; i++ {
+		l := binary.BigEndian.Uint16(avcCdata[p:p+2])
+		bitptr := uint64(p+3) * 8
+		ReadExpGolomb(avcCdata, &bitptr) // seq parameter set id
+		client.Media.FrameNumBits = ReadExpGolomb(avcCdata, &bitptr) + 4
+		p += l
+	}
+
+
+
 	server.Streams[client.Stream] = &Stream{
 		Name: client.Stream,
 		Data: make(chan *AVData, 4),
@@ -327,10 +346,9 @@ func TryGetVideoInit(server *Server, client *RtmpClient) {
 	av := &AVData{
 		client.Media.AudioFrames,
 		client.Media.VideoFrames,
-		client.Media.FrameRate,
-		client.Media.AudioSampleRate,
 		0,
 		0,
+		client.Media,
 	}
 	if ok, _ := FindNalus(av, 6); ok {
 		server.Streams[client.Stream].First = DistributeAvc(av, 0, 0, 0, true)
@@ -344,30 +362,37 @@ func ReadBits(data []byte, bitptr *uint64, nbits uint64) uint64 {
 	if (*bitptr + nbits) % 8 > 0 {
 		est += 1
 	}
-	if est >= uint64(len(data)) {
-		return ^uint64(0)
+	if est > uint64(len(data)) {
+		return 1234567890
 	}
-	off := *bitptr % 8
-	sub := data[ptr:est]
 	res := uint64(0)
-	tod := nbits
+	pre := *bitptr % 8
+	post := pre + nbits
+	if post > 8 {
+		post = 8
+	}
+	sub := data[ptr:est]
 	for i, b := range sub {
-		lm := tod % 8
-		if i == 0 && lm + off > 8 {
-			lm -= (lm + off) % 8
-		}
+		lm := post - pre
 		mask := uint64(0)
 		for n := uint64(0); n < lm; n++ {
 			mask |= 1<<n
 		}
-		res |= uint64(b>>(8-lm)) & mask
+		res |= uint64(b>>pre) & mask
 		if i < len(sub)-1 {
 			res <<= lm
 		}
-		tod -= lm
 	}
 	*bitptr += nbits
 	return res
+}
+
+func ReadExpGolomb(data []byte, bitptr *uint64) uint64 {
+	lzero := float64(-1)
+	for b := uint64(0); b == 0; lzero++ {
+		b = ReadBits(data, bitptr, 1)
+	}
+	return uint64(math.Pow(2, lzero)) - 1 + ReadBits(data, bitptr, uint64(lzero))
 }
 
 func FindNalus(av *AVData, find uint8) (bool, int) {
@@ -390,14 +415,39 @@ func FindNalus(av *AVData, find uint8) (bool, int) {
 
 func DistributeAvc(av *AVData, audioTime uint64, videoTime uint64, seq uint32, only56 bool) []byte {
 	buf := &bytes.Buffer{}
-	videoFrames := uint32(0)
 	videos := make([]*Sample, 0)
 	for _, video := range av.VideoFrames {
 		ptr := uint32(0)
 		vs := make([]*Sample, 0)
 		for {
 			l := binary.BigEndian.Uint32(video.Data[ptr:ptr+4]) + 4
-			nalutype := video.Data[ptr+4] & 0x1f
+			p := ptr+4
+			nalutype := video.Data[p] & 0x1f
+			p++
+			if uint32(len(video.Data)) >= p+3 && bytes.Equal(video.Data[p:p+3], []byte{0x00, 0x00, 0x03}) {
+				p += 3
+			} else {
+				p += 1
+			}
+			if !only56 {
+				bitptr := uint64(p * 8)
+				ReadExpGolomb(video.Data, &bitptr) // firstmb
+				ReadExpGolomb(video.Data, &bitptr) // slicetype
+				ReadExpGolomb(video.Data, &bitptr) // ppsid
+				frameNum := ReadBits(video.Data, &bitptr, av.Media.FrameNumBits)
+				if frameNum != av.Media.PrevFrameNum {
+					if len(vs) > 0 {
+						dt := (timeBase * timeScale) / av.Media.FrameRate / uint32(len(vs))
+						for _, v := range vs {
+							v.Duration = dt
+							videos = append(videos, v)
+						}
+					}
+					vs = nil
+				}
+				av.Media.PrevFrameNum = frameNum
+			}
+
 			skip := false
 			if nalutype == 12 {
 				skip = true
@@ -406,7 +456,6 @@ func DistributeAvc(av *AVData, audioTime uint64, videoTime uint64, seq uint32, o
 				skip = true
 			}
 			if !skip {
-				//fmt.Println(nalutype)
 				vs = append(vs, &Sample{l, 0})
 				buf.Write(video.Data[ptr:ptr+l])
 			}
@@ -416,27 +465,28 @@ func DistributeAvc(av *AVData, audioTime uint64, videoTime uint64, seq uint32, o
 			}
 		}
 		if len(vs) > 0 {
-			videoFrames++
-			t := ((timeBase * timeScale) / av.FrameRate) / uint32(len(vs))
-			for _, v := range vs {
-				v.Duration = t
+			dt := uint32(0)
+			if !only56 {
+				dt = (timeBase * timeScale) / av.Media.FrameRate / uint32(len(vs))
 			}
-			videos = append(videos, vs...)
+			for _, v := range vs {
+				v.Duration = dt
+				videos = append(videos, v)
+			}
+			vs = nil
 		}
 	}
 	videoDatalen := buf.Len()
 
-	audioFrames := uint32(0)
 	audios := make([]*Sample, 0)
 	if !only56 {
 		for _, audio := range av.AudioFrames {
-			audioFrames++
-			audios = append(audios, &Sample{uint32(len(audio.Data)), (timeBase * timeScale) / (av.AudioSampleRate / 1000)})
+			audios = append(audios, &Sample{uint32(len(audio.Data)), (timeBase * timeScale) / (av.Media.AudioSampleRate / 1000)})
 			buf.Write(audio.Data)
 		}
 	}
 
-	//fmt.Println(videoFrames, videos, audioFrames, audios)
+
 	moof := &MoofBox{
 		BoxChildren: []Box{
 			&MfhdBox{
@@ -490,16 +540,6 @@ func DistributeAvc(av *AVData, audioTime uint64, videoTime uint64, seq uint32, o
 	segment := &bytes.Buffer{}
 	segment.Write(moofdata)
 	segment.Write(BoxWrite(mdat))
-
-	sumVid := uint32(0)
-	for _, s := range videos {
-		sumVid += s.Duration
-	}
-	sumAud := uint32(0)
-	for _, s := range audios {
-		sumAud += s.Duration
-	}
-	//fmt.Println(videoTime, sumVid, audioTime, sumAud)
 
 	return segment.Bytes()
 }

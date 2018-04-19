@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Video Test</title>
+</head>
+<body>
+<table>
+    <tr>
+        <td>
+            Websocket:
+        </td>
+        <td width="20px"></td>
+        <td>
+            <a href="" id="wsurl"></a>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            File:
+        </td>
+        <td width="20px"></td>
+        <td>
+            <a href="" id="fsurl"></a>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Buffer:
+        </td>
+        <td width="20px"></td>
+        <td>
+            <span id="buffer"></span>
+        </td>
+    </tr>
+</table>
+<video width="640" height="480" id="wsvid" controls>
+</video>
+<script>
+    var time = null;
+    const wsvid = document.querySelector('#wsvid');
+    const buffer = document.querySelector('#buffer');
+    const wsurl = document.querySelector('#wsurl');
+    const fsurl = document.querySelector('#fsurl');
+    wsurl.href = wsurl.innerText = 'wss://' + window.location.host + '/video/yukkuri';
+    fsurl.href = fsurl.innerText = 'https://' + window.location.host + '/file/yukkuri.mp4';
+    wsvid.onprogress = function () {
+        if (wsvid.buffered.length === 0) {
+            return
+        }
+        const current = wsvid.currentTime;
+        const end = wsvid.buffered.end(wsvid.buffered.length - 1);
+        const diff = end - current;
+        buffer.innerText = diff;
+        if (diff > 1.000) {
+            wsvid.play();
+            console.log('play');
+        } else if (diff < 0.500) {
+            wsvid.pause();
+            console.log('pause');
+        }
+    };
+    function converse() {
+        var exampleSocket = new WebSocket("wss://" + window.location.host + "/video/yukkuri");
+        const reconnect = function () {
+            if (time != null) {
+                clearTimeout(time);
+            }
+            time = setTimeout(converse, 1000);
+        };
+
+        const queue = [];
+        var sourceBuffer = null;
+        function drain() {
+            if (queue.length === 0) {
+                return;
+            }
+            if (sourceBuffer.updating) {
+                return;
+            }
+            const next = queue.shift();
+            sourceBuffer.appendBuffer(next);
+        }
+
+        exampleSocket.onopen = function () {
+            const ms = new MediaSource();
+            ms.onsourceopen = function () {
+                sourceBuffer = ms.addSourceBuffer('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
+                sourceBuffer.onupdate = drain;
+                drain();
+            };
+            wsvid.src = window.URL.createObjectURL(ms);
+        };
+        exampleSocket.onerror = reconnect;
+        exampleSocket.onclose = reconnect;
+        exampleSocket.onmessage = function (event) {
+            const fileReader = new FileReader();
+            fileReader.onload = function () {
+                const uint8ArrayNew = new Uint8Array(fileReader.result);
+                console.log('recv bytes', uint8ArrayNew.length);
+                queue.push(uint8ArrayNew);
+                if (sourceBuffer != null) {
+                    drain();
+                }
+            };
+            fileReader.readAsArrayBuffer(event.data);
+        };
+    }
+    converse();
+</script>
+</body>
+</html>

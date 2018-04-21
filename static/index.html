@@ -3,8 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <title>Video Test</title>
+    <style>
+        html, body {
+            height: 100%;
+            box-sizing: border-box;
+            padding: 0;
+            margin: 0;
+        }
+        #video {
+            height: 100%;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+        video {
+            height: 100%;
+            position: absolute;
+        }
+    </style>
 </head>
 <body>
+<!--
 <table>
     <tr>
         <td>
@@ -43,7 +62,10 @@
         </td>
     </tr>
 </table>
-<video width="640" height="480" id="wsvid" controls>
+-->
+<div id="video">
+    <video id="wsvid" preload="auto">
+</div>
 </video>
 <script>
     var time = null;
@@ -51,8 +73,8 @@
     const buffer = document.querySelector('#buffer');
     const wsurl = document.querySelector('#wsurl');
     const fsurl = document.querySelector('#fsurl');
-    wsurl.href = wsurl.innerText = 'wss://' + window.location.host + '/video/yukkuri';
-    fsurl.href = fsurl.innerText = 'https://' + window.location.host + '/file/yukkuri.mp4';
+    //wsurl.href = wsurl.innerText = 'wss://' + window.location.host + '/video/yukkuri';
+    //fsurl.href = fsurl.innerText = 'https://' + window.location.host + '/file/yukkuri.mp4';
     wsvid.onprogress = function () {
         if (wsvid.buffered.length === 0) {
             return
@@ -60,13 +82,13 @@
         const current = wsvid.currentTime;
         const end = wsvid.buffered.end(wsvid.buffered.length - 1);
         const diff = end - current;
-        buffer.innerText = diff;
+        //buffer.innerText = diff;
         if (diff > 1.000) {
             if (wsvid.paused) {
                 wsvid.play();
                 console.log('play');
             }
-        } else if (diff < 0.500) {
+        } else if (diff < 0.250) {
             if (!wsvid.paused) {
                 wsvid.pause();
                 console.log('pause');

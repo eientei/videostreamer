@@ -1,8 +1,9 @@
-package server
+package mp4
 
 import (
 	"bytes"
-	"encoding/binary"
+
+	"github.com/eientei/videostreamer/util"
 )
 
 type Box interface {
@@ -11,22 +12,27 @@ type Box interface {
 	Children() []Box
 }
 
+type Sample struct {
+	Duration uint32
+	Size     uint32
+}
+
 func BoxWrite(box Box) []byte {
 	buf := &bytes.Buffer{}
-	Write32(buf, 0)
+	util.Write32(buf, 0)
 	buf.Write([]byte(box.Name()))
 	buf.Write(box.Data())
 	for _, b := range box.Children() {
 		buf.Write(BoxWrite(b))
 	}
 	data := buf.Bytes()
-	binary.BigEndian.PutUint32(data, uint32(len(data)))
+	util.WriteB32(data, uint32(len(data)))
 	return data
 }
 
 type FtypBox struct {
-	MajorBand string
-	MinorVersion uint32
+	MajorBand       string
+	MinorVersion    uint32
 	CompatibleBands []string
 }
 
@@ -41,7 +47,7 @@ func (box *FtypBox) Children() []Box {
 func (box *FtypBox) Data() []byte {
 	buf := &bytes.Buffer{}
 	buf.Write([]byte(box.MajorBand))
-	Write32(buf, box.MinorVersion)
+	util.Write32(buf, box.MinorVersion)
 	for _, compat := range box.CompatibleBands {
 		buf.Write([]byte(compat))
 	}
@@ -65,13 +71,12 @@ func (box *MoovBox) Data() []byte {
 }
 
 type MvhdBox struct {
-	CreationTime uint64
+	CreationTime     uint64
 	ModificationTime uint64
-	Timescale uint32
-	Duration uint64
-	NextTrackId uint32
+	Timescale        uint32
+	Duration         uint64
+	NextTrackId      uint32
 }
-
 
 func (box *MvhdBox) Name() string {
 	return "mvhd"
@@ -83,40 +88,39 @@ func (box *MvhdBox) Children() []Box {
 
 func (box *MvhdBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0)
-	Write32(buf, uint32(box.CreationTime))
-	Write32(buf, uint32(box.ModificationTime))
-	Write32(buf, box.Timescale)
-	Write32(buf, uint32(box.Duration))
-	Write32(buf, 0x00010000)
-	Write16(buf, 0x0100)
-	Write16(buf, 0)
+	util.Write8(buf, 0)
+	util.Write24(buf, 0)
+	util.Write32(buf, uint32(box.CreationTime))
+	util.Write32(buf, uint32(box.ModificationTime))
+	util.Write32(buf, box.Timescale)
+	util.Write32(buf, uint32(box.Duration))
+	util.Write32(buf, 0x00010000)
+	util.Write16(buf, 0x0100)
+	util.Write16(buf, 0)
 
-	Write32(buf, 0)
-	Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
 
-	Write32(buf, 0x00010000)
-	Write32(buf, 0)
-	Write32(buf, 0)
-	Write32(buf, 0)
-	Write32(buf, 0x00010000)
-	Write32(buf, 0)
-	Write32(buf, 0)
-	Write32(buf, 0)
-	Write32(buf, 0x40000000)
+	util.Write32(buf, 0x00010000)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0x00010000)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0x40000000)
 
-	Write32(buf, 0)
-	Write32(buf, 0)
-	Write32(buf, 0)
-	Write32(buf, 0)
-	Write32(buf, 0)
-	Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
 
-	Write32(buf, box.NextTrackId)
+	util.Write32(buf, box.NextTrackId)
 	return buf.Bytes()
 }
-
 
 type TrakBox struct {
 	BoxChildren []Box
@@ -135,13 +139,13 @@ func (box *TrakBox) Data() []byte {
 }
 
 type TkhdBox struct {
-	CreationTime uint64
+	CreationTime     uint64
 	ModificationTime uint64
-	TrackId uint32
-	Duration uint64
-	Audio bool
-	Width uint32
-	Height uint32
+	TrackId          uint32
+	Duration         uint64
+	Audio            bool
+	Width            uint32
+	Height           uint32
 }
 
 func (box *TkhdBox) Name() string {
@@ -154,37 +158,37 @@ func (box *TkhdBox) Children() []Box {
 
 func (box *TkhdBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0x7)
-	Write32(buf, uint32(box.CreationTime))
-	Write32(buf, uint32(box.ModificationTime))
-	Write32(buf, box.TrackId)
-	Write32(buf, 0)
-	Write32(buf, uint32(box.Duration))
-	Write32(buf, 0)
-	Write32(buf, 0)
+	util.Write8(buf, 0)
+	util.Write24(buf, 0x3)
+	util.Write32(buf, uint32(box.CreationTime))
+	util.Write32(buf, uint32(box.ModificationTime))
+	util.Write32(buf, box.TrackId)
+	util.Write32(buf, 0)
+	util.Write32(buf, uint32(box.Duration))
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
 
-	Write16(buf, 0)
-	Write16(buf, 0)
+	util.Write16(buf, 0)
+	util.Write16(buf, 0)
 	if box.Audio {
-		Write16(buf, 0x0100)
+		util.Write16(buf, 0x0100)
 	} else {
-		Write16(buf, 0)
+		util.Write16(buf, 0)
 	}
-	Write16(buf, 0)
+	util.Write16(buf, 0)
 
-	Write32(buf, 0x00010000)
-	Write32(buf, 0)
-	Write32(buf, 0)
-	Write32(buf, 0)
-	Write32(buf, 0x00010000)
-	Write32(buf, 0)
-	Write32(buf, 0)
-	Write32(buf, 0)
-	Write32(buf, 0x40000000)
+	util.Write32(buf, 0x00010000)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0x00010000)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0x40000000)
 
-	Write32(buf, box.Width)
-	Write32(buf, box.Height)
+	util.Write32(buf, box.Width)
+	util.Write32(buf, box.Height)
 
 	return buf.Bytes()
 }
@@ -206,10 +210,10 @@ func (box *MdiaBox) Data() []byte {
 }
 
 type MdhdBox struct {
-	CreationTime uint64
+	CreationTime     uint64
 	ModificationTime uint64
-	Timescale uint32
-	Duration uint64
+	Timescale        uint32
+	Duration         uint64
 }
 
 func (box *MdhdBox) Name() string {
@@ -222,14 +226,14 @@ func (box *MdhdBox) Children() []Box {
 
 func (box *MdhdBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0)
-	Write32(buf, uint32(box.CreationTime))
-	Write32(buf, uint32(box.ModificationTime))
-	Write32(buf, box.Timescale)
-	Write32(buf, uint32(box.Duration))
-	Write16(buf, 0)
-	Write16(buf, 0)
+	util.Write8(buf, 0)
+	util.Write24(buf, 0)
+	util.Write32(buf, uint32(box.CreationTime))
+	util.Write32(buf, uint32(box.ModificationTime))
+	util.Write32(buf, box.Timescale)
+	util.Write32(buf, uint32(box.Duration))
+	util.Write16(buf, 0)
+	util.Write16(buf, 0)
 
 	return buf.Bytes()
 }
@@ -249,14 +253,14 @@ func (box *HdlrBox) Children() []Box {
 
 func (box *HdlrBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0)
-	Write32(buf, 0)
+	util.Write8(buf, 0)
+	util.Write24(buf, 0)
+	util.Write32(buf, 0)
 	buf.Write([]byte(box.HandlerType))
 
-	Write32(buf, 0)
-	Write32(buf, 0)
-	Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
 
 	buf.Write([]byte(box.HandlerName))
 	buf.Write([]byte{0})
@@ -293,13 +297,13 @@ func (box *VmhdBox) Children() []Box {
 
 func (box *VmhdBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 1)
-	Write16(buf, 0)
+	util.Write8(buf, 0)
+	util.Write24(buf, 1)
+	util.Write16(buf, 0)
 
-	Write16(buf, 0)
-	Write16(buf, 0)
-	Write16(buf, 0)
+	util.Write16(buf, 0)
+	util.Write16(buf, 0)
+	util.Write16(buf, 0)
 
 	return buf.Bytes()
 }
@@ -317,10 +321,10 @@ func (box *SmhdBox) Children() []Box {
 
 func (box *SmhdBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 1)
-	Write16(buf, 0)
-	Write16(buf, 0)
+	util.Write8(buf, 0)
+	util.Write24(buf, 1)
+	util.Write16(buf, 0)
+	util.Write16(buf, 0)
 	return buf.Bytes()
 }
 
@@ -354,9 +358,9 @@ func (box *DrefBox) Children() []Box {
 
 func (box *DrefBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0)
-	Write32(buf, uint32(len(box.BoxChildren)))
+	util.Write8(buf, 0)
+	util.Write24(buf, 0)
+	util.Write32(buf, uint32(len(box.BoxChildren)))
 	return buf.Bytes()
 }
 
@@ -373,8 +377,8 @@ func (box *Url_Box) Children() []Box {
 
 func (box *Url_Box) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0x1)
+	util.Write8(buf, 0)
+	util.Write24(buf, 0x1)
 	return buf.Bytes()
 }
 
@@ -408,19 +412,19 @@ func (box *StsdBox) Children() []Box {
 
 func (box *StsdBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0)
-	Write32(buf, uint32(len(box.BoxChildren)))
+	util.Write8(buf, 0)
+	util.Write24(buf, 0)
+	util.Write32(buf, uint32(len(box.BoxChildren)))
 
 	return buf.Bytes()
 }
 
 type Avc1Box struct {
 	DataReferenceIndex uint16
-	Width uint16
-	Height uint16
-	Compressorname string
-	AvcC *AvcCBox
+	Width              uint16
+	Height             uint16
+	Compressorname     string
+	AvcC               *AvcCBox
 }
 
 func (box *Avc1Box) Name() string {
@@ -434,35 +438,35 @@ func (box *Avc1Box) Children() []Box {
 func (box *Avc1Box) Data() []byte {
 	buf := &bytes.Buffer{}
 
-	Write8(buf, 0)
-	Write8(buf, 0)
-	Write8(buf, 0)
-	Write8(buf, 0)
-	Write8(buf, 0)
-	Write8(buf, 0)
+	util.Write8(buf, 0)
+	util.Write8(buf, 0)
+	util.Write8(buf, 0)
+	util.Write8(buf, 0)
+	util.Write8(buf, 0)
+	util.Write8(buf, 0)
 
-	Write16(buf, box.DataReferenceIndex)
+	util.Write16(buf, box.DataReferenceIndex)
 
-	Write16(buf, 0)
-	Write16(buf, 0)
+	util.Write16(buf, 0)
+	util.Write16(buf, 0)
 
-	Write32(buf, 0)
-	Write32(buf, 0)
-	Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
 
-	Write16(buf, box.Width)
-	Write16(buf, box.Height)
+	util.Write16(buf, box.Width)
+	util.Write16(buf, box.Height)
 
-	Write32(buf, 0x00480000)
-	Write32(buf, 0x00480000)
+	util.Write32(buf, 0x00480000)
+	util.Write32(buf, 0x00480000)
 
-	Write32(buf, 0)
-	Write16(buf, 1)
+	util.Write32(buf, 0)
+	util.Write16(buf, 1)
 	name := make([]byte, 32)
 	copy(name, []byte(box.Compressorname))
 	buf.Write(name)
-	Write16(buf, 0x0018)
-	Write16(buf, ^uint16(0))
+	util.Write16(buf, 0x0018)
+	util.Write16(buf, ^uint16(0))
 
 	return buf.Bytes()
 }
@@ -485,8 +489,8 @@ func (box *AvcCBox) Data() []byte {
 
 type Mp4aBox struct {
 	DataReferenceIndex uint16
-	SampleRate uint32
-	Esds *EsdsBox
+	SampleRate         uint32
+	Esds               *EsdsBox
 }
 
 func (box *Mp4aBox) Name() string {
@@ -500,30 +504,30 @@ func (box *Mp4aBox) Children() []Box {
 func (box *Mp4aBox) Data() []byte {
 	buf := &bytes.Buffer{}
 
-	Write8(buf, 0)
-	Write8(buf, 0)
-	Write8(buf, 0)
-	Write8(buf, 0)
-	Write8(buf, 0)
-	Write8(buf, 0)
+	util.Write8(buf, 0)
+	util.Write8(buf, 0)
+	util.Write8(buf, 0)
+	util.Write8(buf, 0)
+	util.Write8(buf, 0)
+	util.Write8(buf, 0)
 
-	Write16(buf, box.DataReferenceIndex)
+	util.Write16(buf, box.DataReferenceIndex)
 
-	Write32(buf, 0)
-	Write32(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
 
-	Write16(buf, 2)
-	Write16(buf, 16)
+	util.Write16(buf, 2)
+	util.Write16(buf, 16)
 
-	Write16(buf, 0)
-	Write16(buf, 0)
+	util.Write16(buf, 0)
+	util.Write16(buf, 0)
 
-	Write32(buf, box.SampleRate << 16)
+	util.Write32(buf, box.SampleRate<<16)
 	return buf.Bytes()
 }
 
 type EsdsBox struct {
-	Bitrate uint32
+	Bitrate   uint32
 	Frequency uint32
 }
 
@@ -537,28 +541,28 @@ func (box *EsdsBox) Children() []Box {
 
 func (box *EsdsBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0)
-	Write8(buf, 0x03)
-	Write8(buf, 0x19)
-	Write16(buf, 0x00)
-	Write8(buf, 0x00)
-	Write8(buf, 0x04)
-	Write8(buf, 0x11)
-	Write8(buf, 0x40)
-	Write8(buf, 0x15)
-	Write8(buf, 0x00)
-	Write8(buf, 0x06)
-	Write8(buf, 0x00)
-	Write32(buf, box.Bitrate)
-	Write32(buf, box.Bitrate)
-	Write8(buf, 0x05)
-	Write8(buf, 0x02)
-	Write8(buf, 0x12)
-	Write8(buf, 0x10)
-	Write8(buf, 0x06)
-	Write8(buf, 0x01)
-	Write8(buf, 0x02)
+	util.Write8(buf, 0)
+	util.Write24(buf, 0)
+	util.Write8(buf, 0x03)
+	util.Write8(buf, 0x19)
+	util.Write16(buf, 0x00)
+	util.Write8(buf, 0x00)
+	util.Write8(buf, 0x04)
+	util.Write8(buf, 0x11)
+	util.Write8(buf, 0x40)
+	util.Write8(buf, 0x15)
+	util.Write8(buf, 0x00)
+	util.Write8(buf, 0x06)
+	util.Write8(buf, 0x00)
+	util.Write32(buf, box.Bitrate)
+	util.Write32(buf, box.Bitrate)
+	util.Write8(buf, 0x05)
+	util.Write8(buf, 0x02)
+	util.Write8(buf, 0x12)
+	util.Write8(buf, 0x10)
+	util.Write8(buf, 0x06)
+	util.Write8(buf, 0x01)
+	util.Write8(buf, 0x02)
 
 	return buf.Bytes()
 }
@@ -576,9 +580,9 @@ func (box *SttsBox) Children() []Box {
 
 func (box *SttsBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0)
-	Write32(buf, 0)
+	util.Write8(buf, 0)
+	util.Write24(buf, 0)
+	util.Write32(buf, 0)
 	return buf.Bytes()
 }
 
@@ -595,9 +599,9 @@ func (box *StscBox) Children() []Box {
 
 func (box *StscBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0)
-	Write32(buf, 0)
+	util.Write8(buf, 0)
+	util.Write24(buf, 0)
+	util.Write32(buf, 0)
 	return buf.Bytes()
 }
 
@@ -614,10 +618,10 @@ func (box *StszBox) Children() []Box {
 
 func (box *StszBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0)
-	Write32(buf, 0)
-	Write32(buf, 0)
+	util.Write8(buf, 0)
+	util.Write24(buf, 0)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
 	return buf.Bytes()
 }
 
@@ -634,9 +638,41 @@ func (box *StcoBox) Children() []Box {
 
 func (box *StcoBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0)
-	Write32(buf, 0)
+	util.Write8(buf, 0)
+	util.Write24(buf, 0)
+	util.Write32(buf, 0)
+	return buf.Bytes()
+}
+
+type SidxBox struct {
+	ReferenceId        uint32
+	Timescale          uint32
+	PresentationTime   uint64
+	ReferenceSize      uint32
+	SubsegmentDuration uint32
+}
+
+func (box *SidxBox) Name() string {
+	return "sidx"
+}
+
+func (box *SidxBox) Children() []Box {
+	return []Box{}
+}
+
+func (box *SidxBox) Data() []byte {
+	buf := &bytes.Buffer{}
+	util.Write8(buf, 1)
+	util.Write24(buf, 0)
+	util.Write32(buf, box.ReferenceId)
+	util.Write32(buf, box.Timescale)
+	util.Write64(buf, box.PresentationTime)
+	util.Write64(buf, 0)
+	util.Write16(buf, 0)
+	util.Write16(buf, 1)
+	util.Write32(buf, box.ReferenceSize&0x7fffffff)
+	util.Write32(buf, box.SubsegmentDuration)
+	util.Write32(buf, 1<<31|1<<28)
 	return buf.Bytes()
 }
 
@@ -670,9 +706,9 @@ func (box *MfhdBox) Children() []Box {
 
 func (box *MfhdBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0)
-	Write32(buf, box.Sequence)
+	util.Write8(buf, 0)
+	util.Write24(buf, 0)
+	util.Write32(buf, box.Sequence)
 	return buf.Bytes()
 }
 
@@ -694,6 +730,7 @@ func (box *TrafBox) Data() []byte {
 
 type TfhdBox struct {
 	TrackId uint32
+	Flags   uint32
 }
 
 func (box *TfhdBox) Name() string {
@@ -706,10 +743,10 @@ func (box *TfhdBox) Children() []Box {
 
 func (box *TfhdBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0x20000 | 0x20)
-	Write32(buf, box.TrackId)
-	Write32(buf, 0x1010000)
+	util.Write8(buf, 0)
+	util.Write24(buf, 0x20000|0x20)
+	util.Write32(buf, box.TrackId)
+	util.Write32(buf, box.Flags)
 	return buf.Bytes()
 }
 
@@ -727,9 +764,9 @@ func (box *TfdtBox) Children() []Box {
 
 func (box *TfdtBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 1)
-	Write24(buf, 0)
-	Write64(buf, box.BaseMediaDecodeTime)
+	util.Write8(buf, 1)
+	util.Write24(buf, 0)
+	util.Write64(buf, box.BaseMediaDecodeTime)
 	return buf.Bytes()
 }
 
@@ -747,14 +784,13 @@ func (box *TrunBox) Children() []Box {
 
 func (box *TrunBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0x200 | 0x100 | 0x4 | 0x1)
-	Write32(buf, uint32(len(box.SampleSizes)))
-	Write32(buf, 0)
-	Write32(buf, 0x2000000)
+	util.Write8(buf, 0)
+	util.Write24(buf, 0x200|0x100|0x1)
+	util.Write32(buf, uint32(len(box.SampleSizes)))
+	util.Write32(buf, 0)
 	for _, s := range box.SampleSizes {
-		Write32(buf, s.Duration)
-		Write32(buf, s.Size)
+		util.Write32(buf, s.Duration)
+		util.Write32(buf, s.Size)
 	}
 	return buf.Bytes()
 }
@@ -805,9 +841,9 @@ func (box *MehdBox) Children() []Box {
 
 func (box *MehdBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0)
-	Write32(buf, box.TimeScale)
+	util.Write8(buf, 0)
+	util.Write24(buf, 0)
+	util.Write32(buf, box.TimeScale)
 	return buf.Bytes()
 }
 
@@ -825,13 +861,12 @@ func (box *TrexBox) Children() []Box {
 
 func (box *TrexBox) Data() []byte {
 	buf := &bytes.Buffer{}
-	Write8(buf, 0)
-	Write24(buf, 0)
-	Write32(buf, box.TrackId)
-	Write32(buf, 1)
-	Write32(buf, 1)
-	Write32(buf, 0)
-	Write32(buf, 0)
+	util.Write8(buf, 0)
+	util.Write24(buf, 0)
+	util.Write32(buf, box.TrackId)
+	util.Write32(buf, 1)
+	util.Write32(buf, 1)
+	util.Write32(buf, 0)
+	util.Write32(buf, 0)
 	return buf.Bytes()
 }
-

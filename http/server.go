@@ -1,12 +1,12 @@
-package server
+package http
 
 import (
+	"log"
 	"net/http"
+
+	"github.com/eientei/videostreamer/server"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-	"fmt"
-	"bytes"
-	"time"
 )
 
 var upgrader = websocket.Upgrader{
@@ -18,7 +18,8 @@ var upgrader = websocket.Upgrader{
 }
 
 type ConnWriter struct {
-	Conn *websocket.Conn
+	Logger *log.Logger
+	Conn   *websocket.Conn
 }
 
 func (cw *ConnWriter) Write(data []byte) (int, error) {
@@ -27,13 +28,15 @@ func (cw *ConnWriter) Write(data []byte) (int, error) {
 }
 
 func (cw *ConnWriter) Close() error {
+	cw.Logger.Println("wss:// client disconnected", cw.Conn.RemoteAddr().String())
 	return cw.Conn.Close()
 }
 
 type HttpWriter struct {
-	Conn http.ResponseWriter
+	Conn   http.ResponseWriter
 	Closer chan struct{}
 }
+
 func (cw *HttpWriter) Write(data []byte) (int, error) {
 	n, err := cw.Conn.Write(data)
 	cw.Conn.(http.Flusher).Flush()
@@ -45,64 +48,60 @@ func (cw *HttpWriter) Close() error {
 	return nil
 }
 
-func VideoHandler(server *Server) func(w http.ResponseWriter, r *http.Request) {
+func WebsocketHandler(context *server.Context) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		if stream, ok := vars["stream"]; !ok {
 			http.NotFound(w, r)
 			return
-		} else if sdata, ok := server.Streams[stream]; !ok {
+		} else if sdata, ok := context.Streams[stream]; !ok {
 			http.NotFound(w, r)
 			return
-		} else if sdata.Moov == nil {
+		} else if sdata.CodecInit == nil {
 			http.Error(w, "Try again a bit later", http.StatusPartialContent)
 			return
 		} else {
 			if conn, err := upgrader.Upgrade(w, r, nil); err != nil {
-				fmt.Println(err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			} else {
-				conn.SetReadDeadline(time.Time{})
-				conn.SetCloseHandler(func(code int, text string) error {
-					fmt.Println(code, text)
-					return nil
-				})
-				sdata.Clients = append(sdata.Clients, &Client{&ConnWriter{conn}, false, 0, 0, 0, &bytes.Buffer{}})
+				sdata.Logger.Println("wss:// client connected", r.RemoteAddr)
+				sdata.Clients = append(sdata.Clients, &server.Client{Conn: &ConnWriter{sdata.Logger, conn}})
 			}
 		}
 	}
 }
 
-func FileHandler(server *Server) func(w http.ResponseWriter, r *http.Request) {
+func FileHandler(context *server.Context) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		if stream, ok := vars["stream"]; !ok {
 			http.NotFound(w, r)
 			return
-		} else if sdata, ok := server.Streams[stream]; !ok {
+		} else if sdata, ok := context.Streams[stream]; !ok {
 			http.NotFound(w, r)
 			return
-		} else if sdata.Moov == nil {
+		} else if sdata.CodecInit == nil {
 			http.Error(w, "Try again a bit later", http.StatusPartialContent)
 			return
 		} else {
+			sdata.Logger.Println("file:// client connected", r.RemoteAddr)
 			w.Header().Set("X-Content-Type-Options", "nosniff")
 			cw := &HttpWriter{w, make(chan struct{})}
-			sdata.Clients = append(sdata.Clients, &Client{cw, false, 0, 0, 0,&bytes.Buffer{}})
+			sdata.Clients = append(sdata.Clients, &server.Client{Conn: cw})
 			<-cw.Closer
+			sdata.Logger.Println("file:// client disconnected", r.RemoteAddr)
 		}
 	}
 }
 
-func HttpServer(addr string, server *Server) {
+func Server(addr string, context *server.Context) {
 	r := mux.NewRouter()
-	r.HandleFunc("/video/{stream}", VideoHandler(server))
-	r.HandleFunc("/file/{stream}.mp4", FileHandler(server))
+	r.HandleFunc("/video/{stream}", WebsocketHandler(context))
+	r.HandleFunc("/file/{stream}.mp4", FileHandler(context))
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static")))
 	s := &http.Server{
-		Addr: addr,
+		Addr:    addr,
 		Handler: r,
 	}
 	s.ListenAndServe()
-	close(server.HttpDone)
 }

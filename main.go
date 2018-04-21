@@ -1,14 +1,17 @@
 package main
 
 import (
-	"context"
+	"github.com/eientei/videostreamer/http"
+	"github.com/eientei/videostreamer/rtmp"
 	"github.com/eientei/videostreamer/server"
 )
 
 func main() {
-	server := server.NewServer(1935, 8080)
-	ctx, cancel := context.WithCancel(context.Background())
-	server.Serve(ctx)
-	server.Wait()
-	cancel()
+	context := &server.Context{
+		Streams: make(map[string]*server.Stream),
+	}
+	wait := make(chan struct{})
+	go rtmp.Server(":1935", context)
+	go http.Server(":8080", context)
+	<-wait
 }

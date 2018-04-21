@@ -22,6 +22,20 @@ type ConnWriter struct {
 	Conn   *websocket.Conn
 }
 
+type SignalWriter struct {
+	Logger *log.Logger
+	Conn   *websocket.Conn
+}
+
+func (cw *SignalWriter) Write(data []byte) (int, error) {
+	return len(data), nil
+}
+
+func (cw *SignalWriter) Close() error {
+	cw.Logger.Println("wss:// client disconnected", cw.Conn.RemoteAddr().String())
+	return cw.Conn.Close()
+}
+
 func (cw *ConnWriter) Write(data []byte) (int, error) {
 	err := cw.Conn.WriteMessage(websocket.BinaryMessage, data)
 	return len(data), err
@@ -71,6 +85,29 @@ func WebsocketHandler(context *server.Context) func(w http.ResponseWriter, r *ht
 	}
 }
 
+func SignalHandler(context *server.Context) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		if stream, ok := vars["stream"]; !ok {
+			http.NotFound(w, r)
+			return
+		} else if sdata, ok := context.Streams[stream]; !ok {
+			http.NotFound(w, r)
+			return
+		} else if sdata.CodecInit == nil {
+			http.Error(w, "Try again a bit later", http.StatusPartialContent)
+			return
+		} else {
+			if conn, err := upgrader.Upgrade(w, r, nil); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			} else {
+				sdata.Logger.Println("signal:// client connected", r.RemoteAddr)
+				sdata.Clients = append(sdata.Clients, &server.Client{Conn: &SignalWriter{sdata.Logger, conn}})
+			}
+		}
+	}
+}
+
 func FileHandler(context *server.Context) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
@@ -96,8 +133,9 @@ func FileHandler(context *server.Context) func(w http.ResponseWriter, r *http.Re
 
 func Server(addr string, context *server.Context) {
 	r := mux.NewRouter()
-	r.HandleFunc("/video/{stream}", WebsocketHandler(context))
-	r.HandleFunc("/file/{stream}.mp4", FileHandler(context))
+	r.HandleFunc("/live/{stream}.wss", WebsocketHandler(context))
+	r.HandleFunc("/live/{stream}.mp4", FileHandler(context))
+	r.HandleFunc("/live/{stream}.sig", SignalHandler(context))
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static")))
 	s := &http.Server{
 		Addr:    addr,

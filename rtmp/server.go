@@ -356,12 +356,15 @@ func (client *Client) Converse() error {
 		id = 64 + uint16(cid[0])*256 + uint16(cid[1])
 	}
 
+	fmt.Println(id, "FMT", format)
+
 	if _, ok := client.Assembly[id]; !ok {
 		client.Assembly[id] = &Message{
 			Chunk: id,
 		}
 		if format != 0 {
 			fmt.Println("ERR FMT", format)
+			return ClosingConnection
 		}
 	}
 	message := client.Assembly[id]

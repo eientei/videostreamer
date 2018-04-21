@@ -12,7 +12,7 @@
         }
         #video {
             height: 100%;
-            width: 100%;
+            max-width: 100%;
             display: flex;
             justify-content: center;
         }
@@ -23,125 +23,62 @@
     </style>
 </head>
 <body>
-<!--
-<table>
-    <tr>
-        <td>
-            Websocket:
-        </td>
-        <td width="20px"></td>
-        <td>
-            <a href="" id="wsurl"></a>
-        </td>
-    </tr>
-    <tr>
-        <td>
-            File:
-        </td>
-        <td width="20px"></td>
-        <td>
-            <a href="" id="fsurl"></a>
-        </td>
-    </tr>
-    <tr>
-        <td>
-            Sources:
-        </td>
-        <td width="20px"></td>
-        <td>
-            <a href="https://github.com/eientei/videostreamer/tree/golang">https://github.com/eientei/videostreamer/tree/golang</a>
-        </td>
-    </tr>
-    <tr>
-        <td>
-            Buffer:
-        </td>
-        <td width="20px"></td>
-        <td>
-            <span id="buffer"></span>
-        </td>
-    </tr>
-</table>
--->
 <div id="video">
-    <video id="wsvid" preload="auto">
+    <span id="info" style="z-index: 999"></span>
+    <video id="wsvid" autoplay></video>
 </div>
 </video>
 <script>
     var time = null;
-    const wsvid = document.querySelector('#wsvid');
-    const buffer = document.querySelector('#buffer');
-    const wsurl = document.querySelector('#wsurl');
-    const fsurl = document.querySelector('#fsurl');
-    //wsurl.href = wsurl.innerText = 'wss://' + window.location.host + '/video/yukkuri';
-    //fsurl.href = fsurl.innerText = 'https://' + window.location.host + '/file/yukkuri.mp4';
-    wsvid.onprogress = function () {
-        if (wsvid.buffered.length === 0) {
-            return
-        }
-        const current = wsvid.currentTime;
-        const end = wsvid.buffered.end(wsvid.buffered.length - 1);
-        const diff = end - current;
-        //buffer.innerText = diff;
-        if (diff > 1.000) {
-            if (wsvid.paused) {
-                wsvid.play();
-                console.log('play');
-            }
-        } else if (diff < 0.250) {
-            if (!wsvid.paused) {
-                wsvid.pause();
-                console.log('pause');
-            }
-        }
-    };
-    function converse() {
-        var exampleSocket = new WebSocket("wss://" + window.location.host + "/video/yukkuri");
-        const reconnect = function () {
-            if (time != null) {
-                clearTimeout(time);
-            }
-            time = setTimeout(converse, 1000);
-        };
-
-        const queue = [];
-        var sourceBuffer = null;
-        function drain() {
-            if (queue.length === 0) {
-                return;
-            }
-            if (sourceBuffer.updating) {
-                return;
-            }
-            const next = queue.shift();
-            sourceBuffer.appendBuffer(next);
-        }
-
-        exampleSocket.onopen = function () {
-            const ms = new MediaSource();
-            ms.onsourceopen = function () {
-                sourceBuffer = ms.addSourceBuffer('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
-                sourceBuffer.onupdate = drain;
-                drain();
-            };
-            wsvid.src = window.URL.createObjectURL(ms);
-        };
-        exampleSocket.onerror = reconnect;
-        exampleSocket.onclose = reconnect;
-        exampleSocket.onmessage = function (event) {
-            const fileReader = new FileReader();
-            fileReader.onload = function () {
-                const uint8ArrayNew = new Uint8Array(fileReader.result);
-                console.log('recv bytes', uint8ArrayNew.length);
-                queue.push(uint8ArrayNew);
-                if (sourceBuffer != null) {
-                    drain();
+    function init() {
+        const parent = document.querySelector('#video');
+        const wsvid = document.querySelector('#wsvid');
+        const info = document.querySelector('#info');
+        const video = window.location.hash.length > 0 ? window.location.hash.substring(1) : null;
+        wsvid.src = '';
+        if (video != null) {
+            info.innerHTML = '';
+            wsvid.onprogress = function () {
+                if (wsvid.buffered.length === 0) {
+                    return
+                }
+                const current = wsvid.currentTime;
+                const end = wsvid.buffered.end(wsvid.buffered.length - 1);
+                const diff = end - current;
+                if (diff > 1.000) {
+                    if (wsvid.paused) {
+                        wsvid.play();
+                        console.log('play');
+                    }
+                } else if (diff < 0.250) {
+                    if (!wsvid.paused) {
+                        wsvid.pause();
+                        console.log('pause');
+                    }
                 }
             };
-            fileReader.readAsArrayBuffer(event.data);
-        };
+            function converse() {
+                const socket = new WebSocket('wss://' + window.location.host + '/live/' + video + '.sig');
+                const reconnect = function () {
+                    if (time != null) {
+                        clearTimeout(time);
+                    }
+                    time = setTimeout(converse, 1000);
+                };
+                socket.onopen = function () {
+                    wsvid.src = '/live/' + video + '.mp4';
+                    wsvid.play();
+                };
+                socket.onerror = reconnect;
+                socket.onclose = reconnect;
+            }
+            converse();
+        } else {
+            info.innerHTML = '<div>Use url with hash suffix, e.g. <a href="https://' + window.location.host + '#yukkuri">https://' + window.location.host + '#yukkuri</a></div><div style="margin-left: 1em">which corresponds to rtmp://' + window.location.host + '/live/yukkuri</div>'
+        }
     }
-    converse();
+    window.onhashchange = init;
+    init();
 </script>
 </body>
 </html>

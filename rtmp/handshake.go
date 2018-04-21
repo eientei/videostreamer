@@ -9,7 +9,7 @@ import (
 	"io"
 	"net"
 
-	"github.com/eientei/videostreamer/util"
+	"../util"
 )
 
 var (

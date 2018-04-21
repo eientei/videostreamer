@@ -3,7 +3,7 @@ package amf
 import (
 	"io"
 
-	"github.com/eientei/videostreamer/util"
+	"../util"
 )
 
 func (value *StringValue) Type() uint8 {

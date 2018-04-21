@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/eientei/videostreamer/util"
+	"../util"
 )
 
 func TestStringValue_Type(t *testing.T) {

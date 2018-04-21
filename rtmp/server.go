@@ -9,10 +9,10 @@ import (
 	"net"
 	"os"
 
-	"github.com/eientei/videostreamer/amf"
-	"github.com/eientei/videostreamer/util"
+	"../amf"
+	"../util"
 
-	"github.com/eientei/videostreamer/server"
+	"../server"
 )
 
 var InvalidAmf = errors.New("invalid amf")

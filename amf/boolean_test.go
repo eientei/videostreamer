@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/eientei/videostreamer/util"
+	"../util"
 )
 
 func TestBooleanValue_Type(t *testing.T) {

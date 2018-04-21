@@ -6,7 +6,7 @@ import (
 	"io"
 	"sort"
 
-	"github.com/eientei/videostreamer/util"
+	"../util"
 )
 
 var InvalidArray = errors.New("invalid array")

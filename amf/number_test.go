@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/eientei/videostreamer/util"
+	"../util"
 )
 
 func TestNumberValue_Type(t *testing.T) {

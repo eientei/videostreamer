@@ -3,7 +3,7 @@ package mp4
 import (
 	"bytes"
 
-	"github.com/eientei/videostreamer/util"
+	"../util"
 )
 
 type Box interface {

@@ -7,9 +7,9 @@ import (
 	"log"
 	"math"
 
-	"github.com/eientei/videostreamer/amf"
-	"github.com/eientei/videostreamer/mp4"
-	"github.com/eientei/videostreamer/util"
+	"../amf"
+	"../mp4"
+	"../util"
 )
 
 var UnknownCodec = errors.New("unknown codec")

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/eientei/videostreamer/http"
-	"github.com/eientei/videostreamer/rtmp"
-	"github.com/eientei/videostreamer/server"
+	"./http"
+	"./rtmp"
+	"./server"
 )
 
 func main() {

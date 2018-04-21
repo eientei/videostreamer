@@ -5,7 +5,7 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/eientei/videostreamer/util"
+	"../util"
 )
 
 func (value *NumberValue) Type() uint8 {

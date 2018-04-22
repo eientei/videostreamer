@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 
@@ -609,7 +608,6 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 	vsamp := 0
 	vtime := uint64(0)
 
-	fmt.Println(slicetyp, len(stream.AudioBuffer), len(stream.VideoBuffer))
 	if len(stream.AudioBuffer) > 0 && slicetyp == 7 {
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
@@ -658,7 +656,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			Timescale:          1000 * tvid,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
-			SubsegmentDuration: secs * 1000 * tvid,
+			SubsegmentDuration: (1000 * tvid * 1024) * uint32(len(samples)) / stream.AudioRate,
 			Keyframe:           true,
 		}
 
@@ -749,7 +747,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			Timescale:          1000 * tvid,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
-			SubsegmentDuration: secs * 1000 * tvid,
+			SubsegmentDuration: (1000 * tvid * uint32(len(samples))) / stream.FrameRate,
 			Keyframe:           keyframe,
 		}
 

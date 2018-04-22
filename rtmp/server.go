@@ -303,7 +303,7 @@ func (client *Client) ProcessAmf(values []amf.Value) error {
 }
 
 func (client *Client) ProcessMessage(message *Message) error {
-	fmt.Println(message.Type, message)
+	client.Logger.Println(message.Type, message)
 	switch message.Type {
 	case CommandMessage:
 		if err := client.ProcessAmf(amf.ReadAll(bytes.NewReader(message.Data))); err != nil {

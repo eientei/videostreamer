@@ -746,17 +746,18 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		vsamp = len(samples)
 		stream.VideoBuffer = stream.VideoBuffer[:0]
 	}
-	switch typ {
-	case Audio:
-		stream.AudioBuffer = append(stream.AudioBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})
-	case Video:
-		stream.VideoBuffer = append(stream.VideoBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})
-	}
 
 	if vsegment.Len() > 0 || asegment.Len() > 0 {
 		stream.SendSegment(vsegment.Bytes(), vsidx, vsamp, vtime, asegment.Bytes(), asidx, asamp, atime)
 		stream.AudioBuffer = stream.AudioBuffer[:0]
 		stream.VideoBuffer = stream.VideoBuffer[:0]
+	}
+
+	switch typ {
+	case Audio:
+		stream.AudioBuffer = append(stream.AudioBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})
+	case Video:
+		stream.VideoBuffer = append(stream.VideoBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})
 	}
 	return nil
 }

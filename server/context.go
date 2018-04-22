@@ -427,7 +427,7 @@ func (stream *Stream) SendAudio(data []byte, time uint64) error {
 	*/
 	copydata := make([]byte, len(data))
 	copy(copydata, data)
-	return stream.AddSegment([]*mp4.Sample{{Duration: 1024, Size: uint32(len(data))}}, copydata, Audio, 0, time)
+	return stream.AddSegment([]*mp4.Sample{{Duration: stream.AudioRate / 1000, Size: uint32(len(data))}}, copydata, Audio, 0, time)
 }
 
 /*
@@ -640,7 +640,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			Timescale:          1000,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
-			SubsegmentDuration: 1024 * uint32(len(samples)),
+			SubsegmentDuration: (stream.AudioRate * uint32(len(samples))) / 1000,
 			Keyframe:           true,
 		}
 
@@ -664,7 +664,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		samples := make([]*mp4.Sample, 0)
 		for i, seg := range stream.VideoBuffer {
 			pts := i
-			if i == 0 && seg.SliceType == 7 {
+			if seg.SliceType == 7 {
 				keyframe = true
 			}
 			if seg.SliceType == 5 || seg.SliceType == 7 {

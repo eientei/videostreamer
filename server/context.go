@@ -640,12 +640,17 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 
 		mdata := mp4.BoxWrite(mdat)
 
+		secs := uint32(len(samples)) / (stream.AudioRate / 1000)
+		if uint32(len(samples))%(stream.AudioRate/1000) != 0 {
+			secs += 1
+		}
+
 		sidx := &mp4.SidxBox{
 			ReferenceId:        2,
 			Timescale:          1000,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
-			SubsegmentDuration: (1000 * 1024 / stream.AudioRate) * uint32(len(samples)),
+			SubsegmentDuration: secs * 1000,
 			Keyframe:           true,
 		}
 
@@ -726,12 +731,17 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 
 		mdata := mp4.BoxWrite(mdat)
 
+		secs := uint32(len(samples)) / stream.FrameRate
+		if uint32(len(samples))%stream.FrameRate != 0 {
+			secs += 1
+		}
+
 		sidx := &mp4.SidxBox{
 			ReferenceId:        1,
 			Timescale:          1000,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
-			SubsegmentDuration: (1000 / stream.FrameRate) * uint32(len(samples)),
+			SubsegmentDuration: secs * 1000,
 			Keyframe:           keyframe,
 		}
 

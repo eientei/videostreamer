@@ -209,7 +209,7 @@ func (stream *Stream) InitContainer(avcC []byte) error {
 							&mp4.MdhdBox{
 								CreationTime:     0,
 								ModificationTime: 0,
-								Timescale:        1000,
+								Timescale:        1000 * tvid,
 								Duration:         0,
 							},
 							&mp4.HdlrBox{
@@ -271,7 +271,7 @@ func (stream *Stream) InitContainer(avcC []byte) error {
 							&mp4.MdhdBox{
 								CreationTime:     0,
 								ModificationTime: 0,
-								Timescale:        1000,
+								Timescale:        1000 * tvid,
 								Duration:         0,
 							},
 							&mp4.HdlrBox{
@@ -320,11 +320,11 @@ func (stream *Stream) InitContainer(avcC []byte) error {
 				BoxChildren: []mp4.Box{
 					&mp4.TrexBox{
 						TrackId: 1,
-						Defdur:  1000 / stream.FrameRate,
+						Defdur:  1000 * tvid / stream.FrameRate,
 					},
 					&mp4.TrexBox{
 						TrackId: 2,
-						Defdur:  (1000 * 1024) / stream.AudioRate,
+						Defdur:  (1000 * tvid * 1024) / stream.AudioRate,
 					},
 				},
 			},
@@ -432,7 +432,7 @@ func (stream *Stream) SendAudio(data []byte, time uint64) error {
 	*/
 	copydata := make([]byte, len(data))
 	copy(copydata, data)
-	return stream.AddSegment([]*mp4.Sample{{Duration: 1000 * 1024 / stream.AudioRate, Size: uint32(len(data))}}, copydata, Audio, 0, time)
+	return stream.AddSegment([]*mp4.Sample{{Duration: 1000 * tvid * 1024 / stream.AudioRate, Size: uint32(len(data))}}, copydata, Audio, 0, time)
 }
 
 /*
@@ -527,7 +527,7 @@ func (stream *Stream) SendVideo(data []byte, time uint64) error {
 			}
 		}
 
-		videos = append(videos, &mp4.Sample{Duration: 1000 / stream.FrameRate, Size: uint32(len(nalu.Data))})
+		videos = append(videos, &mp4.Sample{Duration: 1000 * tvid / stream.FrameRate, Size: uint32(len(nalu.Data))})
 		segd = append(segd, nalu.Data...)
 		//lnaltyp = nalu.Reader.Type
 		lstyp = nextslice
@@ -649,14 +649,14 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		if uint32(len(samples))%(stream.AudioRate/1000) != 0 {
 			secs += 1
 		}
-		atime = uint64(secs) * 1000
+		atime = uint64(secs) * 1000 * tvid
 
 		sidx := &mp4.SidxBox{
 			ReferenceId:        2,
-			Timescale:          1000,
+			Timescale:          1000 * tvid,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
-			SubsegmentDuration: secs * 1000,
+			SubsegmentDuration: secs * 1000 * tvid,
 			Keyframe:           true,
 		}
 
@@ -740,14 +740,14 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			secs += 1
 		}
 
-		vtime = uint64(secs) * 1000
+		vtime = uint64(secs) * 1000 * tvid
 
 		sidx := &mp4.SidxBox{
 			ReferenceId:        1,
-			Timescale:          1000,
+			Timescale:          1000 * tvid,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
-			SubsegmentDuration: secs * 1000,
+			SubsegmentDuration: secs * 1000 * tvid,
 			Keyframe:           keyframe,
 		}
 

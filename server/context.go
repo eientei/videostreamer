@@ -610,7 +610,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 	vtime := uint64(0)
 
 	fmt.Println(slicetyp, len(stream.AudioBuffer), len(stream.VideoBuffer))
-	if len(stream.AudioBuffer) > 0 && slicetyp == 7 {
+	if len(stream.AudioBuffer) > 0 && len(stream.VideoBuffer) > 0 && slicetyp == 7 {
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
 		for _, seg := range stream.AudioBuffer {

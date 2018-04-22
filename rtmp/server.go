@@ -328,7 +328,7 @@ func (client *Client) ProcessMessage(message *Message) error {
 		client.Drainer = make([]byte, len(client.InChunk)*10)
 	default:
 		if message.Type == 0 {
-			if _, err := client.Conn.Read(client.Drainer); err != nil {
+			if _, err := io.ReadFull(client.Conn, client.Drainer); err != nil {
 				return err
 			}
 		}
@@ -339,7 +339,7 @@ func (client *Client) ProcessMessage(message *Message) error {
 
 func (client *Client) ReadFormat() (uint8, uint16, error) {
 	fst := make([]byte, 1)
-	if _, err := client.Conn.Read(fst); err != nil {
+	if _, err := io.ReadFull(client.Conn, fst); err != nil {
 		return 0, 0, err
 	}
 	client.Unacked += 1
@@ -349,14 +349,14 @@ func (client *Client) ReadFormat() (uint8, uint16, error) {
 
 	if id == 0 {
 		cid := make([]byte, 1)
-		if _, err := client.Conn.Read(cid); err != nil {
+		if _, err := io.ReadFull(client.Conn, cid); err != nil {
 			return 0, 0, err
 		}
 		client.Unacked += 1
 		id = 64 + uint16(cid[0])
 	} else if id == 1 {
 		cid := make([]byte, 2)
-		if _, err := client.Conn.Read(cid); err != nil {
+		if _, err := io.ReadFull(client.Conn, cid); err != nil {
 			return 0, 0, err
 		}
 		client.Unacked += 2
@@ -380,7 +380,7 @@ func (client *Client) Converse() error {
 			if format == 0 || format == 1 {
 				break
 			}
-			if _, err := client.Conn.Read(client.Drainer); err != nil {
+			if _, err := io.ReadFull(client.Conn, client.Drainer); err != nil {
 				return err
 			}
 			format, id, err = client.ReadFormat()
@@ -395,7 +395,7 @@ func (client *Client) Converse() error {
 	switch format {
 	case 0:
 		buf := make([]byte, 11)
-		if _, err := client.Conn.Read(buf); err != nil {
+		if _, err := io.ReadFull(client.Conn, buf); err != nil {
 			return err
 		}
 		client.Unacked += 11
@@ -407,7 +407,7 @@ func (client *Client) Converse() error {
 		message.Extended = false
 		if message.Timestamp == 0xFFFFFF {
 			buf := make([]byte, 4)
-			if _, err := client.Conn.Read(buf); err != nil {
+			if _, err := io.ReadFull(client.Conn, buf); err != nil {
 				return err
 			}
 			client.Unacked += 4
@@ -416,7 +416,7 @@ func (client *Client) Converse() error {
 		}
 	case 1:
 		buf := make([]byte, 7)
-		if _, err := client.Conn.Read(buf); err != nil {
+		if _, err := io.ReadFull(client.Conn, buf); err != nil {
 			return err
 		}
 		client.Unacked += 7
@@ -427,7 +427,7 @@ func (client *Client) Converse() error {
 			message.Extended = false
 			if message.Delta == 0xFFFFFF {
 				buf := make([]byte, 4)
-				if _, err := client.Conn.Read(buf); err != nil {
+				if _, err := io.ReadFull(client.Conn, buf); err != nil {
 					return err
 				}
 				client.Unacked += 4
@@ -438,7 +438,7 @@ func (client *Client) Converse() error {
 		}
 	case 2:
 		buf := make([]byte, 3)
-		if _, err := client.Conn.Read(buf); err != nil {
+		if _, err := io.ReadFull(client.Conn, buf); err != nil {
 			return err
 		}
 		client.Unacked += 3
@@ -447,7 +447,7 @@ func (client *Client) Converse() error {
 			message.Extended = false
 			if message.Delta == 0xFFFFFF {
 				buf := make([]byte, 4)
-				if _, err := client.Conn.Read(buf); err != nil {
+				if _, err := io.ReadFull(client.Conn, buf); err != nil {
 					return err
 				}
 				client.Unacked += 4
@@ -460,7 +460,7 @@ func (client *Client) Converse() error {
 		if len(message.Data) == 0 {
 			if message.Extended {
 				buf := make([]byte, 4)
-				if _, err := client.Conn.Read(buf); err != nil {
+				if _, err := io.ReadFull(client.Conn, buf); err != nil {
 					return err
 				}
 				client.Unacked += 4

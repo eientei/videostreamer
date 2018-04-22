@@ -399,7 +399,7 @@ func (stream *Stream) SendAudio(data []byte, timestamp uint32) error {
 	*/
 	copydata := make([]byte, len(data))
 	copy(copydata, data)
-	return stream.AddSegment([]*mp4.Sample{{Duration: 1024, Size: uint32(len(data))}}, copydata, Audio, false, 0)
+	return stream.AddSegment([]*mp4.Sample{{Duration: 1024, Size: uint32(len(data))}}, copydata, Audio, 0)
 }
 
 /*
@@ -462,7 +462,7 @@ func (stream *Stream) SendVideo(data []byte, timestamp uint32) error {
 
 	lframenum := uint64(0)
 
-	lnaltyp := uint64(0)
+	//lnaltyp := uint64(0)
 	lstyp := uint64(0)
 
 	for _, nalu := range nalus {
@@ -487,7 +487,7 @@ func (stream *Stream) SendVideo(data []byte, timestamp uint32) error {
 
 		if len(segd) > 0 {
 			if lframenum != nextframe {
-				stream.AddSegment(videos, segd, Video, lnaltyp == 5, lstyp)
+				stream.AddSegment(videos, segd, Video, lstyp)
 
 				videos = videos[:0]
 				segd = segd[:0]
@@ -496,13 +496,13 @@ func (stream *Stream) SendVideo(data []byte, timestamp uint32) error {
 
 		videos = append(videos, &mp4.Sample{Duration: 1, Size: uint32(len(nalu.Data))})
 		segd = append(segd, nalu.Data...)
-		lnaltyp = nalu.Reader.Type
+		//lnaltyp = nalu.Reader.Type
 		lstyp = nextslice
 		lframenum = nextframe
 	}
 
 	if len(segd) > 0 {
-		return stream.AddSegment(videos, segd, Video, lnaltyp == 5, lstyp)
+		return stream.AddSegment(videos, segd, Video, lstyp)
 	}
 	return nil
 }
@@ -573,7 +573,7 @@ func (stream *Stream) SendSegment(segmentdata []byte, indexlen int, samples int,
 	return nil
 }
 
-func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, typ uint8, keyframe bool, slicetyp uint64) error {
+func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, typ uint8, slicetyp uint64) error {
 	if typ == Audio {
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
@@ -636,10 +636,14 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 	}
 
 	if len(stream.VideoBuffer) > 0 && slicetyp == 5 || slicetyp == 7 {
+		keyframe := false
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
 		for i, seg := range stream.VideoBuffer {
 			pts := i
+			if seg.SliceType == 7 {
+				keyframe = true
+			}
 			if seg.SliceType == 5 || seg.SliceType == 7 {
 				M := 0
 				for n := i + 1; n < len(stream.VideoBuffer); n++ {
@@ -698,7 +702,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
 			SubsegmentDuration: 1 * uint32(len(samples)),
-			Keyframe:           stream.VideoBuffer[0].SliceType == 7,
+			Keyframe:           keyframe,
 		}
 
 		t1off := len(moofdata) - len(samples)*12 - 4

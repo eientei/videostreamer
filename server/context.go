@@ -66,6 +66,9 @@ type Segment struct {
 }
 
 type Stream struct {
+	AudioIn chan []byte
+	VideoIn chan []byte
+
 	Name          string
 	Logger        *log.Logger
 	ContainerInit []byte // (ftyp moov)
@@ -91,12 +94,31 @@ type Context struct {
 }
 
 func (stream *Stream) Close() {
+	close(stream.AudioIn)
+	close(stream.VideoIn)
 	for _, client := range stream.Clients {
 		client.Conn.Close()
 	}
 }
 
-func (stream *Stream) Audio(data []byte, timestamp uint32) error {
+func (stream *Stream) Run() {
+	for {
+		select {
+		case msg, ok := <-stream.AudioIn:
+			if !ok {
+				return
+			}
+			stream.Audio(msg)
+		case msg, ok := <-stream.VideoIn:
+			if !ok {
+				return
+			}
+			stream.Video(msg)
+		}
+	}
+}
+
+func (stream *Stream) Audio(data []byte) error {
 	ptr := 0
 	format := data[ptr] >> 4
 	ptr += 1
@@ -104,10 +126,10 @@ func (stream *Stream) Audio(data []byte, timestamp uint32) error {
 		return UnknownCodec
 	}
 	ptr += 1
-	return stream.SendAudio(data[ptr:], timestamp)
+	return stream.SendAudio(data[ptr:])
 }
 
-func (stream *Stream) Video(data []byte, timestamp uint32) error {
+func (stream *Stream) Video(data []byte) error {
 	ptr := 0
 	frame := (data[ptr] >> 4) & 0xF
 	codec := data[ptr] & 0xF
@@ -128,7 +150,7 @@ func (stream *Stream) Video(data []byte, timestamp uint32) error {
 				stream.SkipToKeyframe = true
 				return stream.InitContainer(data[ptr:])
 			case 1:
-				return stream.SendVideo(data[ptr:], timestamp)
+				return stream.SendVideo(data[ptr:])
 			default:
 				return UnknownCodec
 			}
@@ -350,7 +372,7 @@ func (stream *Stream) InitContainer(avcC []byte) error {
 	return nil
 }
 
-func (stream *Stream) SendAudio(data []byte, timestamp uint32) error {
+func (stream *Stream) SendAudio(data []byte) error {
 	/*
 		moof := &mp4.MoofBox{
 			BoxChildren: []mp4.Box{
@@ -453,7 +475,7 @@ func (stream *Stream) FormVideo(videos []*mp4.Sample, data []byte, keyframe bool
 	return stream.AddSegment(videos, data, Video, keyframe)
 }
 */
-func (stream *Stream) SendVideo(data []byte, timestamp uint32) error {
+func (stream *Stream) SendVideo(data []byte) error {
 	videos := make([]*mp4.Sample, 0)
 
 	nalus := stream.BreakNals(data)

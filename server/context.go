@@ -640,7 +640,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			Timescale:          1000,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
-			SubsegmentDuration: 1024,
+			SubsegmentDuration: 1024 * uint32(len(samples)),
 			Keyframe:           true,
 		}
 

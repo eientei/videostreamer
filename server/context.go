@@ -588,7 +588,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 	asamp := 0
 	vsamp := 0
 
-	if uint32(len(stream.AudioBuffer)) >= 43 {
+	if uint32(len(stream.AudioBuffer)) >= 44 {
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
 		for _, seg := range stream.AudioBuffer {

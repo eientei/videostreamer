@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 
@@ -50,12 +49,13 @@ type Nalu struct {
 }
 
 type Client struct {
-	Conn           io.WriteCloser
-	Initialized    bool
-	InitFrame      []byte
-	Booted         bool
-	FirstVCL       bool
-	Sequence       uint32
+	Conn        io.WriteCloser
+	Initialized bool
+	InitFrame   []byte
+	Booted      bool
+	FirstVCL    bool
+	Sequence    uint32
+
 	AudioStartTime uint64
 	VideoStartTime uint64
 }
@@ -539,24 +539,28 @@ func (stream *Stream) SendVideo(data []byte, time uint64) error {
 func (stream *Stream) SendSegment(viddata []byte, vsidx int, vsamp int, vidstarttime uint64, auddata []byte, asidx int, asamp int, audstarttime uint64) error {
 	toremove := make([]*Client, 0)
 	for _, client := range stream.Clients {
+		if !client.Initialized {
+			client.VideoStartTime = vidstarttime
+			client.AudioStartTime = audstarttime
+			client.Initialized = true
+		}
+
 		if len(viddata) > 0 {
-			client.AudioStartTime = vidstarttime
 			voff := 0
-			util.WriteB64(viddata[presentoff:presentoff+8], client.VideoStartTime)
+			util.WriteB64(viddata[presentoff:presentoff+8], vidstarttime-client.VideoStartTime)
 			voff += vsidx
 			util.WriteB32(viddata[voff+sequenceoff:voff+sequenceoff+4], client.Sequence)
 			client.Sequence++
-			util.WriteB64(viddata[voff+timeoff:voff+timeoff+8], client.VideoStartTime)
+			util.WriteB64(viddata[voff+timeoff:voff+timeoff+8], vidstarttime-client.VideoStartTime)
 		}
 
 		if len(auddata) > 0 {
-			client.AudioStartTime = audstarttime
 			aoff := 0
-			util.WriteB64(auddata[presentoff:presentoff+8], client.AudioStartTime)
+			util.WriteB64(auddata[presentoff:presentoff+8], audstarttime-client.AudioStartTime)
 			aoff += asidx
 			util.WriteB32(auddata[aoff+sequenceoff:aoff+sequenceoff+4], client.Sequence)
 			client.Sequence++
-			util.WriteB64(auddata[aoff+timeoff:aoff+timeoff+8], client.AudioStartTime)
+			util.WriteB64(auddata[aoff+timeoff:aoff+timeoff+8], audstarttime-client.AudioStartTime)
 		}
 
 		if _, err := client.Conn.Write(append(viddata, auddata...)); err != nil {
@@ -663,9 +667,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		keyframe := false
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
-		fmt.Println("ll", len(stream.VideoBuffer))
 		for i, seg := range stream.VideoBuffer {
-			fmt.Println(i, seg.SliceType)
 			pts := i
 			if seg.SliceType == 7 {
 				keyframe = true

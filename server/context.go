@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 
@@ -608,7 +609,8 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 	vsamp := 0
 	vtime := uint64(0)
 
-	if len(stream.AudioBuffer) > 0 && slicetyp == 7 {
+	fmt.Println(slicetyp, len(stream.AudioBuffer), len(stream.VideoBuffer))
+	if len(stream.AudioBuffer) > 0 && uint32(len(stream.VideoBuffer)) >= stream.FrameRate {
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
 		for _, seg := range stream.AudioBuffer {
@@ -645,14 +647,18 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 
 		mdata := mp4.BoxWrite(mdat)
 
-		atime = uint64(1000*tvid*1024) * uint64(len(samples)) / uint64(stream.AudioRate)
+		secs := uint32(len(samples)) / (stream.AudioRate / 1000)
+		if uint32(len(samples))%(stream.AudioRate/1000) != 0 {
+			secs += 1
+		}
+		atime = uint64(secs) * 1000 * tvid
 
 		sidx := &mp4.SidxBox{
 			ReferenceId:        2,
 			Timescale:          1000 * tvid,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
-			SubsegmentDuration: (1000 * tvid * 1024) * uint32(len(samples)) / stream.AudioRate,
+			SubsegmentDuration: secs * 1000 * tvid,
 			Keyframe:           true,
 		}
 
@@ -670,7 +676,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		stream.AudioBuffer = stream.AudioBuffer[:0]
 	}
 
-	if len(stream.VideoBuffer) > 0 && slicetyp == 7 {
+	if uint32(len(stream.VideoBuffer)) >= stream.FrameRate {
 		keyframe := false
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
@@ -731,14 +737,19 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 
 		mdata := mp4.BoxWrite(mdat)
 
-		vtime = uint64(1000*tvid*uint32(len(samples))) / uint64(stream.FrameRate)
+		secs := uint32(len(samples)) / stream.FrameRate
+		if uint32(len(samples))%stream.FrameRate != 0 {
+			secs += 1
+		}
+
+		vtime = uint64(secs) * 1000 * tvid
 
 		sidx := &mp4.SidxBox{
 			ReferenceId:        1,
 			Timescale:          1000 * tvid,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
-			SubsegmentDuration: (1000 * tvid * uint32(len(samples))) / stream.FrameRate,
+			SubsegmentDuration: secs * 1000 * tvid,
 			Keyframe:           keyframe,
 		}
 

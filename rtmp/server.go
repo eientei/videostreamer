@@ -3,7 +3,6 @@ package rtmp
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"

@@ -294,8 +294,8 @@ func (client *Client) ProcessAmf(values []amf.Value) error {
 
 		client.Logger.Println("Open stream [/" + streamName + "]")
 		client.Stream = &server.Stream{
-			AudioIn: make(chan []byte, 64),
-			VideoIn: make(chan []byte, 64),
+			AudioIn: make(chan *server.Msg, 64),
+			VideoIn: make(chan *server.Msg, 64),
 			Name:    streamName,
 			Logger:  log.New(os.Stdout, "[/"+streamName+"] ", log.LstdFlags),
 		}
@@ -317,11 +317,11 @@ func (client *Client) ProcessMessage(message *Message) error {
 	case AudioMessage:
 		copydata := make([]byte, len(message.Data))
 		copy(copydata, message.Data)
-		client.Stream.AudioIn <- copydata
+		client.Stream.AudioIn <- &server.Msg{copydata, uint64(message.Timestamp)}
 	case VideoMessage:
 		copydata := make([]byte, len(message.Data))
 		copy(copydata, message.Data)
-		client.Stream.VideoIn <- copydata
+		client.Stream.VideoIn <- &server.Msg{copydata, uint64(message.Timestamp)}
 	case MetadataMessage:
 		if err := client.Stream.Meta(message.Data); err != nil {
 			return err

@@ -303,6 +303,7 @@ func (client *Client) ProcessAmf(values []amf.Value) error {
 }
 
 func (client *Client) ProcessMessage(message *Message) error {
+	fmt.Println(message.Type, message)
 	switch message.Type {
 	case CommandMessage:
 		if err := client.ProcessAmf(amf.ReadAll(bytes.NewReader(message.Data))); err != nil {
@@ -325,7 +326,6 @@ func (client *Client) ProcessMessage(message *Message) error {
 	case SetChunkSizeMessage:
 		client.InChunk = make([]byte, util.ReadB32(message.Data))
 	default:
-		fmt.Println("UNK", message.Type, message)
 		baka := make([]byte, 1024)
 		client.Conn.Read(baka)
 		fmt.Println(baka)

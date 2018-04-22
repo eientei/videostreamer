@@ -262,7 +262,7 @@ func (stream *Stream) InitContainer(avcC []byte) error {
 							&mp4.MdhdBox{
 								CreationTime:     0,
 								ModificationTime: 0,
-								Timescale:        stream.AudioRate,
+								Timescale:        stream.AudioRate / 1000,
 								Duration:         0,
 							},
 							&mp4.HdlrBox{
@@ -388,7 +388,7 @@ func (stream *Stream) SendAudio(data []byte) error {
 							BaseMediaDecodeTime: 0,
 						},
 						&mp4.TrunBox{
-							SampleSizes: []*mp4.Sample{{Duration: 1024, Size: uint32(len(data))}},
+							SampleSizes: []*mp4.Sample{{Duration: 1000, Size: uint32(len(data))}},
 						},
 					},
 				},
@@ -405,7 +405,7 @@ func (stream *Stream) SendAudio(data []byte) error {
 			Timescale:          stream.AudioRate,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)),
-			SubsegmentDuration: 1024,
+			SubsegmentDuration: 1000,
 			Keyframe:           true,
 		}
 
@@ -421,7 +421,7 @@ func (stream *Stream) SendAudio(data []byte) error {
 	*/
 	copydata := make([]byte, len(data))
 	copy(copydata, data)
-	return stream.AddSegment([]*mp4.Sample{{Duration: 1024, Size: uint32(len(data))}}, copydata, Audio, 0)
+	return stream.AddSegment([]*mp4.Sample{{Duration: 1000, Size: uint32(len(data))}}, copydata, Audio, 0)
 }
 
 /*
@@ -544,7 +544,7 @@ func (stream *Stream) SendSegment(segmentdata []byte, indexlen int, samples int,
 		switch typ {
 		case Audio:
 			util.WriteB64(segmentdata[off+timeoff:off+timeoff+8], client.AudioStartTime)
-			client.AudioStartTime += uint64(1024 * samples)
+			client.AudioStartTime += uint64(1000 * samples)
 		case Video:
 			util.WriteB64(segmentdata[off+timeoff:off+timeoff+8], client.VideoStartTime)
 			client.VideoStartTime += uint64(1 * samples)
@@ -635,10 +635,10 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 
 		sidx := &mp4.SidxBox{
 			ReferenceId:        2,
-			Timescale:          stream.AudioRate,
+			Timescale:          stream.AudioRate / 1000,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
-			SubsegmentDuration: 1024 * uint32(len(samples)),
+			SubsegmentDuration: 1000 * uint32(len(samples)),
 			Keyframe:           true,
 		}
 

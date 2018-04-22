@@ -501,6 +501,7 @@ func (stream *Stream) SendVideo(data []byte, time uint64) error {
 
 		ReadExpGolomb(nalu.Reader.Bitr)
 		nextslice := ReadExpGolomb(nalu.Reader.Bitr)
+		fmt.Println(nextslice)
 		ReadExpGolomb(nalu.Reader.Bitr) // pps id
 		if stream.ColorPlanes {
 			nalu.Reader.Bitr.Read(2)
@@ -664,7 +665,6 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
 		for i, seg := range stream.VideoBuffer {
-			fmt.Println(seg.SliceType)
 			pts := i
 			if seg.SliceType == 7 {
 				keyframe = true

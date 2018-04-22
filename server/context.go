@@ -574,7 +574,7 @@ func (stream *Stream) SendSegment(segmentdata []byte, indexlen int, samples int,
 }
 
 func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, typ uint8, slicetyp uint64) error {
-	if len(stream.AudioBuffer) > 0 && slicetyp == 7 || slicetyp == 5 {
+	if len(stream.AudioBuffer) > 0 {
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
 		for _, seg := range stream.AudioBuffer {

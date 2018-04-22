@@ -327,14 +327,11 @@ func (client *Client) ProcessMessage(message *Message) error {
 		client.InChunk = make([]byte, util.ReadB32(message.Data))
 	default:
 		if message.Type == 0 {
-			for {
-				if n, err := client.Conn.Read(client.InChunk); err != nil {
-					return err
-				} else if n == 0 {
-					break
-				} else {
-					fmt.Println("DRAIN", n)
-				}
+			drainer := make([]byte, len(client.InChunk)*10)
+			if n, err := client.Conn.Read(client.InChunk); err != nil {
+				return err
+			} else {
+				fmt.Println("DRAIN", n, drainer)
 			}
 		}
 		client.Logger.Println(message)

@@ -36,7 +36,6 @@
         const wsvid = document.querySelector('#wsvid');
         const info = document.querySelector('#info');
         const video = window.location.hash.length > 0 ? window.location.hash.substring(1) : null;
-        /*
         wsvid.onprogress = function () {
             if (wsvid.buffered.length === 0) {
                 return
@@ -45,18 +44,18 @@
             const end = wsvid.buffered.end(wsvid.buffered.length - 1);
             const diff = end - current;
             //buffer.innerText = diff;
-            if (diff > 1.000) {
+            if (diff > 2.000) {
                 if (wsvid.paused) {
                     wsvid.play();
                     console.log('play');
                 }
-            } else if (diff < 0.250) {
+            } else if (diff < 1.000) {
                 if (!wsvid.paused) {
                     wsvid.pause();
                     console.log('pause');
                 }
             }
-        };*/
+        };
         wsvid.pause();
         if (video != null) {
             info.innerHTML = '';
@@ -90,7 +89,6 @@
                         drain();
                     };
                     wsvid.src = window.URL.createObjectURL(ms);
-                    wsvid.play();
                 };
                 socket.onerror = reconnect;
                 socket.onclose = reconnect;

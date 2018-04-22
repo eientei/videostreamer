@@ -327,11 +327,11 @@ func (client *Client) ProcessMessage(message *Message) error {
 		client.InChunk = make([]byte, util.ReadB32(message.Data))
 		client.Drainer = make([]byte, len(client.InChunk)*10)
 	default:
-		if message.Type == 0 {
-			if _, err := io.ReadFull(client.Conn, client.Drainer); err != nil {
-				return err
-			}
-		}
+		//if message.Type == 0 {
+		//if _, err := io.ReadFull(client.Conn, client.Drainer); err != nil {
+		//return err
+		//}
+		//}
 		//client.Logger.Println(message)
 	}
 	return nil
@@ -380,6 +380,7 @@ func (client *Client) Converse() error {
 			if format == 0 || format == 1 {
 				break
 			}
+			client.Logger.Println("SKIP", format)
 			if _, err := io.ReadFull(client.Conn, client.Drainer); err != nil {
 				return err
 			}

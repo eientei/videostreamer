@@ -665,7 +665,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		samples := make([]*mp4.Sample, 0)
 		fmt.Println("ll", len(stream.VideoBuffer))
 		for i, seg := range stream.VideoBuffer {
-			fmt.Println(i, seg)
+			fmt.Println(i, seg.SliceType)
 			pts := i
 			if seg.SliceType == 7 {
 				keyframe = true

@@ -82,7 +82,7 @@ type Stream struct {
 	ColorPlanes  bool
 
 	SkipToKeyframe bool
-	//AudioBuffer    []*Segment
+	AudioBuffer    []*Segment
 	VideoBuffer []*Segment
 }
 
@@ -574,13 +574,13 @@ func (stream *Stream) SendSegment(segmentdata []byte, indexlen int, samples int,
 }
 
 func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, typ uint8, slicetyp uint64) error {
-	if typ == Audio {
+	if len(stream.AudioBuffer) > 0 && slicetyp == 7 {
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
-		//for _, seg := range stream.AudioBuffer {
-		samples = append(samples, newsamples...)
-		databuf.Write(sampledata)
-		//}
+		for _, seg := range stream.AudioBuffer {
+			samples = append(samples, seg.Samples...)
+			databuf.Write(seg.Data)
+		}
 
 		moof := &mp4.MoofBox{
 			BoxChildren: []mp4.Box{
@@ -632,7 +632,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 
 		segmentdata := segment.Bytes()
 		stream.SendSegment(segmentdata, len(sidxdata), len(samples), Audio)
-		//stream.AudioBuffer = stream.AudioBuffer[:0]
+		stream.AudioBuffer = stream.AudioBuffer[:0]
 	}
 
 	if len(stream.VideoBuffer) > 0 && slicetyp == 7 {
@@ -721,7 +721,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 	}
 	switch typ {
 	case Audio:
-		//stream.AudioBuffer = append(stream.AudioBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp})
+		/stream.AudioBuffer = append(stream.AudioBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp})
 	case Video:
 		stream.VideoBuffer = append(stream.VideoBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp})
 	}

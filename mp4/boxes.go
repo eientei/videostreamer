@@ -15,6 +15,7 @@ type Box interface {
 type Sample struct {
 	Duration uint32
 	Size     uint32
+	Scto     uint32
 }
 
 func BoxWrite(box Box) []byte {
@@ -650,6 +651,7 @@ type SidxBox struct {
 	PresentationTime   uint64
 	ReferenceSize      uint32
 	SubsegmentDuration uint32
+	Keyframe           bool
 }
 
 func (box *SidxBox) Name() string {
@@ -672,7 +674,11 @@ func (box *SidxBox) Data() []byte {
 	util.Write16(buf, 1)
 	util.Write32(buf, box.ReferenceSize&0x7fffffff)
 	util.Write32(buf, box.SubsegmentDuration)
-	util.Write32(buf, 1<<31|1<<28)
+	if box.Keyframe {
+		util.Write32(buf, 1<<31)
+	} else {
+		util.Write32(buf, 0)
+	}
 	return buf.Bytes()
 }
 
@@ -771,7 +777,7 @@ func (box *TfdtBox) Data() []byte {
 }
 
 type TrunBox struct {
-	SampleSizes []*Sample
+	Samples []*Sample
 }
 
 func (box *TrunBox) Name() string {
@@ -785,12 +791,13 @@ func (box *TrunBox) Children() []Box {
 func (box *TrunBox) Data() []byte {
 	buf := &bytes.Buffer{}
 	util.Write8(buf, 0)
-	util.Write24(buf, 0x200|0x100|0x1)
-	util.Write32(buf, uint32(len(box.SampleSizes)))
+	util.Write24(buf, 0x800|0x200|0x100|0x1)
+	util.Write32(buf, uint32(len(box.Samples)))
 	util.Write32(buf, 0)
-	for _, s := range box.SampleSizes {
+	for _, s := range box.Samples {
 		util.Write32(buf, s.Duration)
 		util.Write32(buf, s.Size)
+		util.Write32(buf, s.Scto)
 	}
 	return buf.Bytes()
 }

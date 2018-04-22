@@ -326,6 +326,10 @@ func (client *Client) ProcessMessage(message *Message) error {
 		client.InChunk = make([]byte, util.ReadB32(message.Data))
 	default:
 		fmt.Println("UNK", message.Type, message)
+		baka := make([]byte, 1024)
+		client.Conn.Read(baka)
+		fmt.Println(baka)
+		return ClosingConnection
 	}
 	return nil
 }
@@ -356,7 +360,7 @@ func (client *Client) Converse() error {
 		id = 64 + uint16(cid[0])*256 + uint16(cid[1])
 	}
 
-	fmt.Println(id, "FMT", format)
+	//fmt.Println(id, "FMT", format)
 
 	if _, ok := client.Assembly[id]; !ok {
 		client.Assembly[id] = &Message{

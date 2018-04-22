@@ -71,7 +71,7 @@ func WebsocketHandler(context *server.Context) func(w http.ResponseWriter, r *ht
 		} else if sdata, ok := context.Streams[stream]; !ok {
 			http.NotFound(w, r)
 			return
-		} else if sdata.CodecInit == nil {
+		} else if sdata.ContainerInit == nil {
 			http.Error(w, "Try again a bit later", http.StatusPartialContent)
 			return
 		} else {
@@ -79,7 +79,9 @@ func WebsocketHandler(context *server.Context) func(w http.ResponseWriter, r *ht
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			} else {
 				sdata.Logger.Println("wss:// client connected", r.RemoteAddr)
-				sdata.Clients = append(sdata.Clients, &server.Client{Conn: &ConnWriter{sdata.Logger, conn}})
+				cw := &ConnWriter{sdata.Logger, conn}
+				cw.Write(sdata.ContainerInit)
+				sdata.Clients = append(sdata.Clients, &server.Client{Conn: cw})
 			}
 		}
 	}
@@ -94,7 +96,7 @@ func SignalHandler(context *server.Context) func(w http.ResponseWriter, r *http.
 		} else if sdata, ok := context.Streams[stream]; !ok {
 			http.NotFound(w, r)
 			return
-		} else if sdata.CodecInit == nil {
+		} else if sdata.ContainerInit == nil {
 			http.Error(w, "Try again a bit later", http.StatusPartialContent)
 			return
 		} else {
@@ -102,7 +104,9 @@ func SignalHandler(context *server.Context) func(w http.ResponseWriter, r *http.
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			} else {
 				sdata.Logger.Println("signal:// client connected", r.RemoteAddr)
-				sdata.Clients = append(sdata.Clients, &server.Client{Conn: &SignalWriter{sdata.Logger, conn}})
+				cw := &SignalWriter{sdata.Logger, conn}
+				cw.Write(sdata.ContainerInit)
+				sdata.Clients = append(sdata.Clients, &server.Client{Conn: cw})
 			}
 		}
 	}
@@ -117,13 +121,14 @@ func FileHandler(context *server.Context) func(w http.ResponseWriter, r *http.Re
 		} else if sdata, ok := context.Streams[stream]; !ok {
 			http.NotFound(w, r)
 			return
-		} else if sdata.CodecInit == nil {
+		} else if sdata.ContainerInit == nil {
 			http.Error(w, "Try again a bit later", http.StatusPartialContent)
 			return
 		} else {
+			w.Header().Set("Content-Type", "video/mp4")
 			sdata.Logger.Println("file:// client connected", r.RemoteAddr)
-			w.Header().Set("X-Content-Type-Options", "nosniff")
 			cw := &HttpWriter{w, make(chan struct{})}
+			cw.Write(sdata.ContainerInit)
 			sdata.Clients = append(sdata.Clients, &server.Client{Conn: cw})
 			<-cw.Closer
 			sdata.Logger.Println("file:// client disconnected", r.RemoteAddr)

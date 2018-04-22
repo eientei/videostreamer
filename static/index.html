@@ -20,45 +20,62 @@
             height: 100%;
             position: absolute;
         }
+        div {
+            text-align: center;
+        }
     </style>
 </head>
 <body>
 <div id="video">
     <span id="info" style="z-index: 999"></span>
-    <video id="wsvid" autoplay></video>
+    <video id="wsvid"></video>
 </div>
-</video>
 <script>
     var time = null;
     function init() {
-        const parent = document.querySelector('#video');
         const wsvid = document.querySelector('#wsvid');
         const info = document.querySelector('#info');
         const video = window.location.hash.length > 0 ? window.location.hash.substring(1) : null;
-        wsvid.src = '';
+        /*
+        wsvid.onprogress = function () {
+            if (wsvid.buffered.length === 0) {
+                return
+            }
+            const current = wsvid.currentTime;
+            const end = wsvid.buffered.end(wsvid.buffered.length - 1);
+            const diff = end - current;
+            //buffer.innerText = diff;
+            if (diff > 1.000) {
+                if (wsvid.paused) {
+                    wsvid.play();
+                    console.log('play');
+                }
+            } else if (diff < 0.250) {
+                if (!wsvid.paused) {
+                    wsvid.pause();
+                    console.log('pause');
+                }
+            }
+        };*/
+        wsvid.pause();
         if (video != null) {
             info.innerHTML = '';
-            wsvid.onprogress = function () {
-                if (wsvid.buffered.length === 0) {
-                    return
-                }
-                const current = wsvid.currentTime;
-                const end = wsvid.buffered.end(wsvid.buffered.length - 1);
-                const diff = end - current;
-                if (diff > 1.000) {
-                    if (wsvid.paused) {
-                        wsvid.play();
-                        console.log('play');
-                    }
-                } else if (diff < 0.250) {
-                    if (!wsvid.paused) {
-                        wsvid.pause();
-                        console.log('pause');
-                    }
-                }
-            };
             function converse() {
-                const socket = new WebSocket('wss://' + window.location.host + '/live/' + video + '.sig');
+                const queue = [];
+                var sourceBuffer = null;
+                function drain() {
+                    if (queue.length === 0) {
+                        return;
+                    }
+                    if (sourceBuffer.updating) {
+                        return;
+                    }
+                    const next = queue.shift();
+                    sourceBuffer.appendBuffer(next);
+                }
+
+
+                const socket = new WebSocket('wss://' + window.location.host + '/live/' + video + '.wss');
                 const reconnect = function () {
                     if (time != null) {
                         clearTimeout(time);
@@ -66,15 +83,33 @@
                     time = setTimeout(converse, 1000);
                 };
                 socket.onopen = function () {
-                    wsvid.src = '/live/' + video + '.mp4';
+                    const ms = new MediaSource();
+                    ms.onsourceopen = function () {
+                        sourceBuffer = ms.addSourceBuffer('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
+                        sourceBuffer.onupdate = drain;
+                        drain();
+                    };
+                    wsvid.src = window.URL.createObjectURL(ms);
                     wsvid.play();
                 };
                 socket.onerror = reconnect;
                 socket.onclose = reconnect;
+                socket.onmessage = function (event) {
+                    const fileReader = new FileReader();
+                    fileReader.onload = function () {
+                        const uint8ArrayNew = new Uint8Array(fileReader.result);
+                        console.log('recv bytes', uint8ArrayNew.length);
+                        queue.push(uint8ArrayNew);
+                        if (sourceBuffer != null) {
+                            drain();
+                        }
+                    };
+                    fileReader.readAsArrayBuffer(event.data);
+                };
             }
             converse();
         } else {
-            info.innerHTML = '<div>Use url with hash suffix, e.g. <a href="https://' + window.location.host + '#yukkuri">https://' + window.location.host + '#yukkuri</a></div><div style="margin-left: 1em">which corresponds to rtmp://' + window.location.host + '/live/yukkuri</div>'
+            info.innerHTML = '<div>Use url with hash suffix, e.g. <a href="https://' + window.location.host + '#yukkuri">https://' + window.location.host + '#yukkuri</a></div><div style="margin-left: 1em">which corresponds to rtmp://' + window.location.host + '/live/yukkuri</div><div>For Chromium-based browsers to play stream correctly,</div><div>h264 profile must be set to <b>baseline</b> and <b>none</b> tune options must be used</div><img src="reference-obs.png">'
         }
     }
     window.onhashchange = init;

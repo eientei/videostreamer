@@ -5,13 +5,13 @@ import (
 	"errors"
 	"io"
 	"log"
-	"math"
 
 	"../amf"
 	"../mp4"
 	"../util"
 )
 
+var InvalidProfile = errors.New("invalid profile")
 var UnknownCodec = errors.New("unknown codec")
 
 const tvid = 1000
@@ -44,14 +44,14 @@ const (
 )
 
 type Nalu struct {
-	Type     uint8
-	FrameNum uint32
-	Data     []byte
+	Reader *NaluReader
+	Data   []byte
 }
 
 type Client struct {
 	Conn           io.WriteCloser
 	Initialized    bool
+	InitFrame      []byte
 	Booted         bool
 	FirstVCL       bool
 	Sequence       uint32
@@ -60,10 +60,9 @@ type Client struct {
 }
 
 type Segment struct {
-	Index     []byte
+	Samples   []*mp4.Sample
 	Data      []byte
-	Type      uint8
-	Timestamp uint32
+	SliceType uint64
 }
 
 type Stream struct {
@@ -79,11 +78,12 @@ type Stream struct {
 	AudioRate uint32
 
 	LengthSize   uint32
-	FrameNumBits uint32
+	FrameNumBits uint64
+	ColorPlanes  bool
 
 	SkipToKeyframe bool
-	Buffer         []*Segment
-	PrevFrameNum   uint32
+	AudioBuffer    []*Segment
+	VideoBuffer    []*Segment
 }
 
 type Context struct {
@@ -125,13 +125,10 @@ func (stream *Stream) Video(data []byte, timestamp uint32) error {
 		case VideoAVCCodec:
 			switch avctype {
 			case 0:
+				stream.SkipToKeyframe = true
 				return stream.InitContainer(data[ptr:])
 			case 1:
-				if stream.CodecInit == nil {
-					return stream.TryInitCodec(data[ptr:])
-				} else {
-					return stream.SendVideo(data[ptr:], timestamp)
-				}
+				return stream.SendVideo(data[ptr:], timestamp)
 			default:
 				return UnknownCodec
 			}
@@ -152,16 +149,16 @@ func (stream *Stream) Meta(data []byte) error {
 
 func (stream *Stream) InitContainer(avcC []byte) error {
 	ftyp := &mp4.FtypBox{
-		MajorBand:       "isom",
-		MinorVersion:    0x200,
-		CompatibleBands: []string{"isom", "iso2", "avc1", "mp41"},
+		MajorBand:       "iso5",
+		MinorVersion:    1,
+		CompatibleBands: []string{"avc1", "iso5", "dash"},
 	}
 	moov := &mp4.MoovBox{
 		BoxChildren: []mp4.Box{
 			&mp4.MvhdBox{
 				CreationTime:     0,
 				ModificationTime: 0,
-				Timescale:        1000,
+				Timescale:        1,
 				Duration:         0,
 				NextTrackId:      0xFFFFFFFF,
 			},
@@ -290,9 +287,6 @@ func (stream *Stream) InitContainer(avcC []byte) error {
 			},
 			&mp4.MvexBox{
 				BoxChildren: []mp4.Box{
-					&mp4.MehdBox{
-						TimeScale: 1000,
-					},
 					&mp4.TrexBox{
 						TrackId: 1,
 					},
@@ -304,15 +298,49 @@ func (stream *Stream) InitContainer(avcC []byte) error {
 		},
 	}
 
-	stream.LengthSize = uint32(avcC[4]&3) + 1
-	p := uint16(6)
-	for i := byte(0); i < avcC[5]&0x1f; i++ {
-		l := util.ReadB16(avcC[p : p+2])
-		bitptr := uint64(p+3) * 8
-		ReadExpGolomb(avcC, &bitptr) // seq parameter set id
-		stream.FrameNumBits = uint32(ReadExpGolomb(avcC, &bitptr) + 4)
-		p += l
+	if avcC[1] != 66 {
+		return InvalidProfile
 	}
+
+	stream.LengthSize = uint32(avcC[4]&3) + 1
+
+	b := &BitReader{Reader: bytes.NewReader(avcC[8:])}
+	profileIdc := b.Read(8)
+	b.Read(8) // flags
+	b.Read(8) // levelIdc
+	if profileIdc == 100 ||
+		profileIdc == 110 ||
+		profileIdc == 122 ||
+		profileIdc == 244 ||
+		profileIdc == 44 ||
+		profileIdc == 83 ||
+		profileIdc == 86 ||
+		profileIdc == 118 ||
+		profileIdc == 128 ||
+		profileIdc == 138 ||
+		profileIdc == 139 ||
+		profileIdc == 134 ||
+		profileIdc == 135 {
+		chromeIdc := ReadExpGolomb(b)
+		mat := 8
+		if chromeIdc == 3 {
+			if b.Read(1) == 1 {
+				stream.ColorPlanes = true
+			}
+			mat = 12
+		}
+		ReadExpGolomb(b)
+		ReadExpGolomb(b)
+		b.Read(1)
+		scale := b.Read(1)
+		if scale == 1 {
+			for i := 0; i < mat; i++ {
+				b.Read(1)
+			}
+		}
+	}
+
+	stream.FrameNumBits = ReadExpGolomb(b) + 4
 
 	buf := &bytes.Buffer{}
 	buf.Write(mp4.BoxWrite(ftyp))
@@ -323,221 +351,458 @@ func (stream *Stream) InitContainer(avcC []byte) error {
 }
 
 func (stream *Stream) SendAudio(data []byte, timestamp uint32) error {
-	moof := &mp4.MoofBox{
-		BoxChildren: []mp4.Box{
-			&mp4.MfhdBox{
-				Sequence: 0,
-			},
-			&mp4.TrafBox{
-				BoxChildren: []mp4.Box{
-					&mp4.TfhdBox{
-						TrackId: 2,
-					},
-					&mp4.TfdtBox{
-						BaseMediaDecodeTime: 0,
-					},
-					&mp4.TrunBox{
-						SampleSizes: []*mp4.Sample{{Duration: 1024, Size: uint32(len(data))}},
+	/*
+		moof := &mp4.MoofBox{
+			BoxChildren: []mp4.Box{
+				&mp4.MfhdBox{
+					Sequence: 0,
+				},
+				&mp4.TrafBox{
+					BoxChildren: []mp4.Box{
+						&mp4.TfhdBox{
+							TrackId: 2,
+						},
+						&mp4.TfdtBox{
+							BaseMediaDecodeTime: 0,
+						},
+						&mp4.TrunBox{
+							SampleSizes: []*mp4.Sample{{Duration: 1024, Size: uint32(len(data))}},
+						},
 					},
 				},
 			},
-		},
-	}
-	mdat := &mp4.MdatBox{
-		BoxData: data,
-	}
-
-	moofdata := mp4.BoxWrite(moof)
-
-	sidx := &mp4.SidxBox{
-		ReferenceId:        2,
-		Timescale:          stream.AudioRate,
-		PresentationTime:   0,
-		ReferenceSize:      uint32(len(moofdata)),
-		SubsegmentDuration: 1024,
-	}
-
-	t1off := len(moofdata) - 8 - 4
-	util.WriteB32(moofdata[t1off:t1off+4], uint32(len(moofdata)+8))
-
-	segment := &bytes.Buffer{}
-	segment.Write(moofdata)
-	segment.Write(mp4.BoxWrite(mdat))
-
-	segmentidx := mp4.BoxWrite(sidx)
-	segmentdata := segment.Bytes()
-
-	return stream.SendSegment(segmentidx, segmentdata, false, Audio, timestamp)
-}
-
-func (stream *Stream) FormVideo(videos []*mp4.Sample, data []byte, keyframe bool, timestamp uint32) error {
-	moof := &mp4.MoofBox{
-		BoxChildren: []mp4.Box{
-			&mp4.MfhdBox{
-				Sequence: 0,
-			},
-			&mp4.TrafBox{
-				BoxChildren: []mp4.Box{
-					&mp4.TfhdBox{
-						TrackId: 1,
-						Flags:   0x2000000,
-					},
-					&mp4.TfdtBox{
-						BaseMediaDecodeTime: 0,
-					},
-					&mp4.TrunBox{
-						SampleSizes: videos,
-					},
-				},
-			},
-		},
-	}
-	mdat := &mp4.MdatBox{
-		BoxData: data,
-	}
-
-	moofdata := mp4.BoxWrite(moof)
-
-	sidx := &mp4.SidxBox{
-		ReferenceId:        1,
-		Timescale:          stream.FrameRate,
-		PresentationTime:   0,
-		ReferenceSize:      uint32(len(moofdata)),
-		SubsegmentDuration: 1,
-	}
-
-	t1off := len(moofdata) - len(videos)*8 - 4
-	util.WriteB32(moofdata[t1off:t1off+4], uint32(len(moofdata)+8))
-
-	segment := &bytes.Buffer{}
-	segment.Write(moofdata)
-	segment.Write(mp4.BoxWrite(mdat))
-
-	segmentidx := mp4.BoxWrite(sidx)
-	segmentdata := segment.Bytes()
-
-	return stream.SendSegment(segmentidx, segmentdata, keyframe, Video, timestamp)
-}
-
-func (stream *Stream) SendVideo(data []byte, timestamp uint32) error {
-	buf := &bytes.Buffer{}
-	videos := make([]*mp4.Sample, 0)
-	nalus := stream.BreakNals(data)
-	keyframe := false
-	for _, nalu := range nalus {
-		if nalu.Type == 5 {
-			keyframe = true
 		}
-		if stream.SkipToKeyframe && !keyframe {
+		mdat := &mp4.MdatBox{
+			BoxData: data,
+		}
+
+		moofdata := mp4.BoxWrite(moof)
+
+		sidx := &mp4.SidxBox{
+			ReferenceId:        2,
+			Timescale:          stream.AudioRate,
+			PresentationTime:   0,
+			ReferenceSize:      uint32(len(moofdata)),
+			SubsegmentDuration: 1024,
+			Keyframe:           true,
+		}
+
+		t1off := len(moofdata) - 8 - 4
+		util.WriteB32(moofdata[t1off:t1off+4], uint32(len(moofdata)+8))
+
+		segment := &bytes.Buffer{}
+		segment.Write(moofdata)
+		segment.Write(mp4.BoxWrite(mdat))
+
+		segmentidx := mp4.BoxWrite(sidx)
+		segmentdata := segment.Bytes()
+	*/
+	copydata := make([]byte, len(data))
+	copy(copydata, data)
+	return stream.AddSegment([]*mp4.Sample{{Duration: 1024, Size: uint32(len(data))}}, copydata, Audio, false, 0)
+}
+
+/*
+func (stream *Stream) FormVideo(videos []*mp4.Sample, data []byte, keyframe bool) error {
+		moof := &mp4.MoofBox{
+			BoxChildren: []mp4.Box{
+				&mp4.MfhdBox{
+					Sequence: 0,
+				},
+				&mp4.TrafBox{
+					BoxChildren: []mp4.Box{
+						&mp4.TfhdBox{
+							TrackId: 1,
+							Flags:   0x2000000,
+						},
+						&mp4.TfdtBox{
+							BaseMediaDecodeTime: 0,
+						},
+						&mp4.TrunBox{
+							SampleSizes: videos,
+						},
+					},
+				},
+			},
+		}
+		mdat := &mp4.MdatBox{
+			BoxData: data,
+		}
+
+		moofdata := mp4.BoxWrite(moof)
+
+		sidx := &mp4.SidxBox{
+			ReferenceId:        1,
+			Timescale:          stream.FrameRate,
+			PresentationTime:   0,
+			ReferenceSize:      uint32(len(moofdata)),
+			SubsegmentDuration: 1,
+			Keyframe:           keyframe,
+		}
+
+		t1off := len(moofdata) - len(videos)*8 - 4
+		util.WriteB32(moofdata[t1off:t1off+4], uint32(len(moofdata)+8))
+
+		segment := &bytes.Buffer{}
+		segment.Write(moofdata)
+		segment.Write(mp4.BoxWrite(mdat))
+
+		segmentidx := mp4.BoxWrite(sidx)
+		segmentdata := segment.Bytes()
+
+	return stream.AddSegment(videos, data, Video, keyframe)
+}
+*/
+func (stream *Stream) SendVideo(data []byte, timestamp uint32) error {
+	videos := make([]*mp4.Sample, 0)
+
+	nalus := stream.BreakNals(data)
+
+	segd := make([]byte, 0)
+
+	lframenum := uint64(0)
+
+	lnaltyp := uint64(0)
+	lstyp := uint64(0)
+
+	for _, nalu := range nalus {
+		if nalu.Reader.Type != 1 && nalu.Reader.Type != 5 {
 			continue
-		} else if keyframe {
+		}
+
+		ReadExpGolomb(nalu.Reader.Bitr)
+		nextslice := ReadExpGolomb(nalu.Reader.Bitr)
+		ReadExpGolomb(nalu.Reader.Bitr) // pps id
+		if stream.ColorPlanes {
+			nalu.Reader.Bitr.Read(2)
+		}
+		nextframe := nalu.Reader.Bitr.Read(stream.FrameNumBits)
+
+		if stream.SkipToKeyframe {
+			if nalu.Reader.Type != 5 {
+				continue
+			}
 			stream.SkipToKeyframe = false
 		}
-		if nalu.Type == 12 {
-			continue
-		}
-		//dur := uint32(tvid / stream.FrameRate)
-		/*
-			if len(videos) > 0 && nalu.FrameNum != stream.PrevFrameNum {
-				stream.FormVideo(videos, buf.Bytes(), keyframe)
+
+		if len(segd) > 0 {
+			if lframenum != nextframe {
+				stream.AddSegment(videos, segd, Video, lnaltyp == 5, lstyp)
+
 				videos = videos[:0]
-				buf = &bytes.Buffer{}
-				keyframe = false
+				segd = segd[:0]
 			}
-		*/
+		}
+
 		videos = append(videos, &mp4.Sample{Duration: 1, Size: uint32(len(nalu.Data))})
-		buf.Write(nalu.Data)
-		stream.PrevFrameNum = nalu.FrameNum
+		segd = append(segd, nalu.Data...)
+		lnaltyp = nalu.Reader.Type
+		lstyp = nextslice
+		lframenum = nextframe
 	}
 
-	if len(videos) > 0 {
-		return stream.FormVideo(videos, buf.Bytes(), keyframe, timestamp)
-	} else {
-		return nil
+	if len(segd) > 0 {
+		return stream.AddSegment(videos, segd, Video, lnaltyp == 5, lstyp)
 	}
-
-}
-
-func (stream *Stream) SendSegment(index []byte, data []byte, keyframe bool, typ uint8, timestamp uint32) error {
-	if len(stream.Buffer) > 0 && keyframe {
-		buf := &bytes.Buffer{}
-		for _, segment := range stream.Buffer {
-			buf.Write(segment.Index)
-			buf.Write(segment.Data)
-		}
-		bufdata := buf.Bytes()
-		toremove := make([]*Client, 0)
-		for _, client := range stream.Clients {
-			if !client.Initialized {
-				if _, err := client.Conn.Write(stream.ContainerInit); err != nil {
-					client.Conn.Close()
-					toremove = append(toremove, client)
-					continue
-				}
-				client.Initialized = true
-			} else if !client.Booted && client.FirstVCL {
-				//if _, err := client.Conn.Write(stream.CodecInit); err != nil {
-				//	client.Conn.Close()
-				//	toremove = append(toremove, client)
-				//}
-				client.Booted = true
-			}
-			off := 0
-			wasvideo := false
-			for _, segment := range stream.Buffer {
-				client.Sequence++
-				switch segment.Type {
-				case Audio:
-					util.WriteB64(bufdata[off+presentoff:off+presentoff+8], client.AudioStartTime)
-				case Video:
-					util.WriteB64(bufdata[off+presentoff:off+presentoff+8], client.VideoStartTime)
-				}
-				off += len(segment.Index)
-				util.WriteB32(bufdata[off+sequenceoff:off+sequenceoff+4], client.Sequence)
-				switch segment.Type {
-				case Audio:
-					util.WriteB64(bufdata[off+timeoff:off+timeoff+8], client.AudioStartTime)
-					client.AudioStartTime += 1024
-				case Video:
-					util.WriteB64(bufdata[off+timeoff:off+timeoff+8], client.VideoStartTime)
-					client.VideoStartTime += 1
-					wasvideo = true
-				}
-				off += len(segment.Data)
-			}
-			if wasvideo && !client.FirstVCL {
-				client.FirstVCL = true
-			}
-			if client.FirstVCL {
-				if _, err := client.Conn.Write(bufdata); err != nil {
-					client.Conn.Close()
-					toremove = append(toremove, client)
-					continue
-				}
-			}
-		}
-		stream.Buffer = stream.Buffer[:0]
-		if len(toremove) > 0 {
-			nclients := make([]*Client, 0)
-			for _, client := range stream.Clients {
-				add := true
-				for _, rem := range toremove {
-					if rem == client {
-						add = false
-						break
-					}
-				}
-				if add {
-					nclients = append(nclients, client)
-				}
-			}
-			stream.Clients = nclients
-		}
-	}
-	stream.Buffer = append(stream.Buffer, &Segment{Index: index, Data: data, Type: typ, Timestamp: timestamp})
 	return nil
 }
 
+func (stream *Stream) SendSegment(segmentdata []byte, indexlen int, samples int, typ uint8) error {
+	toremove := make([]*Client, 0)
+	for _, client := range stream.Clients {
+		off := 0
+		switch typ {
+		case Audio:
+			util.WriteB64(segmentdata[presentoff:presentoff+8], client.AudioStartTime)
+		case Video:
+			util.WriteB64(segmentdata[presentoff:presentoff+8], client.VideoStartTime)
+		}
+		off += indexlen
+		util.WriteB32(segmentdata[off+sequenceoff:off+sequenceoff+4], client.Sequence)
+		switch typ {
+		case Audio:
+			util.WriteB64(segmentdata[off+timeoff:off+timeoff+8], client.AudioStartTime)
+			client.AudioStartTime += uint64(1024 * samples)
+		case Video:
+			util.WriteB64(segmentdata[off+timeoff:off+timeoff+8], client.VideoStartTime)
+			client.VideoStartTime += uint64(1 * samples)
+		}
+		client.Sequence++
+
+		if client.Initialized || true {
+			if client.InitFrame != nil {
+				buf := &bytes.Buffer{}
+				buf.Write(client.InitFrame)
+				buf.Write(segmentdata)
+				if _, err := client.Conn.Write(buf.Bytes()); err != nil {
+					client.Conn.Close()
+					toremove = append(toremove, client)
+					continue
+				}
+				client.InitFrame = nil
+			} else {
+				if _, err := client.Conn.Write(segmentdata); err != nil {
+					client.Conn.Close()
+					toremove = append(toremove, client)
+					continue
+				}
+			}
+		} else {
+			client.InitFrame = make([]byte, len(segmentdata))
+			copy(client.InitFrame, segmentdata)
+			client.Initialized = true
+		}
+	}
+
+	if len(toremove) > 0 {
+		nclients := make([]*Client, 0)
+		for _, client := range stream.Clients {
+			add := true
+			for _, rem := range toremove {
+				if rem == client {
+					add = false
+					break
+				}
+			}
+			if add {
+				nclients = append(nclients, client)
+			}
+		}
+		stream.Clients = nclients
+	}
+	return nil
+}
+
+func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, typ uint8, keyframe bool, slicetyp uint64) error {
+	if len(stream.AudioBuffer) > 0 && keyframe {
+		databuf := &bytes.Buffer{}
+		samples := make([]*mp4.Sample, 0)
+		for _, seg := range stream.AudioBuffer {
+			samples = append(samples, seg.Samples...)
+			databuf.Write(seg.Data)
+		}
+
+		moof := &mp4.MoofBox{
+			BoxChildren: []mp4.Box{
+				&mp4.MfhdBox{
+					Sequence: 0,
+				},
+				&mp4.TrafBox{
+					BoxChildren: []mp4.Box{
+						&mp4.TfhdBox{
+							TrackId: 2,
+						},
+						&mp4.TfdtBox{
+							BaseMediaDecodeTime: 0,
+						},
+						&mp4.TrunBox{
+							Samples: samples,
+						},
+					},
+				},
+			},
+		}
+
+		moofdata := mp4.BoxWrite(moof)
+
+		mdat := &mp4.MdatBox{
+			BoxData: databuf.Bytes(),
+		}
+
+		mdata := mp4.BoxWrite(mdat)
+
+		sidx := &mp4.SidxBox{
+			ReferenceId:        2,
+			Timescale:          stream.AudioRate,
+			PresentationTime:   0,
+			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
+			SubsegmentDuration: 1024 * uint32(len(samples)),
+			Keyframe:           true,
+		}
+
+		t1off := len(moofdata) - len(samples)*12 - 4
+		util.WriteB32(moofdata[t1off:t1off+4], uint32(len(moofdata)+8))
+
+		sidxdata := mp4.BoxWrite(sidx)
+
+		segment := &bytes.Buffer{}
+		segment.Write(sidxdata)
+		segment.Write(moofdata)
+		segment.Write(mdata)
+
+		segmentdata := segment.Bytes()
+		stream.SendSegment(segmentdata, len(sidxdata), len(samples), Audio)
+		stream.AudioBuffer = stream.AudioBuffer[:0]
+	}
+
+	if len(stream.VideoBuffer) > 0 && keyframe {
+		databuf := &bytes.Buffer{}
+		samples := make([]*mp4.Sample, 0)
+		for i, seg := range stream.VideoBuffer {
+			pts := i
+			if seg.SliceType == 5 || seg.SliceType == 7 {
+				M := 0
+				for n := i + 1; n < len(stream.VideoBuffer); n++ {
+					if stream.VideoBuffer[n].SliceType == 5 || stream.VideoBuffer[n].SliceType == 7 {
+						break
+					}
+					if stream.VideoBuffer[n].SliceType == 6 {
+						M++
+					}
+				}
+				pts += M + 1
+			}
+
+			for x, sample := range seg.Samples {
+				if x > 0 {
+					//sample.Duration = 0
+				}
+				sample.Scto = uint32(pts - i)
+				samples = append(samples, sample)
+			}
+			databuf.Write(seg.Data)
+		}
+
+		moof := &mp4.MoofBox{
+			BoxChildren: []mp4.Box{
+				&mp4.MfhdBox{
+					Sequence: 0,
+				},
+				&mp4.TrafBox{
+					BoxChildren: []mp4.Box{
+						&mp4.TfhdBox{
+							TrackId: 1,
+						},
+						&mp4.TfdtBox{
+							BaseMediaDecodeTime: 0,
+						},
+						&mp4.TrunBox{
+							Samples: samples,
+						},
+					},
+				},
+			},
+		}
+
+		moofdata := mp4.BoxWrite(moof)
+
+		mdat := &mp4.MdatBox{
+			BoxData: databuf.Bytes(),
+		}
+
+		mdata := mp4.BoxWrite(mdat)
+
+		sidx := &mp4.SidxBox{
+			ReferenceId:        1,
+			Timescale:          stream.FrameRate,
+			PresentationTime:   0,
+			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
+			SubsegmentDuration: 1 * uint32(len(samples)),
+			Keyframe:           true,
+		}
+
+		t1off := len(moofdata) - len(samples)*12 - 4
+		util.WriteB32(moofdata[t1off:t1off+4], uint32(len(moofdata)+8))
+
+		sidxdata := mp4.BoxWrite(sidx)
+
+		segment := &bytes.Buffer{}
+		segment.Write(sidxdata)
+		segment.Write(moofdata)
+		segment.Write(mdata)
+
+		segmentdata := segment.Bytes()
+		stream.SendSegment(segmentdata, len(sidxdata), len(samples), Video)
+		stream.VideoBuffer = stream.VideoBuffer[:0]
+	}
+
+	/*
+		if len(stream.Buffer) > 0 && keyframe {
+			buf := &bytes.Buffer{}
+			for _, segment := range stream.Buffer {
+				buf.Write(segment.Index)
+				buf.Write(segment.Data)
+			}
+			bufdata := buf.Bytes()
+			toremove := make([]*Client, 0)
+			for _, client := range stream.Clients {
+				if !client.Initialized {
+					if _, err := client.Conn.Write(stream.ContainerInit); err != nil {
+						client.Conn.Close()
+						toremove = append(toremove, client)
+						continue
+					}
+					client.Initialized = true
+				} else if !client.Booted && client.FirstVCL {
+					//if _, err := client.Conn.Write(stream.CodecInit); err != nil {
+					//	client.Conn.Close()
+					//	toremove = append(toremove, client)
+					//}
+					client.Booted = true
+				}
+				off := 0
+				wasvideo := false
+				for _, segment := range stream.Buffer {
+					switch segment.Type {
+					case Audio:
+						util.WriteB64(bufdata[off+presentoff:off+presentoff+8], client.AudioStartTime)
+					case Video:
+						util.WriteB64(bufdata[off+presentoff:off+presentoff+8], client.VideoStartTime)
+					}
+					off += len(segment.Index)
+					util.WriteB32(bufdata[off+sequenceoff:off+sequenceoff+4], client.Sequence)
+					switch segment.Type {
+					case Audio:
+						util.WriteB64(bufdata[off+timeoff:off+timeoff+8], client.AudioStartTime)
+						client.AudioStartTime += 1024
+					case Video:
+						util.WriteB64(bufdata[off+timeoff:off+timeoff+8], client.VideoStartTime)
+						client.VideoStartTime += 1
+						wasvideo = true
+					}
+					off += len(segment.Data)
+					client.Sequence++
+				}
+				if wasvideo && !client.FirstVCL {
+					client.FirstVCL = true
+				}
+				if client.FirstVCL {
+					if _, err := client.Conn.Write(bufdata); err != nil {
+						client.Conn.Close()
+						toremove = append(toremove, client)
+						continue
+					}
+				}
+			}
+			stream.Buffer = stream.Buffer[:0]
+			if len(toremove) > 0 {
+				nclients := make([]*Client, 0)
+				for _, client := range stream.Clients {
+					add := true
+					for _, rem := range toremove {
+						if rem == client {
+							add = false
+							break
+						}
+					}
+					if add {
+						nclients = append(nclients, client)
+					}
+				}
+				stream.Clients = nclients
+			}
+		}
+	*/
+	switch typ {
+	case Audio:
+		stream.AudioBuffer = append(stream.AudioBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp})
+	case Video:
+		stream.VideoBuffer = append(stream.VideoBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp})
+	}
+	return nil
+}
+
+/*
 func (stream *Stream) TryInitCodec(data []byte) error {
 	buf := &bytes.Buffer{}
 	videos := make([]*mp4.Sample, 0)
@@ -557,7 +822,7 @@ func (stream *Stream) TryInitCodec(data []byte) error {
 		}
 	}
 
-	stream.FormVideo(videos, buf.Bytes(), keyframe, 0)
+	stream.FormVideo(videos, buf.Bytes(), keyframe)
 
 	if s == nil {
 		return nil
@@ -599,7 +864,7 @@ func (stream *Stream) TryInitCodec(data []byte) error {
 	stream.SkipToKeyframe = true
 	return nil
 }
-
+*/
 func (stream *Stream) BreakNals(data []byte) []*Nalu {
 	nalus := make([]*Nalu, 0)
 	ptr := uint32(0)
@@ -615,20 +880,8 @@ func (stream *Stream) BreakNals(data []byte) []*Nalu {
 		case 4:
 			length = util.ReadB32(data[ptr:ptr+4]) + 4
 		}
-		p := ptr + stream.LengthSize
-		nalutype := data[p] & 0x1f
-		p++
-		if uint32(len(data)) >= p+3 && bytes.Equal(data[p:p+3], []byte{0x00, 0x00, 0x03}) {
-			p += 3
-		} else {
-			p += 1
-		}
-		bitptr := uint64(p * 8)
-		ReadExpGolomb(data, &bitptr) // firstmb
-		ReadExpGolomb(data, &bitptr) // slicetype
-		ReadExpGolomb(data, &bitptr) // ppsid
-		frameNum := uint32(ReadBits(data, &bitptr, uint64(stream.FrameNumBits)))
-		nalus = append(nalus, &Nalu{nalutype, frameNum, data[ptr : ptr+length]})
+		r := MakeNaluReader(data[ptr+4 : ptr+length])
+		nalus = append(nalus, &Nalu{Reader: r, Data: data[ptr : ptr+length]})
 		ptr += length
 		if ptr >= uint32(len(data)) {
 			break
@@ -637,6 +890,88 @@ func (stream *Stream) BreakNals(data []byte) []*Nalu {
 	return nalus
 }
 
+type NaluReader struct {
+	Data   []byte
+	Ptr    int
+	Bitr   *BitReader
+	RefIdc uint64
+	Type   uint64
+	Rbsp   bool
+	Buf    []byte
+}
+
+func MakeNaluReader(data []byte) *NaluReader {
+	r := &NaluReader{Data: data}
+	r.Bitr = &BitReader{Reader: r}
+	r.Bitr.Read(1) // zero
+	r.RefIdc = r.Bitr.Read(2)
+	r.Type = r.Bitr.Read(5)
+	if r.Type == 14 || r.Type == 20 || r.Type == 21 {
+		return nil
+	}
+	r.Rbsp = true
+	return r
+}
+
+func (r *NaluReader) ReadByte() (byte, error) {
+	if r.Ptr >= len(r.Data) {
+		return 0, nil
+	}
+
+	if r.Rbsp {
+		if len(r.Buf) > 0 {
+			b := r.Buf[0]
+			r.Buf = r.Buf[1:]
+			return b, nil
+		}
+
+		if r.Ptr+3 <= len(r.Data) && util.ReadB24(r.Data[r.Ptr:r.Ptr+3]) == 0x000003 {
+			r.Buf = r.Data[r.Ptr+1 : r.Ptr+2]
+			r.Ptr += 3
+			return 0, nil
+		}
+	}
+
+	b := r.Data[r.Ptr]
+	r.Ptr++
+	return b, nil
+}
+
+type BitReader struct {
+	Reader io.ByteReader
+	Init   bool
+	Byte   byte
+	Bit    uint8
+}
+
+func (b *BitReader) Read(nbits uint64) uint64 {
+	if !b.Init {
+		b.Byte, _ = b.Reader.ReadByte()
+		b.Bit = 0
+		b.Init = true
+	}
+	res := uint64(0)
+	for i := uint64(0); i < nbits; i++ {
+		if b.Bit == 8 {
+			b.Byte, _ = b.Reader.ReadByte()
+			b.Bit = 0
+		}
+		res <<= 1
+		res |= uint64(b.Byte>>(7-b.Bit)) & 1
+		b.Bit++
+	}
+	return res
+}
+
+func ReadExpGolomb(b *BitReader) uint64 {
+	lzero := uint64(0)
+	for b.Read(1) == 0 {
+		lzero++
+	}
+	return 1<<lzero + b.Read(lzero) - 1
+}
+
+/*
 func ReadBits(data []byte, bitptr *uint64, nbits uint64) uint64 {
 	ptr := *bitptr / 8
 	est := (*bitptr + nbits) / 8
@@ -669,9 +1004,10 @@ func ReadBits(data []byte, bitptr *uint64, nbits uint64) uint64 {
 }
 
 func ReadExpGolomb(data []byte, bitptr *uint64) uint64 {
-	lzero := float64(-1)
-	for b := uint64(0); b == 0; lzero++ {
-		b = ReadBits(data, bitptr, 1)
+	lzero := uint64(0)
+	for ReadBits(data, bitptr, 1) == 0 {
+		lzero++
 	}
-	return uint64(math.Pow(2, lzero)) - 1 + ReadBits(data, bitptr, uint64(lzero))
+	return 1<<lzero + ReadBits(data, bitptr, lzero) - 1
 }
+*/

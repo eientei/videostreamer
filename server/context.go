@@ -189,7 +189,7 @@ func (stream *Stream) InitContainer(avcC []byte) error {
 			&mp4.MvhdBox{
 				CreationTime:     0,
 				ModificationTime: 0,
-				Timescale:        1000,
+				Timescale:        1,
 				Duration:         0,
 				NextTrackId:      0xFFFFFFFF,
 			},

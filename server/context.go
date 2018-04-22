@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 
@@ -663,6 +664,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
 		for i, seg := range stream.VideoBuffer {
+			fmt.Println(seg.SliceType)
 			pts := i
 			if seg.SliceType == 7 {
 				keyframe = true

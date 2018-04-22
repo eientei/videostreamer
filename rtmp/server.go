@@ -47,6 +47,7 @@ type Message struct {
 type Client struct {
 	Context  *server.Context
 	Conn     net.Conn
+	Drainer  []byte
 	InChunk  []byte
 	OutChunk []byte
 	Assembly map[uint16]*Message
@@ -324,10 +325,10 @@ func (client *Client) ProcessMessage(message *Message) error {
 		}
 	case SetChunkSizeMessage:
 		client.InChunk = make([]byte, util.ReadB32(message.Data))
+		client.Drainer = make([]byte, len(client.InChunk)*10)
 	default:
 		if message.Type == 0 {
-			drainer := make([]byte, len(client.InChunk)*10)
-			if _, err := client.Conn.Read(drainer); err != nil {
+			if _, err := client.Conn.Read(client.Drainer); err != nil {
 				return err
 			}
 		}
@@ -336,10 +337,10 @@ func (client *Client) ProcessMessage(message *Message) error {
 	return nil
 }
 
-func (client *Client) Converse() error {
+func (client *Client) ReadFormat() (uint8, uint16, error) {
 	fst := make([]byte, 1)
 	if _, err := client.Conn.Read(fst); err != nil {
-		return err
+		return 0, 0, err
 	}
 	client.Unacked += 1
 
@@ -349,33 +350,46 @@ func (client *Client) Converse() error {
 	if id == 0 {
 		cid := make([]byte, 1)
 		if _, err := client.Conn.Read(cid); err != nil {
-			return err
+			return 0, 0, err
 		}
 		client.Unacked += 1
 		id = 64 + uint16(cid[0])
 	} else if id == 1 {
 		cid := make([]byte, 2)
 		if _, err := client.Conn.Read(cid); err != nil {
-			return err
+			return 0, 0, err
 		}
 		client.Unacked += 2
 		id = 64 + uint16(cid[0])*256 + uint16(cid[1])
 	}
+	return format, id, nil
+}
 
-	//fmt.Println(id, "FMT", format)
+func (client *Client) Converse() error {
+	format, id, err := client.ReadFormat()
+	if err != nil {
+		return err
+	}
 
 	if _, ok := client.Assembly[id]; !ok {
 		client.Assembly[id] = &Message{
 			Chunk:  id,
 			Stream: 1,
 		}
-		/*
-			if format != 0 {
-				fmt.Println("ERR FMT", format)
-				return ClosingConnection
+		for {
+			if format == 0 || format == 1 {
+				break
 			}
-		*/
+			if _, err := client.Conn.Read(client.Drainer); err != nil {
+				return err
+			}
+			format, id, err = client.ReadFormat()
+			if err != nil {
+				return err
+			}
+		}
 	}
+
 	message := client.Assembly[id]
 
 	switch format {
@@ -496,6 +510,7 @@ func Serve(context *server.Context, conn net.Conn, logger *log.Logger) error {
 	client := &Client{
 		Context:  context,
 		Conn:     conn,
+		Drainer:  make([]byte, 128*10),
 		InChunk:  make([]byte, 128),
 		OutChunk: make([]byte, 128),
 		Assembly: make(map[uint16]*Message),

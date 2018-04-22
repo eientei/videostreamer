@@ -619,9 +619,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		}
 
 		miss := uint32(len(samples)) % (stream.AudioRate / 1024)
-		for i := uint32(0); i < miss; i++ {
-			samples = append(samples, &mp4.Sample{Duration: 1000 * tvid * 1024 / stream.AudioRate, Size: 0, Scto: 0})
-		}
+		samples[len(samples)-1].Duration += miss * 1000 * tvid * 1024 / stream.AudioRate
 
 		moof := &mp4.MoofBox{
 			BoxChildren: []mp4.Box{
@@ -714,9 +712,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		}
 
 		miss := uint32(len(samples)) % stream.FrameRate
-		for i := uint32(0); i < miss; i++ {
-			samples = append(samples, &mp4.Sample{Duration: 1000 * tvid / stream.FrameRate, Size: 0, Scto: 0})
-		}
+		samples[len(samples)-1].Duration += 1000 * tvid / stream.FrameRate
 
 		moof := &mp4.MoofBox{
 			BoxChildren: []mp4.Box{

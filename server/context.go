@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 
@@ -608,7 +609,8 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 	vsamp := 0
 	vtime := uint64(0)
 
-	if len(stream.AudioBuffer) >= 0 && slicetyp == 7 {
+	fmt.Println(slicetyp, len(stream.AudioBuffer), len(stream.VideoBuffer))
+	if len(stream.AudioBuffer) > 0 && slicetyp == 7 {
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
 		for _, seg := range stream.AudioBuffer {

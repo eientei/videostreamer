@@ -83,7 +83,7 @@ type Stream struct {
 
 	SkipToKeyframe bool
 	AudioBuffer    []*Segment
-	VideoBuffer []*Segment
+	VideoBuffer    []*Segment
 }
 
 type Context struct {
@@ -721,7 +721,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 	}
 	switch typ {
 	case Audio:
-		/stream.AudioBuffer = append(stream.AudioBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp})
+		stream.AudioBuffer = append(stream.AudioBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp})
 	case Video:
 		stream.VideoBuffer = append(stream.VideoBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp})
 	}

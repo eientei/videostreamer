@@ -296,11 +296,11 @@ func (client *Client) ProcessAmf(values []amf.Value) error {
 		client.Stream = &server.Stream{
 			AudioIn: make(chan []byte, 64),
 			VideoIn: make(chan []byte, 64),
-			Name:   streamName,
-			Logger: log.New(os.Stdout, "[/"+streamName+"] ", log.LstdFlags),
+			Name:    streamName,
+			Logger:  log.New(os.Stdout, "[/"+streamName+"] ", log.LstdFlags),
 		}
 		client.Context.Streams[streamName] = client.Stream
-		go client.Stream.Run()_
+		go client.Stream.Run()
 	}
 	return nil
 }

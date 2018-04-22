@@ -421,7 +421,7 @@ func (stream *Stream) SendAudio(data []byte) error {
 	*/
 	copydata := make([]byte, len(data))
 	copy(copydata, data)
-	return stream.AddSegment([]*mp4.Sample{{Duration: 1024, Size: uint32(len(data))}}, copydata, Audio, 0)
+	return stream.AddSegment([]*mp4.Sample{{Duration: 1, Size: uint32(len(data))}}, copydata, Audio, 0)
 }
 
 /*
@@ -544,7 +544,7 @@ func (stream *Stream) SendSegment(segmentdata []byte, indexlen int, samples int,
 		switch typ {
 		case Audio:
 			util.WriteB64(segmentdata[off+timeoff:off+timeoff+8], client.AudioStartTime)
-			client.AudioStartTime += uint64(1024 * samples)
+			client.AudioStartTime += uint64(1 * samples)
 		case Video:
 			util.WriteB64(segmentdata[off+timeoff:off+timeoff+8], client.VideoStartTime)
 			client.VideoStartTime += uint64(1 * samples)

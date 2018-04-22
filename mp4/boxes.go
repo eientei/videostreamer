@@ -856,6 +856,7 @@ func (box *MehdBox) Data() []byte {
 
 type TrexBox struct {
 	TrackId uint32
+	Defdur  uint32
 }
 
 func (box *TrexBox) Name() string {
@@ -871,7 +872,7 @@ func (box *TrexBox) Data() []byte {
 	util.Write8(buf, 0)
 	util.Write24(buf, 0)
 	util.Write32(buf, box.TrackId)
-	util.Write32(buf, 1)
+	util.Write32(buf, box.Defdur)
 	util.Write32(buf, 1)
 	util.Write32(buf, 0)
 	util.Write32(buf, 0)

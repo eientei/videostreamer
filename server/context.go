@@ -318,9 +318,11 @@ func (stream *Stream) InitContainer(avcC []byte) error {
 				BoxChildren: []mp4.Box{
 					&mp4.TrexBox{
 						TrackId: 1,
+						Defdur:  1000 / stream.FrameRate,
 					},
 					&mp4.TrexBox{
 						TrackId: 2,
+						Defdur:  (1000 * 1024) / stream.AudioRate,
 					},
 				},
 			},

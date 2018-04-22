@@ -82,8 +82,8 @@ type Stream struct {
 	ColorPlanes  bool
 
 	SkipToKeyframe bool
-	AudioBuffer    []*Segment
-	VideoBuffer    []*Segment
+	//AudioBuffer    []*Segment
+	VideoBuffer []*Segment
 }
 
 type Context struct {
@@ -574,13 +574,13 @@ func (stream *Stream) SendSegment(segmentdata []byte, indexlen int, samples int,
 }
 
 func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, typ uint8, keyframe bool, slicetyp uint64) error {
-	if len(stream.AudioBuffer) > 0 && keyframe {
+	if typ == Audio {
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
-		for _, seg := range stream.AudioBuffer {
-			samples = append(samples, seg.Samples...)
-			databuf.Write(seg.Data)
-		}
+		//for _, seg := range stream.AudioBuffer {
+		samples = append(samples, newsamples...)
+		databuf.Write(sampledata)
+		//}
 
 		moof := &mp4.MoofBox{
 			BoxChildren: []mp4.Box{
@@ -632,10 +632,10 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 
 		segmentdata := segment.Bytes()
 		stream.SendSegment(segmentdata, len(sidxdata), len(samples), Audio)
-		stream.AudioBuffer = stream.AudioBuffer[:0]
+		//stream.AudioBuffer = stream.AudioBuffer[:0]
 	}
 
-	if len(stream.VideoBuffer) > 0 && keyframe {
+	if len(stream.VideoBuffer) > 0 && slicetyp == 5 || slicetyp == 7 {
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
 		for i, seg := range stream.VideoBuffer {
@@ -715,87 +715,9 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		stream.SendSegment(segmentdata, len(sidxdata), len(samples), Video)
 		stream.VideoBuffer = stream.VideoBuffer[:0]
 	}
-
-	/*
-		if len(stream.Buffer) > 0 && keyframe {
-			buf := &bytes.Buffer{}
-			for _, segment := range stream.Buffer {
-				buf.Write(segment.Index)
-				buf.Write(segment.Data)
-			}
-			bufdata := buf.Bytes()
-			toremove := make([]*Client, 0)
-			for _, client := range stream.Clients {
-				if !client.Initialized {
-					if _, err := client.Conn.Write(stream.ContainerInit); err != nil {
-						client.Conn.Close()
-						toremove = append(toremove, client)
-						continue
-					}
-					client.Initialized = true
-				} else if !client.Booted && client.FirstVCL {
-					//if _, err := client.Conn.Write(stream.CodecInit); err != nil {
-					//	client.Conn.Close()
-					//	toremove = append(toremove, client)
-					//}
-					client.Booted = true
-				}
-				off := 0
-				wasvideo := false
-				for _, segment := range stream.Buffer {
-					switch segment.Type {
-					case Audio:
-						util.WriteB64(bufdata[off+presentoff:off+presentoff+8], client.AudioStartTime)
-					case Video:
-						util.WriteB64(bufdata[off+presentoff:off+presentoff+8], client.VideoStartTime)
-					}
-					off += len(segment.Index)
-					util.WriteB32(bufdata[off+sequenceoff:off+sequenceoff+4], client.Sequence)
-					switch segment.Type {
-					case Audio:
-						util.WriteB64(bufdata[off+timeoff:off+timeoff+8], client.AudioStartTime)
-						client.AudioStartTime += 1024
-					case Video:
-						util.WriteB64(bufdata[off+timeoff:off+timeoff+8], client.VideoStartTime)
-						client.VideoStartTime += 1
-						wasvideo = true
-					}
-					off += len(segment.Data)
-					client.Sequence++
-				}
-				if wasvideo && !client.FirstVCL {
-					client.FirstVCL = true
-				}
-				if client.FirstVCL {
-					if _, err := client.Conn.Write(bufdata); err != nil {
-						client.Conn.Close()
-						toremove = append(toremove, client)
-						continue
-					}
-				}
-			}
-			stream.Buffer = stream.Buffer[:0]
-			if len(toremove) > 0 {
-				nclients := make([]*Client, 0)
-				for _, client := range stream.Clients {
-					add := true
-					for _, rem := range toremove {
-						if rem == client {
-							add = false
-							break
-						}
-					}
-					if add {
-						nclients = append(nclients, client)
-					}
-				}
-				stream.Clients = nclients
-			}
-		}
-	*/
 	switch typ {
 	case Audio:
-		stream.AudioBuffer = append(stream.AudioBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp})
+		//stream.AudioBuffer = append(stream.AudioBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp})
 	case Video:
 		stream.VideoBuffer = append(stream.VideoBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp})
 	}

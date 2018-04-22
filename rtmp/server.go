@@ -328,13 +328,11 @@ func (client *Client) ProcessMessage(message *Message) error {
 	default:
 		if message.Type == 0 {
 			drainer := make([]byte, len(client.InChunk)*10)
-			if n, err := client.Conn.Read(client.InChunk); err != nil {
+			if _, err := client.Conn.Read(drainer); err != nil {
 				return err
-			} else {
-				fmt.Println("DRAIN", n, drainer)
 			}
 		}
-		client.Logger.Println(message)
+		//client.Logger.Println(message)
 	}
 	return nil
 }
@@ -456,9 +454,9 @@ func (client *Client) Converse() error {
 		}
 	}
 
-	if message.Extended {
-		fmt.Println("EXTEND")
-	}
+	//if message.Extended {
+	//fmt.Println("EXTEND")
+	//}
 
 	length := message.Length - uint32(len(message.Data))
 	if length > uint32(len(client.InChunk)) {

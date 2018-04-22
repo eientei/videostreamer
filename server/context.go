@@ -421,7 +421,7 @@ func (stream *Stream) SendAudio(data []byte) error {
 	*/
 	copydata := make([]byte, len(data))
 	copy(copydata, data)
-	return stream.AddSegment([]*mp4.Sample{{Duration: 1000, Size: uint32(len(data))}}, copydata, Audio, 0)
+	return stream.AddSegment([]*mp4.Sample{{Duration: 1023, Size: uint32(len(data))}}, copydata, Audio, 0)
 }
 
 /*

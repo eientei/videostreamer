@@ -529,50 +529,31 @@ func (stream *Stream) SendVideo(data []byte) error {
 	return nil
 }
 
-func (stream *Stream) SendSegment(segmentdata []byte, indexlen int, samples int, typ uint8) error {
+func (stream *Stream) SendSegment(viddata []byte, vsidx int, vsamp int, auddata []byte, asidx int, asamp int) error {
 	toremove := make([]*Client, 0)
 	for _, client := range stream.Clients {
-		off := 0
-		switch typ {
-		case Audio:
-			util.WriteB64(segmentdata[presentoff:presentoff+8], client.AudioStartTime)
-		case Video:
-			util.WriteB64(segmentdata[presentoff:presentoff+8], client.VideoStartTime)
-		}
-		off += indexlen
-		util.WriteB32(segmentdata[off+sequenceoff:off+sequenceoff+4], client.Sequence)
-		switch typ {
-		case Audio:
-			util.WriteB64(segmentdata[off+timeoff:off+timeoff+8], client.AudioStartTime)
-			client.AudioStartTime += uint64(1024 * samples)
-		case Video:
-			util.WriteB64(segmentdata[off+timeoff:off+timeoff+8], client.VideoStartTime)
-			client.VideoStartTime += uint64(1 * samples)
-		}
+		voff := 0
+		aoff := 0
+		util.WriteB64(viddata[presentoff:presentoff+8], client.VideoStartTime)
+		util.WriteB64(auddata[presentoff:presentoff+8], client.AudioStartTime)
+		voff += vsidx
+		aoff += asidx
+
+		util.WriteB32(viddata[voff+sequenceoff:voff+sequenceoff+4], client.Sequence)
+		client.Sequence++
+		util.WriteB32(auddata[aoff+sequenceoff:aoff+sequenceoff+4], client.Sequence)
 		client.Sequence++
 
-		if client.Initialized || true {
-			if client.InitFrame != nil {
-				buf := &bytes.Buffer{}
-				buf.Write(client.InitFrame)
-				buf.Write(segmentdata)
-				if _, err := client.Conn.Write(buf.Bytes()); err != nil {
-					client.Conn.Close()
-					toremove = append(toremove, client)
-					continue
-				}
-				client.InitFrame = nil
-			} else {
-				if _, err := client.Conn.Write(segmentdata); err != nil {
-					client.Conn.Close()
-					toremove = append(toremove, client)
-					continue
-				}
-			}
-		} else {
-			client.InitFrame = make([]byte, len(segmentdata))
-			copy(client.InitFrame, segmentdata)
-			client.Initialized = true
+		util.WriteB64(viddata[voff+timeoff:voff+timeoff+8], client.VideoStartTime)
+		client.VideoStartTime += uint64(1 * vsamp)
+
+		util.WriteB64(auddata[aoff+timeoff:aoff+timeoff+8], client.AudioStartTime)
+		client.AudioStartTime += uint64(1024 * asamp)
+
+		if _, err := client.Conn.Write(append(viddata, auddata...)); err != nil {
+			client.Conn.Close()
+			toremove = append(toremove, client)
+			continue
 		}
 	}
 
@@ -596,7 +577,16 @@ func (stream *Stream) SendSegment(segmentdata []byte, indexlen int, samples int,
 }
 
 func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, typ uint8, slicetyp uint64) error {
-	if uint32(len(stream.AudioBuffer))*1024 >= stream.AudioRate {
+	asegment := &bytes.Buffer{}
+	vsegment := &bytes.Buffer{}
+
+	asidx := 0
+	vsidx := 0
+
+	asamp := 0
+	vsamp := 0
+
+	if len(stream.AudioBuffer) > 0 && slicetyp == 7 {
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
 		for _, seg := range stream.AudioBuffer {
@@ -647,13 +637,12 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 
 		sidxdata := mp4.BoxWrite(sidx)
 
-		segment := &bytes.Buffer{}
-		segment.Write(sidxdata)
-		segment.Write(moofdata)
-		segment.Write(mdata)
+		asegment.Write(sidxdata)
+		asegment.Write(moofdata)
+		asegment.Write(mdata)
 
-		segmentdata := segment.Bytes()
-		stream.SendSegment(segmentdata, len(sidxdata), len(samples), Audio)
+		asidx = len(sidxdata)
+		asamp = len(samples)
 		stream.AudioBuffer = stream.AudioBuffer[:0]
 	}
 
@@ -732,13 +721,12 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 
 		sidxdata := mp4.BoxWrite(sidx)
 
-		segment := &bytes.Buffer{}
-		segment.Write(sidxdata)
-		segment.Write(moofdata)
-		segment.Write(mdata)
+		vsegment.Write(sidxdata)
+		vsegment.Write(moofdata)
+		vsegment.Write(mdata)
 
-		segmentdata := segment.Bytes()
-		stream.SendSegment(segmentdata, len(sidxdata), len(samples), Video)
+		vsidx = len(sidxdata)
+		vsamp = len(samples)
 		stream.VideoBuffer = stream.VideoBuffer[:0]
 	}
 	switch typ {
@@ -747,6 +735,8 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 	case Video:
 		stream.VideoBuffer = append(stream.VideoBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp})
 	}
+
+	stream.SendSegment(vsegment.Bytes(), vsidx, vsamp, asegment.Bytes(), asidx, asamp)
 	return nil
 }
 

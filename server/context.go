@@ -14,7 +14,7 @@ import (
 var InvalidProfile = errors.New("invalid profile")
 var UnknownCodec = errors.New("unknown codec")
 
-const tvid = 1000
+const tvid = 10000
 
 const presentoff = 0 +
 	8 + // sidx

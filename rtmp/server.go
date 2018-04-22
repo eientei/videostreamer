@@ -312,13 +312,21 @@ func (client *Client) ProcessMessage(message *Message) error {
 	case WindowAcknowledgementSizeMessage:
 		client.Acksize = util.ReadB32(message.Data)
 	case AudioMessage:
-		if err := client.Stream.Audio(message.Data, message.Timestamp); err != nil {
-			return err
-		}
+		go func() {
+			copydata := make([]byte, len(message.Data))
+			copy(copydata, message.Data)
+			if err := client.Stream.Audio(copydata, message.Timestamp); err != nil {
+				client.Conn.Close()
+			}
+		}()
 	case VideoMessage:
-		if err := client.Stream.Video(message.Data, message.Timestamp); err != nil {
-			return err
-		}
+		go func() {
+			copydata := make([]byte, len(message.Data))
+			copy(copydata, message.Data)
+			if err := client.Stream.Video(copydata, message.Timestamp); err != nil {
+				client.Conn.Close()
+			}
+		}()
 	case MetadataMessage:
 		if err := client.Stream.Meta(message.Data); err != nil {
 			return err

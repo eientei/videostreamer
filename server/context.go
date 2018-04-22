@@ -421,7 +421,7 @@ func (stream *Stream) SendAudio(data []byte) error {
 	*/
 	copydata := make([]byte, len(data))
 	copy(copydata, data)
-	return stream.AddSegment([]*mp4.Sample{{Duration: 1024, Size: uint32(len(data))}}, copydata, Audio, 0)
+	return stream.AddSegment([]*mp4.Sample{{Duration: 1050, Size: uint32(len(data))}}, copydata, Audio, 0)
 }
 
 /*
@@ -548,7 +548,7 @@ func (stream *Stream) SendSegment(viddata []byte, vsidx int, vsamp int, auddata 
 		client.VideoStartTime += uint64(1 * vsamp)
 
 		util.WriteB64(auddata[aoff+timeoff:aoff+timeoff+8], client.AudioStartTime)
-		client.AudioStartTime += uint64(1024 * asamp)
+		client.AudioStartTime += uint64(1050 * asamp)
 
 		if _, err := client.Conn.Write(append(viddata, auddata...)); err != nil {
 			client.Conn.Close()
@@ -628,7 +628,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			Timescale:          stream.AudioRate,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
-			SubsegmentDuration: 1024 * uint32(len(samples)),
+			SubsegmentDuration: 1050 * uint32(len(samples)),
 			Keyframe:           true,
 		}
 

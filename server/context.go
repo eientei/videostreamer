@@ -736,7 +736,9 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		stream.VideoBuffer = append(stream.VideoBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp})
 	}
 
-	stream.SendSegment(vsegment.Bytes(), vsidx, vsamp, asegment.Bytes(), asidx, asamp)
+	if vsegment.Len() > 0 && asegment.Len() > 0 {
+		stream.SendSegment(vsegment.Bytes(), vsidx, vsamp, asegment.Bytes(), asidx, asamp)
+	}
 	return nil
 }
 

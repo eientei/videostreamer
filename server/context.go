@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 
@@ -501,7 +500,6 @@ func (stream *Stream) SendVideo(data []byte, time uint64) error {
 
 		ReadExpGolomb(nalu.Reader.Bitr)
 		nextslice := ReadExpGolomb(nalu.Reader.Bitr)
-		fmt.Println(nextslice)
 		ReadExpGolomb(nalu.Reader.Bitr) // pps id
 		if stream.ColorPlanes {
 			nalu.Reader.Bitr.Read(2)

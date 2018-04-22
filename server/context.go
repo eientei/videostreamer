@@ -532,23 +532,25 @@ func (stream *Stream) SendVideo(data []byte) error {
 func (stream *Stream) SendSegment(viddata []byte, vsidx int, vsamp int, auddata []byte, asidx int, asamp int) error {
 	toremove := make([]*Client, 0)
 	for _, client := range stream.Clients {
-		voff := 0
-		aoff := 0
-		util.WriteB64(viddata[presentoff:presentoff+8], client.VideoStartTime)
-		util.WriteB64(auddata[presentoff:presentoff+8], client.AudioStartTime)
-		voff += vsidx
-		aoff += asidx
+		if len(viddata) > 0 {
+			voff := 0
+			util.WriteB64(viddata[presentoff:presentoff+8], client.VideoStartTime)
+			voff += vsidx
+			util.WriteB32(viddata[voff+sequenceoff:voff+sequenceoff+4], client.Sequence)
+			client.Sequence++
+			util.WriteB64(viddata[voff+timeoff:voff+timeoff+8], client.VideoStartTime)
+			client.VideoStartTime += uint64(stream.FrameRate)
+		}
 
-		util.WriteB32(viddata[voff+sequenceoff:voff+sequenceoff+4], client.Sequence)
-		client.Sequence++
-		util.WriteB32(auddata[aoff+sequenceoff:aoff+sequenceoff+4], client.Sequence)
-		client.Sequence++
-
-		util.WriteB64(viddata[voff+timeoff:voff+timeoff+8], client.VideoStartTime)
-		client.VideoStartTime += uint64(1 * vsamp)
-
-		util.WriteB64(auddata[aoff+timeoff:aoff+timeoff+8], client.AudioStartTime)
-		client.AudioStartTime += uint64(stream.AudioRate)
+		if len(auddata) > 0 {
+			aoff := 0
+			util.WriteB64(auddata[presentoff:presentoff+8], client.AudioStartTime)
+			aoff += asidx
+			util.WriteB32(auddata[aoff+sequenceoff:aoff+sequenceoff+4], client.Sequence)
+			client.Sequence++
+			util.WriteB64(auddata[aoff+timeoff:aoff+timeoff+8], client.AudioStartTime)
+			client.AudioStartTime += uint64(stream.AudioRate)
+		}
 
 		if _, err := client.Conn.Write(append(viddata, auddata...)); err != nil {
 			client.Conn.Close()
@@ -586,7 +588,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 	asamp := 0
 	vsamp := 0
 
-	if len(stream.AudioBuffer) > 0 && uint32(len(stream.VideoBuffer)) >= stream.FrameRate {
+	if uint32(len(stream.AudioBuffer)) > stream.AudioRate/1024 {
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
 		for _, seg := range stream.AudioBuffer {
@@ -646,7 +648,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		stream.AudioBuffer = stream.AudioBuffer[:0]
 	}
 
-	if len(stream.VideoBuffer) > 0 && uint32(len(stream.VideoBuffer)) >= stream.FrameRate {
+	if uint32(len(stream.VideoBuffer)) >= stream.FrameRate {
 		keyframe := false
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
@@ -712,7 +714,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			Timescale:          stream.FrameRate,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
-			SubsegmentDuration: 1 * uint32(len(samples)),
+			SubsegmentDuration: stream.FrameRate,
 			Keyframe:           keyframe,
 		}
 

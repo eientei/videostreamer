@@ -610,7 +610,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 	vtime := uint64(0)
 
 	fmt.Println(slicetyp, len(stream.AudioBuffer), len(stream.VideoBuffer))
-	if len(stream.AudioBuffer) > 0 && slicetyp == 7 && uint32(len(stream.VideoBuffer))%stream.FrameRate == 0 {
+	if len(stream.AudioBuffer) > 0 && slicetyp == 7 {
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
 		for _, seg := range stream.AudioBuffer {
@@ -676,7 +676,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		stream.AudioBuffer = stream.AudioBuffer[:0]
 	}
 
-	if uint32(len(stream.VideoBuffer)) > 0 && slicetyp == 7 && uint32(len(stream.VideoBuffer))%stream.FrameRate == 0 {
+	if uint32(len(stream.VideoBuffer)) > 0 && slicetyp == 7 {
 		keyframe := false
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
@@ -706,6 +706,11 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 				samples = append(samples, sample)
 			}
 			databuf.Write(seg.Data)
+		}
+
+		miss := uint32(len(samples)) % stream.FrameRate
+		for i := uint32(0); i < miss; i++ {
+			samples = append(samples, &mp4.Sample{Duration: 1000 * tvid / stream.FrameRate, Size: 0, Scto: 0})
 		}
 
 		moof := &mp4.MoofBox{

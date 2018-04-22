@@ -610,7 +610,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 	vtime := uint64(0)
 
 	fmt.Println(slicetyp, len(stream.AudioBuffer), len(stream.VideoBuffer))
-	if len(stream.AudioBuffer) > 0 && slicetyp == 7 {
+	if len(stream.AudioBuffer) > 0 && slicetyp == 7 && uint32(vsamp)%stream.FrameRate == 0 {
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
 		for _, seg := range stream.AudioBuffer {
@@ -676,7 +676,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		stream.AudioBuffer = stream.AudioBuffer[:0]
 	}
 
-	if uint32(len(stream.VideoBuffer)) > 0 && slicetyp == 7 {
+	if uint32(len(stream.VideoBuffer)) > 0 && slicetyp == 7 && uint32(vsamp)%stream.FrameRate == 0 {
 		keyframe := false
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
@@ -768,9 +768,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 	}
 
 	if vsegment.Len() > 0 && asegment.Len() > 0 {
-		if uint32(vsamp)%stream.FrameRate == 0 {
-			stream.SendSegment(vsegment.Bytes(), vsidx, vsamp, vtime, asegment.Bytes(), asidx, asamp, atime)
-		}
+		stream.SendSegment(vsegment.Bytes(), vsidx, vsamp, vtime, asegment.Bytes(), asidx, asamp, atime)
 		stream.AudioBuffer = stream.AudioBuffer[:0]
 		stream.VideoBuffer = stream.VideoBuffer[:0]
 	}

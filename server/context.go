@@ -663,7 +663,9 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		keyframe := false
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
+		fmt.Println("ll", len(stream.VideoBuffer))
 		for i, seg := range stream.VideoBuffer {
+			fmt.Println(i, seg)
 			pts := i
 			if seg.SliceType == 7 {
 				keyframe = true
@@ -748,7 +750,6 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 	case Audio:
 		stream.AudioBuffer = append(stream.AudioBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})
 	case Video:
-		fmt.Println(slicetyp)
 		stream.VideoBuffer = append(stream.VideoBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})
 	}
 

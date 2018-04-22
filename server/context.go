@@ -262,7 +262,7 @@ func (stream *Stream) InitContainer(avcC []byte) error {
 							&mp4.MdhdBox{
 								CreationTime:     0,
 								ModificationTime: 0,
-								Timescale:        stream.AudioRate/1000 - 1,
+								Timescale:        stream.AudioRate / 1000,
 								Duration:         0,
 							},
 							&mp4.HdlrBox{
@@ -596,7 +596,7 @@ func (stream *Stream) SendSegment(segmentdata []byte, indexlen int, samples int,
 }
 
 func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, typ uint8, slicetyp uint64) error {
-	if uint32(len(stream.AudioBuffer)) >= stream.AudioRate/1000-1 {
+	if uint32(len(stream.AudioBuffer)) >= stream.AudioRate/1000 {
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
 		for _, seg := range stream.AudioBuffer {
@@ -635,10 +635,10 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 
 		sidx := &mp4.SidxBox{
 			ReferenceId:        2,
-			Timescale:          stream.AudioRate/1000 - 1,
+			Timescale:          stream.AudioRate / 1000,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
-			SubsegmentDuration: (stream.AudioRate/1000 - 1) * uint32(len(samples)),
+			SubsegmentDuration: 1 * uint32(len(samples)),
 			Keyframe:           true,
 		}
 

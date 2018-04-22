@@ -3,7 +3,6 @@ package rtmp
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -367,12 +366,15 @@ func (client *Client) Converse() error {
 
 	if _, ok := client.Assembly[id]; !ok {
 		client.Assembly[id] = &Message{
-			Chunk: id,
+			Chunk:  id,
+			Stream: 1,
 		}
-		if format != 0 {
-			fmt.Println("ERR FMT", format)
-			return ClosingConnection
-		}
+		/*
+			if format != 0 {
+				fmt.Println("ERR FMT", format)
+				return ClosingConnection
+			}
+		*/
 	}
 	message := client.Assembly[id]
 

@@ -649,7 +649,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		if uint32(len(samples))%(stream.AudioRate/1000) != 0 {
 			secs += 1
 		}
-		atime = uint64(secs)
+		atime = uint64(secs) * 1000
 
 		sidx := &mp4.SidxBox{
 			ReferenceId:        2,
@@ -740,7 +740,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			secs += 1
 		}
 
-		vtime = uint64(secs)
+		vtime = uint64(secs) * 1000
 
 		sidx := &mp4.SidxBox{
 			ReferenceId:        1,

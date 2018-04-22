@@ -94,6 +94,8 @@ type Stream struct {
 	SkipToKeyframe bool
 	AudioBuffer    []*Segment
 	VideoBuffer    []*Segment
+	AudioSecs      uint64
+	VideoSecs      uint64
 }
 
 type Context struct {
@@ -542,27 +544,27 @@ func (stream *Stream) SendSegment(viddata []byte, vsidx int, vsamp int, vidstart
 	toremove := make([]*Client, 0)
 	for _, client := range stream.Clients {
 		if !client.Initialized {
-			client.VideoStartTime = vidstarttime
-			client.AudioStartTime = audstarttime
+			client.VideoStartTime = 0
+			client.AudioStartTime = 0
 			client.Initialized = true
 		}
 
 		if len(viddata) > 0 {
 			voff := 0
-			util.WriteB64(viddata[presentoff:presentoff+8], vidstarttime-client.VideoStartTime)
+			util.WriteB64(viddata[presentoff:presentoff+8], client.VideoStartTime)
 			voff += vsidx
 			util.WriteB32(viddata[voff+sequenceoff:voff+sequenceoff+4], client.Sequence)
 			client.Sequence++
-			util.WriteB64(viddata[voff+timeoff:voff+timeoff+8], vidstarttime-client.VideoStartTime)
+			util.WriteB64(viddata[voff+timeoff:voff+timeoff+8], client.VideoStartTime)
 		}
 
 		if len(auddata) > 0 {
 			aoff := 0
-			util.WriteB64(auddata[presentoff:presentoff+8], audstarttime-client.AudioStartTime)
+			util.WriteB64(auddata[presentoff:presentoff+8], client.AudioStartTime)
 			aoff += asidx
 			util.WriteB32(auddata[aoff+sequenceoff:aoff+sequenceoff+4], client.Sequence)
 			client.Sequence++
-			util.WriteB64(auddata[aoff+timeoff:aoff+timeoff+8], audstarttime-client.AudioStartTime)
+			util.WriteB64(auddata[aoff+timeoff:aoff+timeoff+8], client.AudioStartTime)
 		}
 
 		if _, err := client.Conn.Write(append(viddata, auddata...)); err != nil {
@@ -570,6 +572,9 @@ func (stream *Stream) SendSegment(viddata []byte, vsidx int, vsamp int, vidstart
 			toremove = append(toremove, client)
 			continue
 		}
+
+		client.AudioStartTime += audstarttime
+		client.VideoStartTime += vidstarttime
 	}
 
 	if len(toremove) > 0 {
@@ -611,8 +616,6 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			databuf.Write(seg.Data)
 		}
 
-		atime = stream.AudioBuffer[0].Starttime
-
 		moof := &mp4.MoofBox{
 			BoxChildren: []mp4.Box{
 				&mp4.MfhdBox{
@@ -646,6 +649,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		if uint32(len(samples))%(stream.AudioRate/1000) != 0 {
 			secs += 1
 		}
+		atime = uint64(secs)
 
 		sidx := &mp4.SidxBox{
 			ReferenceId:        2,
@@ -702,8 +706,6 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			databuf.Write(seg.Data)
 		}
 
-		vtime = stream.VideoBuffer[0].Starttime
-
 		moof := &mp4.MoofBox{
 			BoxChildren: []mp4.Box{
 				&mp4.MfhdBox{
@@ -737,6 +739,8 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		if uint32(len(samples))%stream.FrameRate != 0 {
 			secs += 1
 		}
+
+		vtime = uint64(secs)
 
 		sidx := &mp4.SidxBox{
 			ReferenceId:        1,

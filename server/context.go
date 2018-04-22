@@ -618,6 +618,11 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			databuf.Write(seg.Data)
 		}
 
+		miss := uint32(len(samples)) % (stream.FrameRate / 1024)
+		for i := uint32(0); i < miss; i++ {
+			samples = append(samples, &mp4.Sample{Duration: 1000 * tvid * 1024 / stream.AudioRate, Size: 0, Scto: 0})
+		}
+
 		moof := &mp4.MoofBox{
 			BoxChildren: []mp4.Box{
 				&mp4.MfhdBox{

@@ -574,7 +574,7 @@ func (stream *Stream) SendSegment(segmentdata []byte, indexlen int, samples int,
 }
 
 func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, typ uint8, slicetyp uint64) error {
-	if len(stream.AudioBuffer) > 0 && slicetyp == 7 {
+	if len(stream.AudioBuffer) > 8 {
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
 		for _, seg := range stream.AudioBuffer {
@@ -635,13 +635,13 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		stream.AudioBuffer = stream.AudioBuffer[:0]
 	}
 
-	if len(stream.VideoBuffer) > 0 && slicetyp == 7 {
+	if len(stream.VideoBuffer) > 8 {
 		keyframe := false
 		databuf := &bytes.Buffer{}
 		samples := make([]*mp4.Sample, 0)
 		for i, seg := range stream.VideoBuffer {
 			pts := i
-			if seg.SliceType == 7 {
+			if i == 0 && seg.SliceType == 7 {
 				keyframe = true
 			}
 			if seg.SliceType == 5 || seg.SliceType == 7 {

@@ -109,7 +109,7 @@
                                 console.log('Stream complete');
                                 return;
                             }
-                            //console.log('recv bytes', value.length);
+                            console.log(value.length);
                             queue.push(value);
                             if (sourceBuffer != null) {
                                 drain();

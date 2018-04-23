@@ -20,6 +20,8 @@ var upgrader = websocket.Upgrader{
 type ConnWriter struct {
 	Logger *log.Logger
 	Conn   *websocket.Conn
+	Chan   chan []byte
+	Err    error
 }
 
 type SignalWriter struct {
@@ -37,12 +39,13 @@ func (cw *SignalWriter) Close() error {
 }
 
 func (cw *ConnWriter) Write(data []byte) (int, error) {
-	err := cw.Conn.WriteMessage(websocket.BinaryMessage, data)
-	return len(data), err
+	cw.Chan <- data
+	return len(data), cw.Err
 }
 
 func (cw *ConnWriter) Close() error {
 	cw.Logger.Println("wss:// client disconnected", cw.Conn.RemoteAddr().String())
+	close(cw.Chan)
 	return cw.Conn.Close()
 }
 
@@ -79,7 +82,16 @@ func WebsocketHandler(context *server.Context) func(w http.ResponseWriter, r *ht
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			} else {
 				sdata.Logger.Println("wss:// client connected", r.RemoteAddr)
-				cw := &ConnWriter{sdata.Logger, conn}
+				cw := &ConnWriter{sdata.Logger, conn, make(chan []byte, 4), nil}
+				go func() {
+					for {
+						msg, ok := <-cw.Chan
+						if !ok {
+							return
+						}
+						cw.Err = cw.Conn.WriteMessage(websocket.BinaryMessage, msg)
+					}
+				}()
 				cw.Write(sdata.ContainerInit)
 				sdata.Clients = append(sdata.Clients, &server.Client{Conn: cw})
 			}

@@ -306,7 +306,6 @@ func (client *Client) ProcessAmf(values []amf.Value) error {
 }
 
 func (client *Client) ProcessMessage(message *Message) error {
-	//client.Logger.Println(message.Chunk, message.Timestamp, message.Length, message.Type, message.Stream, message.Delta)
 	switch message.Type {
 	case CommandMessage:
 		if err := client.ProcessAmf(amf.ReadAll(bytes.NewReader(message.Data))); err != nil {
@@ -315,10 +314,16 @@ func (client *Client) ProcessMessage(message *Message) error {
 	case WindowAcknowledgementSizeMessage:
 		client.Acksize = util.ReadB32(message.Data)
 	case AudioMessage:
+		if client.Stream.Closing {
+			return ClosingConnection
+		}
 		copydata := make([]byte, len(message.Data))
 		copy(copydata, message.Data)
 		client.Stream.AudioIn <- &server.Msg{copydata, uint64(message.Timestamp)}
 	case VideoMessage:
+		if client.Stream.Closing {
+			return ClosingConnection
+		}
 		copydata := make([]byte, len(message.Data))
 		copy(copydata, message.Data)
 		client.Stream.VideoIn <- &server.Msg{copydata, uint64(message.Timestamp)}
@@ -330,12 +335,6 @@ func (client *Client) ProcessMessage(message *Message) error {
 		client.InChunk = make([]byte, util.ReadB32(message.Data))
 		client.Drainer = make([]byte, len(client.InChunk)*10)
 	default:
-		//if message.Type == 0 {
-		//if _, err := io.ReadFull(client.Conn, client.Drainer); err != nil {
-		//return err
-		//}
-		//}
-		//client.Logger.Println(message)
 	}
 	return nil
 }
@@ -473,10 +472,6 @@ func (client *Client) Converse() error {
 			message.Timestamp += message.Delta
 		}
 	}
-
-	//if message.Extended {
-	//fmt.Println("EXTEND")
-	//}
 
 	length := message.Length - uint32(len(message.Data))
 	if length > uint32(len(client.InChunk)) {

@@ -32,10 +32,18 @@
 </div>
 <script>
     var time = null;
+    var socket = null;
     function init() {
+        if (time != null) {
+            clearTimeout(time);
+        }
+        if (socket != null) {
+            socket.close();
+        }
         const wsvid = document.querySelector('#wsvid');
         const info = document.querySelector('#info');
         const video = window.location.hash.length > 0 ? window.location.hash.substring(1) : null;
+        wsvid.src = '';
         wsvid.onprogress = function () {
             if (wsvid.buffered.length === 0) {
                 return
@@ -43,13 +51,12 @@
             const current = wsvid.currentTime;
             const end = wsvid.buffered.end(wsvid.buffered.length - 1);
             const diff = end - current;
-            //buffer.innerText = diff;
-            if (diff > 2.000) {
+            if (diff > 0.500) {
                 if (wsvid.paused) {
                     wsvid.play();
                     console.log('play');
                 }
-            } else if (diff < 1.000) {
+            } else if (diff < 0.100) {
                 if (!wsvid.paused) {
                     wsvid.pause();
                     console.log('pause');
@@ -74,7 +81,7 @@
                 }
 
 
-                const socket = new WebSocket('wss://' + window.location.host + '/live/' + video + '.wss');
+                socket = new WebSocket('wss://' + window.location.host + '/live/' + video + '.wss');
                 const reconnect = function () {
                     if (time != null) {
                         clearTimeout(time);

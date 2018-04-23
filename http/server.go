@@ -83,7 +83,7 @@ func WebsocketHandler(context *server.Context) func(w http.ResponseWriter, r *ht
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			} else {
 				sdata.Logger.Println("wss:// client connected", r.RemoteAddr)
-				cw := &ConnWriter{sdata.Logger, conn, make(chan []byte, 4), nil}
+				cw := &ConnWriter{sdata.Logger, conn, make(chan []byte, 8), nil}
 				go func() {
 					for {
 						msg, ok := <-cw.Chan

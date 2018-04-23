@@ -52,12 +52,13 @@ func (cw *ConnWriter) Close() error {
 type HttpWriter struct {
 	Conn   http.ResponseWriter
 	Closer chan struct{}
+	Chan   chan []byte
+	Err    error
 }
 
 func (cw *HttpWriter) Write(data []byte) (int, error) {
-	n, err := cw.Conn.Write(data)
-	cw.Conn.(http.Flusher).Flush()
-	return n, err
+	cw.Chan <- data
+	return len(data), cw.Err
 }
 
 func (cw *HttpWriter) Close() error {
@@ -139,7 +140,18 @@ func FileHandler(context *server.Context) func(w http.ResponseWriter, r *http.Re
 		} else {
 			w.Header().Set("Content-Type", "video/mp4")
 			sdata.Logger.Println("file:// client connected", r.RemoteAddr)
-			cw := &HttpWriter{w, make(chan struct{})}
+			cw := &HttpWriter{w, make(chan struct{}), make(chan []byte, 4), nil}
+			go func() {
+				for {
+					msg, ok := <-cw.Chan
+					if !ok {
+						return
+					}
+					_, cw.Err = cw.Conn.Write(msg)
+					cw.Conn.(http.Flusher).Flush()
+				}
+			}()
+
 			cw.Write(sdata.ContainerInit)
 			sdata.Clients = append(sdata.Clients, &server.Client{Conn: cw})
 			<-cw.Closer

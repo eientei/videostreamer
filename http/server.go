@@ -147,6 +147,9 @@ func FileHandler(context *server.Context) func(w http.ResponseWriter, r *http.Re
 					if !ok {
 						return
 					}
+					if cw.Err != nil {
+						return
+					}
 					_, cw.Err = cw.Conn.Write(msg)
 					cw.Conn.(http.Flusher).Flush()
 				}

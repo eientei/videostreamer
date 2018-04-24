@@ -231,16 +231,16 @@ func WebsocketClient(client *server.HttpClient) {
 			if len(msg.Data) < 126 {
 				header = []byte{1<<7 | 2, byte(len(msg.Data))}
 			} else if len(msg.Data) < 65536 {
-				header = []byte{1<<7 | 2, 126, byte(len(msg.Data) << 8), byte(len(msg.Data))}
+				header = []byte{1<<7 | 2, 126, byte(len(msg.Data) >> 8), byte(len(msg.Data))}
 			} else {
 				header = []byte{1<<7 | 2, 127,
-					byte(len(msg.Data) << 56),
-					byte(len(msg.Data) << 48),
-					byte(len(msg.Data) << 40),
-					byte(len(msg.Data) << 32),
-					byte(len(msg.Data) << 24),
-					byte(len(msg.Data) << 16),
-					byte(len(msg.Data) << 8),
+					byte(len(msg.Data) >> 56),
+					byte(len(msg.Data) >> 48),
+					byte(len(msg.Data) >> 40),
+					byte(len(msg.Data) >> 32),
+					byte(len(msg.Data) >> 24),
+					byte(len(msg.Data) >> 16),
+					byte(len(msg.Data) >> 8),
 					byte(len(msg.Data)),
 				}
 			}

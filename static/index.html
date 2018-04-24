@@ -80,6 +80,17 @@
                     sourceBuffer.appendBuffer(next);
                 }
 
+                const reconnect = function () {
+                    if (time != null) {
+                        clearTimeout(time);
+                    }
+                    const nhash = window.location.hash.length > 0 ? window.location.hash.substring(1) : null
+                    if (nhash !== video) {
+                        return
+                    }
+                    time = setTimeout(converse, 1000);
+                };
+
                 socket = new WebSocket('wss://' + window.location.host + '/live/' + video + '.wss');
 
                 socket.onopen = function () {

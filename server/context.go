@@ -598,10 +598,6 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			vidx++
 		}
 
-		for _, s := range vsamples {
-			s.Duration = uint32(len(vsamples)) * (1000 * tvid / stream.FrameRate)
-		}
-
 		vdatalen := len(data)
 
 		for _, seg := range stream.AudioBuffer {

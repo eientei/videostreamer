@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -41,7 +42,7 @@ func (client *HttpClient) Close() error {
 }
 
 const tvid = 1000
-const asamp = 960
+const asamp = 1024
 
 const sidxPresentOffset = 0 +
 	8 + // sidx
@@ -143,6 +144,8 @@ type Stream struct {
 	VideoSecs      uint64
 	Closing        bool
 	First          bool
+	VideoReady     bool
+	AudioReady     bool
 }
 
 type Context struct {
@@ -542,7 +545,10 @@ func (stream *Stream) SendSegment(refdata []byte, sidxlen int, vsamples int, asa
 }
 
 func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, typ uint8, slicetyp uint64, time uint64) error {
-	if len(stream.AudioBuffer) > 0 && len(stream.VideoBuffer) > 0 && slicetyp == 7 {
+	if stream.VideoReady && stream.AudioReady {
+		vidx := 0
+		aidx := 0
+
 		keyframe := false
 		data := make([]byte, 0)
 
@@ -552,6 +558,9 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		for i, seg := range stream.VideoBuffer {
 			pts := i
 			if seg.SliceType == 7 {
+				if keyframe {
+					break
+				}
 				keyframe = true
 			}
 			if seg.SliceType == 5 || seg.SliceType == 7 {
@@ -575,6 +584,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 				vsamples = append(vsamples, sample)
 			}
 			data = append(data, seg.Data...)
+			vidx++
 		}
 
 		vdatalen := len(data)
@@ -582,6 +592,10 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		for _, seg := range stream.AudioBuffer {
 			asamples = append(asamples, seg.Samples...)
 			data = append(data, seg.Data...)
+			aidx++
+			if uint32(aidx) > stream.AudioRate/asamp {
+				break
+			}
 		}
 
 		vtime := uint32(len(vsamples)) * 1000 * tvid / stream.FrameRate
@@ -689,14 +703,24 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 
 		stream.SendSegment(append(append(sidxdata, moofdata...), mdata...), len(sidxdata), len(vsamples), len(asamples), vtime, atime)
 
-		stream.VideoBuffer = stream.VideoBuffer[:0]
-		stream.AudioBuffer = stream.AudioBuffer[:0]
+		stream.AudioReady = false
+		stream.VideoReady = false
+
+		fmt.Println(vidx, aidx)
+		stream.VideoBuffer = stream.VideoBuffer[vidx:]
+		stream.AudioBuffer = stream.AudioBuffer[aidx:]
 	}
 
 	switch typ {
 	case Audio:
+		if uint32(len(stream.AudioBuffer)) > stream.AudioRate/asamp {
+			stream.AudioReady = true
+		}
 		stream.AudioBuffer = append(stream.AudioBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})
 	case Video:
+		if len(stream.VideoBuffer) > 0 && slicetyp == 7 {
+			stream.VideoReady = true
+		}
 		stream.VideoBuffer = append(stream.VideoBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})
 	}
 	return nil

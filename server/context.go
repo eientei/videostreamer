@@ -603,9 +603,9 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			asamples = append(asamples, seg.Samples...)
 			data = append(data, seg.Data...)
 			aidx++
-			if uint32(aidx) >= (stream.AudioRate/asamp + 1) {
-				break
-			}
+			//if uint32(aidx) >= (stream.AudioRate/asamp + 1) {
+			//	break
+			//}
 		}
 
 		vtime := uint32(len(vsamples)) * 1000 * tvid / stream.FrameRate

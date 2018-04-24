@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -717,7 +716,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		stream.AudioReady = false
 		stream.VideoReady = false
 
-		fmt.Println(vidx, aidx)
+		//fmt.Println(vidx, aidx)
 		stream.VideoBuffer = stream.VideoBuffer[vidx:]
 		stream.AudioBuffer = stream.AudioBuffer[aidx:]
 	}

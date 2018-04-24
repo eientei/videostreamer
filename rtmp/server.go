@@ -294,10 +294,12 @@ func (client *Client) ProcessAmf(values []amf.Value) error {
 
 		client.Logger.Println("Open stream [/" + streamName + "]")
 		client.Stream = &server.Stream{
-			AudioIn: make(chan *server.Msg, 64),
-			VideoIn: make(chan *server.Msg, 64),
-			Name:    streamName,
-			Logger:  log.New(os.Stdout, "[/"+streamName+"] ", log.LstdFlags),
+			AudioIn:    make(chan *server.Msg, 64),
+			VideoIn:    make(chan *server.Msg, 64),
+			Inclients:  make(chan *server.HttpClient),
+			Outclients: make(chan *server.HttpClient),
+			Name:       streamName,
+			Logger:     log.New(os.Stdout, "[/"+streamName+"] ", log.LstdFlags),
 		}
 		client.Context.Streams[streamName] = client.Stream
 		go client.Stream.Run()

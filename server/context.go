@@ -14,6 +14,29 @@ import (
 var InvalidProfile = errors.New("invalid profile")
 var UnknownCodec = errors.New("unknown codec")
 
+type Payload struct {
+	Data []byte
+}
+
+type HttpClient struct {
+	Queue  chan *Payload
+	Signal chan bool
+	Open   bool
+}
+
+func (client *HttpClient) Send(payload *Payload) {
+	if client.Open {
+		go func() { client.Queue <- payload }()
+	}
+}
+
+func (client *HttpClient) Close() error {
+	if client.Open {
+		client.Signal <- true
+	}
+	return nil
+}
+
 const tvid = 1000
 
 const sidxPresentOffset = 0 +
@@ -68,13 +91,9 @@ type Nalu struct {
 }
 
 type Client struct {
-	Conn        io.WriteCloser
-	Initialized bool
-	InitFrame   []byte
-	Booted      bool
-	FirstVCL    bool
-	Sequence    uint32
-
+	Conn           *HttpClient
+	Initialized    bool
+	Sequence       uint32
 	AudioStartTime uint64
 	VideoStartTime uint64
 }
@@ -94,6 +113,9 @@ type Msg struct {
 type Stream struct {
 	AudioIn chan *Msg
 	VideoIn chan *Msg
+
+	Inclients  chan *HttpClient
+	Outclients chan *HttpClient
 
 	Name          string
 	Logger        *log.Logger
@@ -150,6 +172,15 @@ func (stream *Stream) Run() {
 			}
 			if err := stream.Video(msg.Data, msg.Time); err != nil {
 				return
+			}
+		case client := <-stream.Inclients:
+			stream.Clients = append(stream.Clients, &Client{Conn: client})
+		case client := <-stream.Outclients:
+			for i, c := range stream.Clients {
+				if c.Conn == client {
+					stream.Clients = append(stream.Clients[:i], stream.Clients[i+1:]...)
+					break
+				}
 			}
 		}
 	}
@@ -474,14 +505,17 @@ func (stream *Stream) SendVideo(data []byte, time uint64) error {
 	return nil
 }
 
-func (stream *Stream) SendSegment(data []byte, sidxlen int, vsamples int, asamples int, vtime uint32, atime uint32) error {
-	toremove := make([]*Client, 0)
+func (stream *Stream) SendSegment(refdata []byte, sidxlen int, vsamples int, asamples int, vtime uint32, atime uint32) error {
 	for _, client := range stream.Clients {
 		if !client.Initialized {
+			client.Conn.Send(&Payload{stream.ContainerInit})
 			client.VideoStartTime = 0
 			client.AudioStartTime = 0
 			client.Initialized = true
 		}
+
+		data := make([]byte, len(refdata))
+		copy(data, refdata)
 
 		off := 0
 		util.WriteB64(data[sidxPresentOffset:sidxPresentOffset+8], client.VideoStartTime)
@@ -494,32 +528,12 @@ func (stream *Stream) SendSegment(data []byte, sidxlen int, vsamples int, asampl
 
 		client.Sequence++
 
-		if _, err := client.Conn.Write(data); err != nil {
-			client.Conn.Close()
-			toremove = append(toremove, client)
-			continue
-		}
+		client.Conn.Send(&Payload{data})
 
 		client.AudioStartTime += uint64(atime)
 		client.VideoStartTime += uint64(vtime)
 	}
 
-	if len(toremove) > 0 {
-		nclients := make([]*Client, 0)
-		for _, client := range stream.Clients {
-			add := true
-			for _, rem := range toremove {
-				if rem == client {
-					add = false
-					break
-				}
-			}
-			if add {
-				nclients = append(nclients, client)
-			}
-		}
-		stream.Clients = nclients
-	}
 	return nil
 }
 

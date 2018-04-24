@@ -1,14 +1,20 @@
 package http
 
 import (
+	"bytes"
+	"io"
 	"log"
-	"net/http"
+	"net"
+	"os"
+	"strconv"
 
 	"../server"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/websocket"
 )
 
+const prefix = "/live/"
+const suffix = ".mp4"
+
+/*
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
@@ -162,16 +168,121 @@ func FileHandler(context *server.Context) func(w http.ResponseWriter, r *http.Re
 		}
 	}
 }
+*/
 
-func Server(addr string, context *server.Context) {
-	r := mux.NewRouter()
-	r.HandleFunc("/live/{stream}.wss", WebsocketHandler(context))
-	r.HandleFunc("/live/{stream}.mp4", FileHandler(context))
-	r.HandleFunc("/live/{stream}.sig", SignalHandler(context))
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static")))
-	s := &http.Server{
-		Addr:    addr,
-		Handler: r,
+func Serve(context *server.Context, conn net.Conn) {
+	mbuf := make([]byte, 3)
+	if _, err := io.ReadFull(conn, mbuf); err != nil {
+		return
 	}
-	s.ListenAndServe()
+
+	if !bytes.Equal(mbuf, []byte{'G', 'E', 'T'}) {
+		conn.Write([]byte("HTTP/1.1 400 Bad request\r\nContent-Length: 0\r\n\r\n"))
+		return
+	}
+
+	bbuf := make([]byte, 1)
+	path := make([]byte, 0)
+	for {
+		if _, err := conn.Read(bbuf); err != nil {
+			return
+		}
+		if bbuf[0] != ' ' {
+			path = append(path, bbuf[0])
+			break
+		}
+	}
+
+	for {
+		if _, err := conn.Read(bbuf); err != nil {
+			return
+		}
+		if bbuf[0] == ' ' {
+			break
+		}
+		path = append(path, bbuf[0])
+	}
+
+	if len(path) <= len(prefix)+len(suffix) || !bytes.Equal(path[:len(prefix)], []byte(prefix)) || !bytes.Equal(path[len(path)-len(suffix):], []byte(suffix)) {
+		conn.Write([]byte("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"))
+		return
+	}
+
+	name := string(path[len(prefix) : len(path)-len(suffix)])
+
+	var stream *server.Stream
+	if res, ok := context.Streams[name]; !ok {
+		conn.Write([]byte("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"))
+		return
+	} else {
+		stream = res
+	}
+
+	logger := log.New(os.Stdout, "HTTP client "+conn.RemoteAddr().String()+" ["+name+"] ", log.LstdFlags)
+	logger.Println("Connected")
+
+	conn.Write([]byte("HTTP/1.1 200 Ok\r\nContent-Type: video/mp4\r\nTransfer-Encoding: chunked\r\n\r\n"))
+
+	client := &server.HttpClient{
+		Queue:  make(chan *server.Payload),
+		Signal: make(chan bool),
+		Open:   true,
+	}
+
+	go func() {
+		drain := make([]byte, 1024)
+		for {
+			if _, err := conn.Read(drain); err != nil {
+				client.Close()
+				return
+			}
+		}
+	}()
+
+	stream.Inclients <- client
+loop:
+	for {
+		select {
+		case msg := <-client.Queue:
+			l := strconv.FormatUint(uint64(len(msg.Data)), 16)
+			if _, err := conn.Write([]byte(l)); err != nil {
+				break loop
+			}
+			if _, err := conn.Write([]byte{'\r', '\n'}); err != nil {
+				break loop
+			}
+			if _, err := conn.Write(msg.Data); err != nil {
+				break loop
+			}
+			if _, err := conn.Write([]byte{'\r', '\n'}); err != nil {
+				break loop
+			}
+		case <-client.Signal:
+			break loop
+		}
+	}
+	client.Open = false
+	stream.Outclients <- client
+	close(client.Queue)
+	close(client.Signal)
+	logger.Println("Disconnected")
+}
+
+func Server(listen string, context *server.Context) error {
+	if listener, err := net.Listen("tcp", listen); err != nil {
+		return err
+	} else {
+		for {
+			if conn, err := listener.Accept(); err != nil {
+				listener.Close()
+				return err
+			} else {
+				go func() {
+					Serve(context, conn)
+					conn.Close()
+				}()
+			}
+		}
+		return listener.Close()
+	}
 }

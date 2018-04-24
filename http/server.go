@@ -391,6 +391,7 @@ func Serve(context *server.Context, conn net.Conn) {
 	stream.Outclients <- client
 	close(client.Queue)
 	close(client.Signal)
+	client.Logger.Println("Disconnected")
 }
 
 func Server(listen string, context *server.Context) error {

@@ -658,7 +658,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 
 		sidx := &mp4.SidxBox{
 			ReferenceId:        1,
-			Timescale:          1000 * tvid,
+			Timescale:          999 * tvid,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
 			SubsegmentDuration: vtime,

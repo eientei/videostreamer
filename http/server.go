@@ -223,6 +223,10 @@ func ChunkedClient(client *server.HttpClient) {
 }
 
 func WebsocketClient(client *server.HttpClient) {
+	defer func() {
+		header := []byte{1<<7 | 8, 0}
+		client.Conn.Write(header)
+	}()
 	for {
 		select {
 		case msg := <-client.Queue:

@@ -571,6 +571,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 
 		kfs := 0
 
+		fmt.Println(stream.VideoBuffer[0].SliceType)
 		for i, seg := range stream.VideoBuffer {
 			pts := i
 			if i > 0 && seg.SliceType == 7 {

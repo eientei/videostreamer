@@ -552,10 +552,11 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		stream.VideoBuffer = append(stream.VideoBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})
 	}
 
-	if uint32(len(stream.AudioBuffer)) >= (stream.AudioRate/asamp + 1) {
-		stream.AudioReady = true
-	}
+	//if uint32(len(stream.AudioBuffer)) >= (stream.AudioRate/asamp + 1) {
+
+	//}
 	if uint32(len(stream.VideoBuffer)) > stream.FrameRate && slicetyp == 7 {
+		stream.AudioReady = true
 		stream.VideoReady = true
 	}
 	if stream.VideoReady && stream.AudioReady {
@@ -599,7 +600,6 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		}
 
 		vdatalen := len(data)
-
 		for _, seg := range stream.AudioBuffer {
 			asamples = append(asamples, seg.Samples...)
 			data = append(data, seg.Data...)

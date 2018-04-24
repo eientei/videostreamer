@@ -377,7 +377,7 @@ func Serve(context *server.Context, conn net.Conn) {
 				concat := header + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 				sum := sha1.Sum([]byte(concat))
 				accept := base64.StdEncoding.EncodeToString(sum[:])
-				client.Conn.Write([]byte("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + accept + "\r\n\r\n"))
+				conn.Write([]byte("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + accept + "\r\n\r\n"))
 				stream = res
 				client = MakeClient(conn, name)
 				client.Logger.Println("Connected")

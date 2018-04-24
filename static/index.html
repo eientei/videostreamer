@@ -101,6 +101,7 @@
                     return readData();
                     function readData() {
                         return reader.read().then(function ({value, done}) {
+                            console.log(reader);
                             if (done) {
                                 if (time != null) {
                                     clearTimeout(time);

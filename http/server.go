@@ -225,7 +225,7 @@ func Serve(context *server.Context, conn net.Conn) {
 	conn.Write([]byte("HTTP/1.1 200 Ok\r\nContent-Type: video/mp4\r\nTransfer-Encoding: chunked\r\n\r\n"))
 
 	client := &server.HttpClient{
-		Queue:  make(chan *server.Payload),
+		Queue:  make(chan *server.Payload, 60),
 		Signal: make(chan bool),
 		Open:   true,
 	}

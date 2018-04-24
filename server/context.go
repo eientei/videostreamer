@@ -26,7 +26,7 @@ type HttpClient struct {
 
 func (client *HttpClient) Send(payload *Payload) {
 	if client.Open {
-		go func() { client.Queue <- payload }()
+		client.Queue <- payload
 	}
 }
 

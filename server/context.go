@@ -554,7 +554,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 	//if uint32(len(stream.AudioBuffer)) >= (stream.AudioRate/asamp + 1) {
 
 	//}
-	if uint32(len(stream.VideoBuffer)) >= stream.FrameRate && slicetyp == 7 {
+	if uint32(len(stream.VideoBuffer)) >= stream.FrameRate {
 		stream.AudioReady = true
 		stream.VideoReady = true
 	}

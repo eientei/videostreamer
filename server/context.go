@@ -41,7 +41,7 @@ func (client *HttpClient) Close() error {
 }
 
 const tvid = 1000
-const asamp = 1260
+const asamp = 960
 
 const sidxPresentOffset = 0 +
 	8 + // sidx

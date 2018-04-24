@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"net"
 
 	"../amf"
 	"../mp4"
@@ -22,6 +23,8 @@ type HttpClient struct {
 	Queue  chan *Payload
 	Signal chan bool
 	Open   bool
+	Logger *log.Logger
+	Conn   net.Conn
 }
 
 func (client *HttpClient) Send(payload *Payload) {

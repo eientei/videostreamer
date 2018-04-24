@@ -2,6 +2,9 @@ package http
 
 import (
 	"bytes"
+	"crypto/sha1"
+	"encoding/base64"
+	"errors"
 	"io"
 	"log"
 	"net"
@@ -11,8 +14,12 @@ import (
 	"../server"
 )
 
+var NotFound = errors.New("not found")
+
 const prefix = "/live/"
-const suffix = ".mp4"
+const fileSuffix = ".mp4"
+const wssSuffix = ".wss"
+const websockHeader = "Sec-WebSocket-Key"
 
 /*
 var upgrader = websocket.Upgrader{
@@ -170,6 +177,139 @@ func FileHandler(context *server.Context) func(w http.ResponseWriter, r *http.Re
 }
 */
 
+func MakeClient(conn net.Conn, name string) *server.HttpClient {
+	client := &server.HttpClient{
+		Queue:  make(chan *server.Payload, 60),
+		Signal: make(chan bool),
+		Open:   true,
+		Logger: log.New(os.Stdout, "HTTP client "+conn.RemoteAddr().String()+" ["+name+"] ", log.LstdFlags),
+		Conn:   conn,
+	}
+
+	go func() {
+		drain := make([]byte, 1024)
+		for {
+			if _, err := client.Conn.Read(drain); err != nil {
+				client.Close()
+				return
+			}
+		}
+	}()
+
+	return client
+}
+
+func ChunkedClient(client *server.HttpClient) {
+	for {
+		select {
+		case msg := <-client.Queue:
+			l := strconv.FormatUint(uint64(len(msg.Data)), 16)
+			if _, err := client.Conn.Write([]byte(l)); err != nil {
+				return
+			}
+			if _, err := client.Conn.Write([]byte{'\r', '\n'}); err != nil {
+				return
+			}
+			if _, err := client.Conn.Write(msg.Data); err != nil {
+				return
+			}
+			if _, err := client.Conn.Write([]byte{'\r', '\n'}); err != nil {
+				return
+			}
+		case <-client.Signal:
+			return
+		}
+	}
+}
+
+func WebsocketClient(client *server.HttpClient) {
+	for {
+		select {
+		case msg := <-client.Queue:
+			if _, err := client.Conn.Write(msg.Data); err != nil {
+				var header []byte
+				if len(msg.Data) < 126 {
+					header = []byte{1<<7 | 2, byte(len(msg.Data))}
+				} else if len(msg.Data) < 65536 {
+					header = []byte{1<<7 | 2, byte(len(msg.Data) << 8), byte(len(msg.Data))}
+				} else {
+					header = []byte{1<<7 | 2,
+						byte(len(msg.Data) << 56),
+						byte(len(msg.Data) << 48),
+						byte(len(msg.Data) << 40),
+						byte(len(msg.Data) << 32),
+						byte(len(msg.Data) << 24),
+						byte(len(msg.Data) << 16),
+						byte(len(msg.Data) << 8),
+						byte(len(msg.Data)),
+					}
+				}
+
+				client.Conn.Write(header)
+				client.Conn.Write(msg.Data)
+				return
+			}
+		case <-client.Signal:
+			return
+		}
+	}
+}
+
+func ScanHeader(conn net.Conn, header string) (string, error) {
+	bbuf := make([]byte, 1)
+	value := make([]byte, 0)
+	binary := 0
+	ptr := 0
+	for {
+		if _, err := conn.Read(bbuf); err != nil {
+			return "", err
+		}
+		if bbuf[0] == '\r' || bbuf[0] == '\n' {
+			binary++
+		} else {
+			binary = 0
+		}
+
+		if binary == 4 {
+			return "", NotFound
+		} else if binary == 2 {
+			ptr = 0
+		} else if binary == 0 {
+			if ptr < 0 {
+				continue
+			} else {
+				if ptr == len(header) && bbuf[0] == ':' {
+					for {
+						if _, err := conn.Read(bbuf); err != nil {
+							return "", err
+						}
+						if bbuf[0] != ' ' {
+							value = append(value, bbuf[0])
+							break
+						}
+					}
+					break
+				}
+				if bbuf[0] == header[ptr] {
+					ptr++
+				} else {
+					ptr = -1
+				}
+			}
+		}
+	}
+
+	for {
+		if _, err := conn.Read(bbuf); err != nil {
+			return "", err
+		}
+		if bbuf[0] == '\r' || bbuf[0] == '\n' {
+			return string(value), nil
+		}
+		value = append(value, bbuf[0])
+	}
+}
+
 func Serve(context *server.Context, conn net.Conn) {
 	mbuf := make([]byte, 3)
 	if _, err := io.ReadFull(conn, mbuf); err != nil {
@@ -203,69 +343,54 @@ func Serve(context *server.Context, conn net.Conn) {
 		path = append(path, bbuf[0])
 	}
 
-	if len(path) <= len(prefix)+len(suffix) || !bytes.Equal(path[:len(prefix)], []byte(prefix)) || !bytes.Equal(path[len(path)-len(suffix):], []byte(suffix)) {
+	if len(path) <= len(prefix) || !bytes.Equal(path[:len(prefix)], []byte(prefix)) {
 		conn.Write([]byte("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"))
 		return
 	}
 
-	name := string(path[len(prefix) : len(path)-len(suffix)])
-
+	var client *server.HttpClient
 	var stream *server.Stream
-	if res, ok := context.Streams[name]; !ok {
-		conn.Write([]byte("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"))
-		return
-	} else {
-		stream = res
-	}
+	if bytes.Equal(path[len(path)-len(fileSuffix):], []byte(fileSuffix)) {
+		name := string(path[len(prefix) : len(path)-len(fileSuffix)])
+		if res, ok := context.Streams[name]; !ok {
+			conn.Write([]byte("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"))
+			return
+		} else {
+			client.Conn.Write([]byte("HTTP/1.1 200 Ok\r\nContent-Type: video/mp4\r\nTransfer-Encoding: chunked\r\n\r\n"))
 
-	logger := log.New(os.Stdout, "HTTP client "+conn.RemoteAddr().String()+" ["+name+"] ", log.LstdFlags)
-	logger.Println("Connected")
-
-	conn.Write([]byte("HTTP/1.1 200 Ok\r\nContent-Type: video/mp4\r\nTransfer-Encoding: chunked\r\n\r\n"))
-
-	client := &server.HttpClient{
-		Queue:  make(chan *server.Payload, 60),
-		Signal: make(chan bool),
-		Open:   true,
-	}
-
-	go func() {
-		drain := make([]byte, 1024)
-		for {
-			if _, err := conn.Read(drain); err != nil {
-				client.Close()
+			stream = res
+			client = MakeClient(conn, name)
+			client.Logger.Println("Connected")
+			stream.Inclients <- client
+			ChunkedClient(client)
+		}
+	} else if bytes.Equal(path[len(path)-len(wssSuffix):], []byte(wssSuffix)) {
+		if header, err := ScanHeader(conn, websockHeader); err != nil {
+			conn.Write([]byte("HTTP/1.1 500 Internal error\r\nContent-Length: 0\r\n\r\n"))
+			return
+		} else {
+			name := string(path[len(prefix) : len(path)-len(wssSuffix)])
+			if res, ok := context.Streams[name]; !ok {
+				conn.Write([]byte("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"))
 				return
+			} else {
+				concat := header + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+				sum := sha1.Sum([]byte(concat))
+				accept := base64.StdEncoding.EncodeToString(sum[:])
+				client.Conn.Write([]byte("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + accept + "\r\n\r\n"))
+				stream = res
+				client = MakeClient(conn, name)
+				client.Logger.Println("Connected")
+				stream.Inclients <- client
+				WebsocketClient(client)
 			}
-		}
-	}()
-
-	stream.Inclients <- client
-loop:
-	for {
-		select {
-		case msg := <-client.Queue:
-			l := strconv.FormatUint(uint64(len(msg.Data)), 16)
-			if _, err := conn.Write([]byte(l)); err != nil {
-				break loop
-			}
-			if _, err := conn.Write([]byte{'\r', '\n'}); err != nil {
-				break loop
-			}
-			if _, err := conn.Write(msg.Data); err != nil {
-				break loop
-			}
-			if _, err := conn.Write([]byte{'\r', '\n'}); err != nil {
-				break loop
-			}
-		case <-client.Signal:
-			break loop
 		}
 	}
+
 	client.Open = false
 	stream.Outclients <- client
 	close(client.Queue)
 	close(client.Signal)
-	logger.Println("Disconnected")
 }
 
 func Server(listen string, context *server.Context) error {

@@ -80,47 +80,6 @@
                     sourceBuffer.appendBuffer(next);
                 }
 
-                fetch('/live/' + video + '.mp4').then((response) => {
-                    if (response.status !== 200) {
-                        if (time != null) {
-                            clearTimeout(time);
-                        }
-                        time = setTimeout(converse, 1000);
-                        return;
-                    }
-
-                    const ms = new MediaSource();
-                    ms.onsourceopen = function () {
-                        sourceBuffer = ms.addSourceBuffer('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
-                        sourceBuffer.onupdate = drain;
-                        drain();
-                    };
-                    wsvid.src = window.URL.createObjectURL(ms);
-
-                    let reader = response.body.getReader();
-                    return readData();
-                    function readData() {
-                        return reader.read().then(function ({value, done}) {
-                            console.log(reader);
-                            if (done) {
-                                if (time != null) {
-                                    clearTimeout(time);
-                                }
-                                time = setTimeout(converse, 1000);
-                                console.log('Stream complete');
-                                return;
-                            }
-                            console.log(value.length);
-                            queue.push(value);
-                            if (sourceBuffer != null) {
-                                drain();
-                            }
-                            return readData();
-                        });
-                    }
-                });
-
-                /*
                 socket = new WebSocket('wss://' + window.location.host + '/live/' + video + '.wss');
 
                 socket.onopen = function () {
@@ -146,7 +105,6 @@
                     };
                     fileReader.readAsArrayBuffer(event.data);
                 };
-                */
             }
             converse();
         } else {

@@ -41,6 +41,7 @@ func (client *HttpClient) Close() error {
 }
 
 const tvid = 1000
+const asamp = 1000
 
 const sidxPresentOffset = 0 +
 	8 + // sidx
@@ -390,7 +391,7 @@ func (stream *Stream) InitContainer(avcC []byte) error {
 					},
 					&mp4.TrexBox{
 						TrackId: 2,
-						Defdur:  (1000 * tvid * 1024) / stream.AudioRate,
+						Defdur:  (1000 * tvid * asamp) / stream.AudioRate,
 					},
 				},
 			},
@@ -452,7 +453,7 @@ func (stream *Stream) InitContainer(avcC []byte) error {
 func (stream *Stream) SendAudio(data []byte, time uint64) error {
 	copydata := make([]byte, len(data))
 	copy(copydata, data)
-	return stream.AddSegment([]*mp4.Sample{{Duration: 1000 * tvid * 1024 / stream.AudioRate, Size: uint32(len(data))}}, copydata, Audio, 0, time)
+	return stream.AddSegment([]*mp4.Sample{{Duration: 1000 * tvid * asamp / stream.AudioRate, Size: uint32(len(data))}}, copydata, Audio, 0, time)
 }
 
 func (stream *Stream) SendVideo(data []byte, time uint64) error {
@@ -588,7 +589,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 
 		atotal := uint32(0)
 		for range asamples {
-			atotal += 1000 * tvid * 1024 / stream.AudioRate
+			atotal += 1000 * tvid * asamp / stream.AudioRate
 		}
 		if atotal < vtime {
 			amiss := vtime - atotal
@@ -600,7 +601,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 				}
 				s.Duration += each
 			}
-		} /*else if atotal > vtime {
+		} else if atotal > vtime {
 			amiss := atotal - vtime
 			each := amiss / uint32(len(asamples))
 			first := amiss % uint32(len(asamples))
@@ -610,7 +611,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 				}
 				s.Duration -= each
 			}
-		}*/
+		}
 
 		moof := &mp4.MoofBox{
 			BoxChildren: []mp4.Box{

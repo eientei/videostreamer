@@ -545,6 +545,20 @@ func (stream *Stream) SendSegment(refdata []byte, sidxlen int, vsamples int, asa
 }
 
 func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, typ uint8, slicetyp uint64, time uint64) error {
+	switch typ {
+	case Audio:
+		frames := uint32(len(stream.VideoBuffer)) / stream.FrameRate
+		if uint32(len(stream.AudioBuffer)) > (stream.AudioRate/asamp)*frames {
+			stream.AudioReady = true
+		}
+		stream.AudioBuffer = append(stream.AudioBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})
+	case Video:
+		if uint32(len(stream.VideoBuffer)) > stream.FrameRate && slicetyp == 7 {
+			stream.VideoReady = true
+		}
+		stream.VideoBuffer = append(stream.VideoBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})
+	}
+
 	if stream.VideoReady && stream.AudioReady {
 		vidx := 0
 		aidx := 0
@@ -589,11 +603,12 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 
 		vdatalen := len(data)
 
+		frames := uint32(len(stream.VideoBuffer)) / stream.FrameRate
 		for _, seg := range stream.AudioBuffer {
 			asamples = append(asamples, seg.Samples...)
 			data = append(data, seg.Data...)
 			aidx++
-			if uint32(aidx) > stream.AudioRate/asamp {
+			if uint32(aidx) > (stream.AudioRate/asamp)*frames {
 				break
 			}
 		}
@@ -709,19 +724,6 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		fmt.Println(vidx, aidx)
 		stream.VideoBuffer = stream.VideoBuffer[vidx:]
 		stream.AudioBuffer = stream.AudioBuffer[aidx:]
-	}
-
-	switch typ {
-	case Audio:
-		if uint32(len(stream.AudioBuffer)) > stream.AudioRate/asamp {
-			stream.AudioReady = true
-		}
-		stream.AudioBuffer = append(stream.AudioBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})
-	case Video:
-		if uint32(len(stream.VideoBuffer)) > stream.FrameRate && slicetyp == 7 {
-			stream.VideoReady = true
-		}
-		stream.VideoBuffer = append(stream.VideoBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})
 	}
 	return nil
 }

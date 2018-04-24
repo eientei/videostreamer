@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -597,6 +598,10 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			vidx++
 		}
 
+		for _, s := range vsamples {
+			s.Duration = uint32(len(vsamples)) * (1000 * tvid / stream.FrameRate)
+		}
+
 		vdatalen := len(data)
 
 		for _, seg := range stream.AudioBuffer {
@@ -716,6 +721,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		stream.AudioReady = false
 		stream.VideoReady = false
 
+		fmt.Println(vidx, aidx)
 		stream.VideoBuffer = stream.VideoBuffer[vidx:]
 		stream.AudioBuffer = stream.AudioBuffer[aidx:]
 	}

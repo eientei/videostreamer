@@ -600,7 +600,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 				}
 				s.Duration += each
 			}
-		} else if atotal > vtime {
+		} /*else if atotal > vtime {
 			amiss := atotal - vtime
 			each := amiss / uint32(len(asamples))
 			first := amiss % uint32(len(asamples))
@@ -610,7 +610,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 				}
 				s.Duration -= each
 			}
-		}
+		}*/
 
 		moof := &mp4.MoofBox{
 			BoxChildren: []mp4.Box{
@@ -661,7 +661,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			Timescale:          1000 * tvid,
 			PresentationTime:   0,
 			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
-			SubsegmentDuration: vtime + 100*tvid,
+			SubsegmentDuration: vtime,
 			Keyframe:           keyframe,
 		}
 

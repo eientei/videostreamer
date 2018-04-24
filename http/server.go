@@ -360,7 +360,7 @@ func Serve(context *server.Context, conn net.Conn) {
 			conn.Write([]byte("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"))
 			return
 		} else {
-			client.Conn.Write([]byte("HTTP/1.1 200 Ok\r\nContent-Type: video/mp4\r\nTransfer-Encoding: chunked\r\n\r\n"))
+			conn.Write([]byte("HTTP/1.1 200 Ok\r\nContent-Type: video/mp4\r\nTransfer-Encoding: chunked\r\n\r\n"))
 
 			stream = res
 			client = MakeClient(conn, name)

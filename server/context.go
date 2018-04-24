@@ -34,6 +34,7 @@ func (client *HttpClient) Send(payload *Payload) {
 }
 
 func (client *HttpClient) Close() error {
+	client.Open = false
 	if client.Open {
 		client.Signal <- true
 	}

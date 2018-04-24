@@ -572,10 +572,10 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		for i, seg := range stream.VideoBuffer {
 			pts := i
 			if seg.SliceType == 7 {
-				if uint32(vidx) > stream.FrameRate && seg.SliceType == 7 {
+				keyframe = true
+				if i > 0 {
 					break
 				}
-				keyframe = true
 			}
 			if seg.SliceType == 5 || seg.SliceType == 7 {
 				M := 0

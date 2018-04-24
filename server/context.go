@@ -552,8 +552,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		stream.VideoBuffer = append(stream.VideoBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})
 	}
 
-	frames := uint32(len(stream.VideoBuffer)) / stream.FrameRate
-	if frames > 0 && uint32(len(stream.AudioBuffer)) >= (stream.AudioRate/asamp+1)*frames {
+	if uint32(len(stream.AudioBuffer)) >= (stream.AudioRate/asamp + 1) {
 		stream.AudioReady = true
 	}
 	if uint32(len(stream.VideoBuffer)) > stream.FrameRate && slicetyp == 7 {
@@ -569,17 +568,12 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		vsamples := make([]*mp4.Sample, 0)
 		asamples := make([]*mp4.Sample, 0)
 
-		kfs := 0
-
 		fmt.Println(stream.VideoBuffer[0].SliceType)
 		for i, seg := range stream.VideoBuffer {
 			pts := i
 			if i > 0 && seg.SliceType == 7 {
 				keyframe = true
-				kfs++
-				if uint32(kfs) > frames {
-					break
-				}
+				break
 			}
 			if seg.SliceType == 5 || seg.SliceType == 7 {
 				M := 0
@@ -611,7 +605,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 			asamples = append(asamples, seg.Samples...)
 			data = append(data, seg.Data...)
 			aidx++
-			if uint32(aidx) >= (stream.AudioRate/asamp+1)*frames {
+			if uint32(aidx) >= (stream.AudioRate/asamp + 1) {
 				break
 			}
 		}

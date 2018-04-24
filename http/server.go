@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -244,6 +245,7 @@ loop:
 	for {
 		select {
 		case msg := <-client.Queue:
+			fmt.Println(len(msg.Data))
 			l := strconv.FormatUint(uint64(len(msg.Data)), 16)
 			if _, err := conn.Write([]byte(l)); err != nil {
 				break loop

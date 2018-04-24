@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -243,6 +244,7 @@ func WebsocketClient(client *server.HttpClient) {
 					byte(len(msg.Data)),
 				}
 			}
+			fmt.Println(header)
 			if _, err := client.Conn.Write(header); err != nil {
 				return
 			}

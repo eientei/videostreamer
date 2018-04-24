@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -568,7 +567,6 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		vsamples := make([]*mp4.Sample, 0)
 		asamples := make([]*mp4.Sample, 0)
 
-		fmt.Println(stream.VideoBuffer[0].SliceType)
 		for i, seg := range stream.VideoBuffer {
 			pts := i
 			if i > 0 && seg.SliceType == 7 {
@@ -718,7 +716,6 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		stream.AudioReady = false
 		stream.VideoReady = false
 
-		fmt.Println(vidx, aidx)
 		stream.VideoBuffer = stream.VideoBuffer[vidx:]
 		stream.AudioBuffer = stream.AudioBuffer[aidx:]
 	}

@@ -558,7 +558,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		for i, seg := range stream.VideoBuffer {
 			pts := i
 			if seg.SliceType == 7 {
-				if keyframe {
+				if keyframe && uint32(vidx) > stream.FrameRate {
 					break
 				}
 				keyframe = true
@@ -718,7 +718,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 		}
 		stream.AudioBuffer = append(stream.AudioBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})
 	case Video:
-		if len(stream.VideoBuffer) > 0 && slicetyp == 7 {
+		if uint32(len(stream.VideoBuffer)) > stream.FrameRate && slicetyp == 7 {
 			stream.VideoReady = true
 		}
 		stream.VideoBuffer = append(stream.VideoBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})

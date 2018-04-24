@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 
@@ -510,7 +509,6 @@ func (stream *Stream) SendSegment(refdata []byte, sidxlen int, vsamples int, asa
 	for _, client := range stream.Clients {
 		if !client.Initialized {
 			client.Conn.Send(&Payload{stream.ContainerInit})
-			fmt.Println("Containit")
 			client.VideoStartTime = 0
 			client.AudioStartTime = 0
 			client.Initialized = true

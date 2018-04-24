@@ -548,7 +548,7 @@ func (stream *Stream) AddSegment(newsamples []*mp4.Sample, sampledata []byte, ty
 	switch typ {
 	case Audio:
 		frames := uint32(len(stream.VideoBuffer)) / stream.FrameRate
-		if frames > 0 && uint32(len(stream.AudioBuffer)) > stream.AudioRate/(asamp/frames) {
+		if frames > 0 && uint32(len(stream.AudioBuffer)) > (stream.AudioRate/asamp+1)*frames {
 			stream.AudioReady = true
 		}
 		stream.AudioBuffer = append(stream.AudioBuffer, &Segment{Samples: newsamples, Data: sampledata, SliceType: slicetyp, Starttime: time})

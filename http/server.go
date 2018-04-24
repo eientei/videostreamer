@@ -5,7 +5,6 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -227,29 +226,27 @@ func WebsocketClient(client *server.HttpClient) {
 	for {
 		select {
 		case msg := <-client.Queue:
-			if _, err := client.Conn.Write(msg.Data); err != nil {
-				var header []byte
-				if len(msg.Data) < 126 {
-					header = []byte{1<<7 | 2, byte(len(msg.Data))}
-				} else if len(msg.Data) < 65536 {
-					header = []byte{1<<7 | 2, 126, byte(len(msg.Data) << 8), byte(len(msg.Data))}
-				} else {
-					header = []byte{1<<7 | 2, 127,
-						byte(len(msg.Data) << 56),
-						byte(len(msg.Data) << 48),
-						byte(len(msg.Data) << 40),
-						byte(len(msg.Data) << 32),
-						byte(len(msg.Data) << 24),
-						byte(len(msg.Data) << 16),
-						byte(len(msg.Data) << 8),
-						byte(len(msg.Data)),
-					}
+			var header []byte
+			if len(msg.Data) < 126 {
+				header = []byte{1<<7 | 2, byte(len(msg.Data))}
+			} else if len(msg.Data) < 65536 {
+				header = []byte{1<<7 | 2, 126, byte(len(msg.Data) << 8), byte(len(msg.Data))}
+			} else {
+				header = []byte{1<<7 | 2, 127,
+					byte(len(msg.Data) << 56),
+					byte(len(msg.Data) << 48),
+					byte(len(msg.Data) << 40),
+					byte(len(msg.Data) << 32),
+					byte(len(msg.Data) << 24),
+					byte(len(msg.Data) << 16),
+					byte(len(msg.Data) << 8),
+					byte(len(msg.Data)),
 				}
-				fmt.Println(456)
-				fmt.Println(header)
-
-				client.Conn.Write(header)
-				client.Conn.Write(msg.Data)
+			}
+			if _, err := client.Conn.Write(header); err != nil {
+				return
+			}
+			if _, err := client.Conn.Write(msg.Data); err != nil {
 				return
 			}
 		case <-client.Signal:

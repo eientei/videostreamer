@@ -189,6 +189,7 @@ func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, name
 }
 
 func (server *Server) ServeMp4(resp http.ResponseWriter, req *http.Request, name string) {
+	resp.Header().Add("Content-Type", "video/mp4")
 	client := &Mp4Client{
 		Resp: resp,
 		Req:  req,

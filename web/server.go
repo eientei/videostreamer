@@ -84,12 +84,18 @@ func (client *WssClient) Send(data []byte) {
 		}
 	}
 	if _, err := client.Conn.Write(header); err != nil {
+		if client.Closed {
+			return
+		}
 		client.Conn.Close()
 		close(client.Closer)
 		client.Closed = true
 		return
 	}
 	if _, err := client.Conn.Write(data); err != nil {
+		if client.Closed {
+			return
+		}
 		client.Conn.Close()
 		close(client.Closer)
 		client.Closed = true

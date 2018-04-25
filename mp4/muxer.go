@@ -75,13 +75,17 @@ type Muxer struct {
 }
 
 type MuxEvent struct {
-	Atime       uint64
-	Vtime       uint64
-	PrePresent  []byte
-	PreSequence []byte
-	PreTrack1   []byte
-	PreTrack2   []byte
-	Trailer     []byte
+	AudioBuffer []*SampleData
+	VideoBuffer []*SampleData
+	/*
+		Atime       uint64
+		Vtime       uint64
+		PrePresent  []byte
+		PreSequence []byte
+		PreTrack1   []byte
+		PreTrack2   []byte
+		Trailer     []byte
+	*/
 }
 
 type MuxHandler interface {
@@ -306,6 +310,147 @@ func (muxer *Muxer) Init(width uint32, height uint32, framerate uint32, audiorat
 	return buf.Bytes()
 }
 
+func (muxer *Muxer) RenderEvent(event *MuxEvent, seq uint32, astart uint64, vstart uint64) ([]byte, uint32, uint32) {
+	data := make([]byte, 0)
+
+	vsamples := make([]*Sample, 0)
+	asamples := make([]*Sample, 0)
+
+	keyframe := false
+	for i, seg := range event.VideoBuffer {
+		if i == 0 && seg.SliceType == 7 {
+			keyframe = true
+		}
+		pts := i
+		if seg.SliceType == 5 || seg.SliceType == 7 {
+			M := 0
+			for n := i + 1; n < len(event.VideoBuffer); n++ {
+				if event.VideoBuffer[n].SliceType == 5 || event.VideoBuffer[n].SliceType == 7 {
+					break
+				}
+				if event.VideoBuffer[n].SliceType == 6 {
+					M++
+				}
+			}
+			pts += M + 1
+		}
+
+		seg.Sample.Scto = uint32(pts - i)
+		vsamples = append(vsamples, seg.Sample)
+		data = append(data, seg.Data...)
+	}
+
+	vdatalen := len(data)
+
+	for _, seg := range event.AudioBuffer {
+		asamples = append(asamples, seg.Sample)
+		data = append(data, seg.Data...)
+	}
+
+	vtime := uint32(len(vsamples)) * 1000 * muxer.Config.TimeScale / muxer.FrameRate
+	atime := vtime
+	/*
+		atotal := uint32(len(asamples)) * 1000 * muxer.Config.TimeScale * 1024 / muxer.AudioRate
+		if atotal < vtime {
+			amiss := vtime - atotal
+			each := amiss / uint32(len(asamples))
+			first := amiss % uint32(len(asamples))
+			for i, s := range asamples {
+				if i == 0 {
+					s.Duration += first
+				}
+				s.Duration += each
+			}
+		} else if atotal > vtime {
+			amiss := atotal - vtime
+			each := amiss / uint32(len(asamples))
+			first := amiss % uint32(len(asamples))
+			for i, s := range asamples {
+				if i == 0 {
+					s.Duration -= first
+				}
+				s.Duration -= each
+			}
+		}
+	*/
+
+	moof := &MoofBox{
+		BoxChildren: []Box{
+			&MfhdBox{
+				Sequence: seq,
+			},
+			&TrafBox{
+				BoxChildren: []Box{
+					&TfhdBox{
+						TrackId: 1,
+					},
+					&TfdtBox{
+						BaseMediaDecodeTime: astart,
+					},
+					&TrunBox{
+						Samples: vsamples,
+					},
+				},
+			},
+			&TrafBox{
+				BoxChildren: []Box{
+					&TfhdBox{
+						TrackId: 2,
+					},
+					&TfdtBox{
+						BaseMediaDecodeTime: vstart,
+					},
+					&TrunBox{
+						Samples: asamples,
+					},
+				},
+			},
+		},
+	}
+
+	moofdata := BoxWrite(moof)
+
+	mdat := &MdatBox{
+		BoxData: data,
+	}
+
+	mdata := BoxWrite(mdat)
+
+	sidx := &SidxBox{
+		ReferenceId:        1,
+		Timescale:          1000 * muxer.Config.TimeScale,
+		PresentationTime:   vstart,
+		ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
+		SubsegmentDuration: uint32(vtime),
+		Keyframe:           keyframe,
+	}
+
+	t1off := len(moofdata) - len(asamples)*12 - 4
+	WriteB32(moofdata[t1off:t1off+4], uint32(len(moofdata)+8+vdatalen))
+
+	t2off := len(moofdata) - len(asamples)*12 - 4 -
+		4 - // trun sample no
+		4 - // trun fullbox
+		8 - // trun header
+		8 - // tfdt base time
+		4 - // tfdt fullbox
+		8 - // tfdt header
+		4 - // tfhd flags
+		4 - // tfhd trackid
+		4 - // tfhd fullbox
+		8 - // tfhd header
+		8 - // traf header
+		len(vsamples)*12 - 4
+
+	WriteB32(moofdata[t2off:t2off+4], uint32(len(moofdata)+8))
+
+	sidxdata := BoxWrite(sidx)
+
+	segment := append(append(sidxdata, moofdata...), mdata...)
+
+	return segment, atime, vtime
+}
+
 func (muxer *Muxer) AddSampleData(sample *Sample, data []byte, typ uint8, slicetyp uint64) {
 	switch typ {
 	case Audio:
@@ -315,165 +460,31 @@ func (muxer *Muxer) AddSampleData(sample *Sample, data []byte, typ uint8, slicet
 	}
 
 	if uint32(len(muxer.VideoBuffer)) > 0 && uint32(len(muxer.VideoBuffer)) >= muxer.FrameRate*muxer.Config.BufferSeconds {
-		vidx := 0
-		aidx := 0
-		data := make([]byte, 0)
+		vidx := muxer.FrameRate * muxer.Config.BufferSeconds
+		aidx := len(muxer.AudioBuffer)
 
-		vsamples := make([]*Sample, 0)
-		asamples := make([]*Sample, 0)
-
-		keyframe := false
-		for i, seg := range muxer.VideoBuffer {
-			if i == 0 && seg.SliceType == 7 {
-				keyframe = true
-			}
-			if uint32(len(vsamples)) >= muxer.FrameRate*muxer.Config.BufferSeconds {
-				break
-			}
-			vidx++
-			pts := i
-			if seg.SliceType == 5 || seg.SliceType == 7 {
-				M := 0
-				for n := i + 1; n < len(muxer.VideoBuffer); n++ {
-					if muxer.VideoBuffer[n].SliceType == 5 || muxer.VideoBuffer[n].SliceType == 7 {
-						break
-					}
-					if muxer.VideoBuffer[n].SliceType == 6 {
-						M++
-					}
-				}
-				pts += M + 1
-			}
-
-			seg.Sample.Scto = uint32(pts - i)
-			vsamples = append(vsamples, seg.Sample)
-			data = append(data, seg.Data...)
-		}
-
-		vdatalen := len(data)
-
-		for _, seg := range muxer.AudioBuffer {
-			asamples = append(asamples, seg.Sample)
-			data = append(data, seg.Data...)
-			aidx++
-		}
-
-		vtime := uint32(len(vsamples)) * 1000 * muxer.Config.TimeScale / muxer.FrameRate
-		atime := vtime
 		/*
-			atotal := uint32(len(asamples)) * 1000 * muxer.Config.TimeScale * 1024 / muxer.AudioRate
-			if atotal < vtime {
-				amiss := vtime - atotal
-				each := amiss / uint32(len(asamples))
-				first := amiss % uint32(len(asamples))
-				for i, s := range asamples {
-					if i == 0 {
-						s.Duration += first
-					}
-					s.Duration += each
-				}
-			} else if atotal > vtime {
-				amiss := atotal - vtime
-				each := amiss / uint32(len(asamples))
-				first := amiss % uint32(len(asamples))
-				for i, s := range asamples {
-					if i == 0 {
-						s.Duration -= first
-					}
-					s.Duration -= each
-				}
+			event := &MuxEvent{
+				Atime:       uint64(atime),
+				Vtime:       uint64(vtime),
+				PrePresent:  segment[:sidxPresentOffset],
+				PreSequence: segment[sidxPresentOffset+8 : len(sidxdata)+mfhdSequenceOffset],
+				PreTrack1:   segment[len(sidxdata)+mfhdSequenceOffset+4 : len(sidxdata)+track1TimeOff],
+				PreTrack2:   segment[len(sidxdata)+track1TimeOff+8 : len(sidxdata)+track1TimeOff+track1End2TimeOff+len(vsamples)*12],
+				Trailer:     segment[len(sidxdata)+track1TimeOff+len(vsamples)*12+track1End2TimeOff+8:],
 			}
 		*/
-
-		moof := &MoofBox{
-			BoxChildren: []Box{
-				&MfhdBox{
-					Sequence: 0,
-				},
-				&TrafBox{
-					BoxChildren: []Box{
-						&TfhdBox{
-							TrackId: 1,
-						},
-						&TfdtBox{
-							BaseMediaDecodeTime: 0,
-						},
-						&TrunBox{
-							Samples: vsamples,
-						},
-					},
-				},
-				&TrafBox{
-					BoxChildren: []Box{
-						&TfhdBox{
-							TrackId: 2,
-						},
-						&TfdtBox{
-							BaseMediaDecodeTime: 0,
-						},
-						&TrunBox{
-							Samples: asamples,
-						},
-					},
-				},
-			},
-		}
-
-		moofdata := BoxWrite(moof)
-
-		mdat := &MdatBox{
-			BoxData: data,
-		}
-
-		mdata := BoxWrite(mdat)
-
-		sidx := &SidxBox{
-			ReferenceId:        1,
-			Timescale:          1000 * muxer.Config.TimeScale,
-			PresentationTime:   0,
-			ReferenceSize:      uint32(len(moofdata)) + uint32(len(mdata)),
-			SubsegmentDuration: vtime,
-			Keyframe:           keyframe,
-		}
-
-		t1off := len(moofdata) - len(asamples)*12 - 4
-		WriteB32(moofdata[t1off:t1off+4], uint32(len(moofdata)+8+vdatalen))
-
-		t2off := len(moofdata) - len(asamples)*12 - 4 -
-			4 - // trun sample no
-			4 - // trun fullbox
-			8 - // trun header
-			8 - // tfdt base time
-			4 - // tfdt fullbox
-			8 - // tfdt header
-			4 - // tfhd flags
-			4 - // tfhd trackid
-			4 - // tfhd fullbox
-			8 - // tfhd header
-			8 - // traf header
-			len(vsamples)*12 - 4
-
-		WriteB32(moofdata[t2off:t2off+4], uint32(len(moofdata)+8))
-
-		sidxdata := BoxWrite(sidx)
-
-		segment := append(append(sidxdata, moofdata...), mdata...)
-
 		event := &MuxEvent{
-			Atime:       uint64(atime),
-			Vtime:       uint64(vtime),
-			PrePresent:  segment[:sidxPresentOffset],
-			PreSequence: segment[sidxPresentOffset+8 : len(sidxdata)+mfhdSequenceOffset],
-			PreTrack1:   segment[len(sidxdata)+mfhdSequenceOffset+4 : len(sidxdata)+track1TimeOff],
-			PreTrack2:   segment[len(sidxdata)+track1TimeOff+8 : len(sidxdata)+track1TimeOff+track1End2TimeOff+len(vsamples)*12],
-			Trailer:     segment[len(sidxdata)+track1TimeOff+len(vsamples)*12+track1End2TimeOff+8:],
+			AudioBuffer: make([]*SampleData, aidx),
+			VideoBuffer: make([]*SampleData, vidx),
 		}
+		copy(event.AudioBuffer, muxer.AudioBuffer)
+		copy(event.VideoBuffer, muxer.VideoBuffer)
 
 		for _, h := range muxer.MuxHandlers {
 			h.MuxHandle(event)
 		}
 
-		//fmt.Println(vidx, aidx)
 		muxer.VideoBuffer = muxer.VideoBuffer[vidx:]
 		muxer.AudioBuffer = muxer.AudioBuffer[aidx:]
 	}

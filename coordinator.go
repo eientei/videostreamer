@@ -40,32 +40,37 @@ type Stream struct {
 	AudioBuffer   chan *rtmp.TimestampBuf
 	VideoBuffer   chan *rtmp.TimestampBuf
 	ContainerInit []byte
+	Muxer         *mp4.Muxer
 }
 
-func (stream *Stream) MuxHandle(mux *mp4.MuxEvent) {
+func (stream *Stream) MuxHandle(event *mp4.MuxEvent) {
 	for _, c := range stream.Clients {
-		abuf := make([]byte, 8)
-		vbuf := make([]byte, 8)
-		sbuf := make([]byte, 4)
+		data, atime, vtime := stream.Muxer.RenderEvent(event, c.Sequence(), c.Atime(), c.Vtime())
+		/*
+			abuf := make([]byte, 8)
+			vbuf := make([]byte, 8)
+			sbuf := make([]byte, 4)
 
-		WriteB64(abuf, c.Atime())
-		WriteB64(vbuf, c.Vtime())
-		WriteB32(sbuf, c.Sequence())
+			WriteB64(abuf, c.Atime())
+			WriteB64(vbuf, c.Vtime())
+			WriteB32(sbuf, c.Sequence())
 
-		b := make([]byte, 0)
-		b = append(b, mux.PrePresent...)
-		b = append(b, vbuf...)
-		b = append(b, mux.PreSequence...)
-		b = append(b, sbuf...)
-		b = append(b, mux.PreTrack1...)
-		b = append(b, vbuf...)
-		b = append(b, mux.PreTrack2...)
-		b = append(b, abuf...)
-		b = append(b, mux.Trailer...)
+			b := make([]byte, 0)
+			b = append(b, mux.PrePresent...)
+			b = append(b, vbuf...)
+			b = append(b, mux.PreSequence...)
+			b = append(b, sbuf...)
+			b = append(b, mux.PreTrack1...)
+			b = append(b, vbuf...)
+			b = append(b, mux.PreTrack2...)
+			b = append(b, abuf...)
+			b = append(b, mux.Trailer...)
 
-		go c.Send(b)
+			go c.Send(b)
 
-		c.Advance(1, mux.Atime, mux.Vtime)
+		*/
+		c.Send(data)
+		c.Advance(1, uint64(atime), uint64(vtime))
 	}
 }
 
@@ -209,7 +214,7 @@ func (coordinator *Coordinator) VideoEvent(client rtmp.ID, data *rtmp.TimestampB
 	return true
 }
 
-func Dispatch(stream *Stream, muxer *mp4.Muxer) {
+func Dispatch(stream *Stream) {
 	defer stream.Close()
 	for {
 		select {
@@ -229,7 +234,7 @@ func Dispatch(stream *Stream, muxer *mp4.Muxer) {
 			}
 			ptr += 1
 
-			muxer.Audio(msg.Data[ptr:])
+			stream.Muxer.Audio(msg.Data[ptr:])
 		case msg, ok := <-stream.VideoBuffer:
 			if !ok {
 				return
@@ -253,7 +258,7 @@ func Dispatch(stream *Stream, muxer *mp4.Muxer) {
 					case 0:
 						continue
 					case 1:
-						muxer.Video(msg.Data[ptr:])
+						stream.Muxer.Video(msg.Data[ptr:])
 					default:
 						return
 					}
@@ -266,7 +271,7 @@ func Dispatch(stream *Stream, muxer *mp4.Muxer) {
 }
 
 func (coordinator *Coordinator) Remux(stream *Stream) bool {
-	muxer := mp4.NewMuxer(coordinator.Config.Mp4)
+	stream.Muxer = mp4.NewMuxer(coordinator.Config.Mp4)
 
 	aptr := 0
 	format := stream.AudioInit[aptr] >> 4
@@ -303,12 +308,12 @@ func (coordinator *Coordinator) Remux(stream *Stream) bool {
 		}
 	}
 
-	stream.ContainerInit = muxer.Init(stream.Metadata.Width, stream.Metadata.Height, stream.Metadata.FrameRate, stream.Metadata.AudioRate, stream.AudioInit[aptr:], stream.VideoInit[vptr:])
+	stream.ContainerInit = stream.Muxer.Init(stream.Metadata.Width, stream.Metadata.Height, stream.Metadata.FrameRate, stream.Metadata.AudioRate, stream.AudioInit[aptr:], stream.VideoInit[vptr:])
 	if len(stream.ContainerInit) == 0 {
 		return false
 	}
-	muxer.Subscribe(stream)
-	go Dispatch(stream, muxer)
+	stream.Muxer.Subscribe(stream)
+	go Dispatch(stream)
 	return true
 }
 

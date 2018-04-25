@@ -1,9 +1,10 @@
 package web
 
 import (
+	"crypto/sha1"
+	"encoding/base64"
+	"net"
 	"net/http"
-
-	"github.com/gorilla/websocket"
 )
 
 const livePrefix = "/live/"
@@ -46,7 +47,7 @@ func (client *BaseClient) Advance(seq uint32, atime uint64, vtime uint64) {
 
 type WssClient struct {
 	BaseClient
-	Conn   *websocket.Conn
+	Conn   net.Conn
 	Closer chan struct{}
 }
 
@@ -55,9 +56,32 @@ func (client *WssClient) Source() string {
 }
 
 func (client *WssClient) Send(data []byte) {
-	if err := client.Conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
+	var header []byte
+	if len(data) < 126 {
+		header = []byte{1<<7 | 2, byte(len(data))}
+	} else if len(data) < 65536 {
+		header = []byte{1<<7 | 2, 126, byte(len(data) >> 8), byte(len(data))}
+	} else {
+		header = []byte{1<<7 | 2, 127,
+			byte(len(data) >> 56),
+			byte(len(data) >> 48),
+			byte(len(data) >> 40),
+			byte(len(data) >> 32),
+			byte(len(data) >> 24),
+			byte(len(data) >> 16),
+			byte(len(data) >> 8),
+			byte(len(data)),
+		}
+	}
+	if _, err := client.Conn.Write(header); err != nil {
 		client.Conn.Close()
 		close(client.Closer)
+		return
+	}
+	if _, err := client.Conn.Write(data); err != nil {
+		client.Conn.Close()
+		close(client.Closer)
+		return
 	}
 }
 
@@ -109,18 +133,16 @@ func (server *Server) Subscribe(handler ClientHandler) {
 	server.ClientHandlers = append(server.ClientHandlers, handler)
 }
 
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-	EnableCompression: false,
-}
-
 func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, name string) {
-	if conn, err := upgrader.Upgrade(resp, req, nil); err != nil {
+	if conn, _, err := resp.(http.Hijacker).Hijack(); err != nil {
 		http.Error(resp, err.Error(), http.StatusInternalServerError)
-		return
 	} else {
+		header := req.Header.Get("Sec-WebSocket-Key")
+		concat := header + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+		sum := sha1.Sum([]byte(concat))
+		accept := base64.StdEncoding.EncodeToString(sum[:])
+		conn.Write([]byte("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + accept + "\r\n\r\n"))
+
 		client := &WssClient{
 			Conn:   conn,
 			Closer: make(chan struct{}),

@@ -327,7 +327,8 @@ func (muxer *Muxer) AddSampleData(sample *Sample, data []byte, typ uint8, slicet
 		for i, seg := range muxer.VideoBuffer {
 			if i == 0 && seg.SliceType == 7 {
 				keyframe = true
-			} else if seg.SliceType == 7 {
+			}
+			if uint32(len(muxer.VideoBuffer)) >= muxer.FrameRate*muxer.Config.BufferSeconds {
 				break
 			}
 			vidx++

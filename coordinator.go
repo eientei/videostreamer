@@ -49,14 +49,25 @@ func (stream *Stream) MuxHandle(event *mp4.MuxEvent) {
 		var atime uint32
 		var vtime uint32
 		if c.Sequence() == 0 {
-			first := 0
+			vfirst := 0
+			tskip := uint32(0)
 			for i, c := range event.VideoBuffer {
 				if c.SliceType == 7 {
-					first = i
+					vfirst = i
 					break
 				}
+				tskip += c.Sample.Duration
 			}
-			data, atime, vtime = stream.Muxer.RenderEvent(&mp4.MuxEvent{AudioBuffer: event.AudioBuffer, VideoBuffer: event.VideoBuffer[first:]}, c.Sequence(), c.Atime(), c.Vtime())
+			aacc := uint32(0)
+			afirst := 0
+			for i, c := range event.AudioBuffer {
+				if aacc >= tskip {
+					afirst = i
+					break
+				}
+				aacc += c.Sample.Duration
+			}
+			data, atime, vtime = stream.Muxer.RenderEvent(&mp4.MuxEvent{AudioBuffer: event.AudioBuffer[afirst:], VideoBuffer: event.VideoBuffer[vfirst:]}, c.Sequence(), c.Atime(), c.Vtime())
 		} else {
 			data, atime, vtime = stream.Muxer.RenderEvent(event, c.Sequence(), c.Atime(), c.Vtime())
 		}

@@ -45,7 +45,23 @@ type Stream struct {
 
 func (stream *Stream) MuxHandle(event *mp4.MuxEvent) {
 	for _, c := range stream.Clients {
-		data, atime, vtime := stream.Muxer.RenderEvent(event, c.Sequence(), c.Atime(), c.Vtime())
+		var data []byte
+		var atime uint32
+		var vtime uint32
+		if c.Sequence() == 0 {
+			first := 0
+			for i, c := range event.VideoBuffer {
+				if c.SliceType == 7 {
+					first = i
+					break
+				}
+			}
+			data, atime, vtime = stream.Muxer.RenderEvent(&mp4.MuxEvent{AudioBuffer: event.AudioBuffer, VideoBuffer: event.VideoBuffer[first:]}, c.Sequence(), c.Atime(), c.Vtime())
+		} else {
+			data, atime, vtime = stream.Muxer.RenderEvent(event, c.Sequence(), c.Atime(), c.Vtime())
+		}
+		c.Send(data)
+		c.Advance(1, uint64(atime), uint64(vtime))
 		/*
 			abuf := make([]byte, 8)
 			vbuf := make([]byte, 8)
@@ -69,8 +85,6 @@ func (stream *Stream) MuxHandle(event *mp4.MuxEvent) {
 			go c.Send(b)
 
 		*/
-		c.Send(data)
-		c.Advance(1, uint64(atime), uint64(vtime))
 	}
 }
 

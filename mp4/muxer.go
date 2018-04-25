@@ -331,6 +331,7 @@ func (muxer *Muxer) AddSampleData(sample *Sample, data []byte, typ uint8, slicet
 			pts := i
 			if seg.SliceType == 7 {
 				keyframe = true
+				break
 			}
 			if seg.SliceType == 5 || seg.SliceType == 7 {
 				M := 0

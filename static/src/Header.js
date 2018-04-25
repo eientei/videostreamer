@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import {Button, Tab, Tabs, Toolbar} from 'material-ui';
 import {Link, withRouter} from 'react-router-dom';
+import Badge from './Badge';
 
 class Header extends Component {
     handleTabSelect = (_,v) => this.setState({tabSelect: v});
@@ -29,7 +30,8 @@ class Header extends Component {
                     <Tab label="Profile" component={Link} to='/profile'/>
                     <Tab label="Howto" component={Link} to='/howto'/>
                 </Tabs>
-                <Button color='inherit'>
+                <Badge size={32}/>
+                <Button color='inherit' component={Link} to='/signup'>
                     Signup
                 </Button>
             </Toolbar>

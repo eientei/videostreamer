@@ -5,8 +5,6 @@ import (
 	"errors"
 	"io"
 	"sort"
-
-	"../util"
 )
 
 var InvalidArray = errors.New("invalid array")
@@ -41,7 +39,7 @@ func (value *ArrayValue) Read(reader io.Reader) error {
 
 func (value *ArrayValue) Write(writer io.Writer) error {
 	buf := make([]byte, 4)
-	util.WriteB32(buf, uint32(len(value.Data)))
+	WriteB32(buf, uint32(len(value.Data)))
 	if _, err := writer.Write(buf); err != nil {
 		return err
 	}

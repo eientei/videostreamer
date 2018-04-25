@@ -2,8 +2,6 @@ package amf
 
 import (
 	"io"
-
-	"../util"
 )
 
 func (value *StringValue) Type() uint8 {
@@ -16,7 +14,7 @@ func (value *StringValue) Read(reader io.Reader) error {
 	if _, err := io.ReadFull(reader, buf); err != nil {
 		return err
 	} else {
-		data := make([]byte, util.ReadB16(buf))
+		data := make([]byte, ReadB16(buf))
 		if _, err := io.ReadFull(reader, data); err != nil {
 			return err
 		} else {
@@ -28,7 +26,7 @@ func (value *StringValue) Read(reader io.Reader) error {
 
 func (value *StringValue) Write(writer io.Writer) error {
 	buf := make([]byte, 2)
-	util.WriteB16(buf, uint16(len(value.Data)))
+	WriteB16(buf, uint16(len(value.Data)))
 	if _, err := writer.Write(buf); err != nil {
 		return err
 	} else {

@@ -4,8 +4,6 @@ import (
 	"io"
 	"math"
 	"strconv"
-
-	"../util"
 )
 
 func (value *NumberValue) Type() uint8 {
@@ -18,14 +16,14 @@ func (value *NumberValue) Read(reader io.Reader) error {
 	if _, err := io.ReadFull(reader, buf); err != nil {
 		return err
 	} else {
-		value.Data = math.Float64frombits(util.ReadB64(buf))
+		value.Data = math.Float64frombits(ReadB64(buf))
 		return nil
 	}
 }
 
 func (value *NumberValue) Write(writer io.Writer) error {
 	buf := make([]byte, 8)
-	util.WriteB64(buf, math.Float64bits(value.Data))
+	WriteB64(buf, math.Float64bits(value.Data))
 	_, err := writer.Write(buf)
 	return err
 }

@@ -25,6 +25,8 @@ type BaseClient struct {
 	SequenceI uint32
 	AtimeI    uint64
 	VtimeI    uint64
+	Closed    bool
+	Closer    chan struct{}
 }
 
 func (client *BaseClient) Sequence() uint32 {
@@ -56,6 +58,9 @@ func (client *WssClient) Source() string {
 }
 
 func (client *WssClient) Send(data []byte) {
+	if client.Closed {
+		return
+	}
 	var header []byte
 	if len(data) < 126 {
 		header = []byte{1<<7 | 2, byte(len(data))}
@@ -76,25 +81,30 @@ func (client *WssClient) Send(data []byte) {
 	if _, err := client.Conn.Write(header); err != nil {
 		client.Conn.Close()
 		close(client.Closer)
+		client.Closed = true
 		return
 	}
 	if _, err := client.Conn.Write(data); err != nil {
 		client.Conn.Close()
 		close(client.Closer)
+		client.Closed = true
 		return
 	}
 }
 
 func (client *WssClient) Close() {
+	if client.Closed {
+		return
+	}
 	client.Conn.Close()
 	close(client.Closer)
+	client.Closed = true
 }
 
 type Mp4Client struct {
 	BaseClient
-	Resp   http.ResponseWriter
-	Req    *http.Request
-	Closer chan struct{}
+	Resp http.ResponseWriter
+	Req  *http.Request
 }
 
 func (client *Mp4Client) Source() string {
@@ -102,15 +112,23 @@ func (client *Mp4Client) Source() string {
 }
 
 func (client *Mp4Client) Send(data []byte) {
+	if client.Closed {
+		return
+	}
 	flusher := client.Resp.(http.Flusher)
 	if _, err := client.Resp.Write(data); err != nil {
 		close(client.Closer)
+		client.Closed = true
 	}
 	flusher.Flush()
 }
 
 func (client *Mp4Client) Close() {
+	if client.Closed {
+		return
+	}
 	close(client.Closer)
+	client.Closed = true
 }
 
 type ClientHandler interface {
@@ -162,9 +180,11 @@ func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, name
 
 func (server *Server) ServeMp4(resp http.ResponseWriter, req *http.Request, name string) {
 	client := &Mp4Client{
-		Resp:   resp,
-		Req:    req,
-		Closer: make(chan struct{}),
+		Resp: resp,
+		Req:  req,
+		BaseClient: BaseClient{
+			Closer: make(chan struct{}),
+		},
 	}
 	for _, h := range server.ClientHandlers {
 		if !h.ClientConnect(client, name) {

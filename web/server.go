@@ -49,11 +49,16 @@ func (client *BaseClient) Advance(seq uint32, atime uint64, vtime uint64) {
 
 type WssClient struct {
 	BaseClient
+	Req    *http.Request
 	Conn   net.Conn
 	Closer chan struct{}
 }
 
 func (client *WssClient) Source() string {
+	ip := client.Req.Header.Get("X-Real-IP")
+	if ip != "" {
+		return ip
+	}
 	return client.Conn.RemoteAddr().String()
 }
 
@@ -108,6 +113,10 @@ type Mp4Client struct {
 }
 
 func (client *Mp4Client) Source() string {
+	ip := client.Req.Header.Get("X-Real-IP")
+	if ip != "" {
+		return ip
+	}
 	return client.Req.RemoteAddr
 }
 
@@ -163,6 +172,7 @@ func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, name
 
 		client := &WssClient{
 			Conn:   conn,
+			Req:    req,
 			Closer: make(chan struct{}),
 		}
 		for _, h := range server.ClientHandlers {

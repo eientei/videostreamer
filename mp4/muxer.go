@@ -360,29 +360,30 @@ func (muxer *Muxer) AddSampleData(sample *Sample, data []byte, typ uint8, slicet
 
 		vtime := uint32(len(vsamples)) * 1000 * muxer.Config.TimeScale / muxer.FrameRate
 		atime := vtime
-
-		atotal := uint32(len(asamples)) * 1000 * muxer.Config.TimeScale * 1024 / muxer.AudioRate
-		if atotal < vtime {
-			amiss := vtime - atotal
-			each := amiss / uint32(len(asamples))
-			first := amiss % uint32(len(asamples))
-			for i, s := range asamples {
-				if i == 0 {
-					s.Duration += first
+		/*
+			atotal := uint32(len(asamples)) * 1000 * muxer.Config.TimeScale * 1024 / muxer.AudioRate
+			if atotal < vtime {
+				amiss := vtime - atotal
+				each := amiss / uint32(len(asamples))
+				first := amiss % uint32(len(asamples))
+				for i, s := range asamples {
+					if i == 0 {
+						s.Duration += first
+					}
+					s.Duration += each
 				}
-				s.Duration += each
-			}
-		} else if atotal > vtime {
-			amiss := atotal - vtime
-			each := amiss / uint32(len(asamples))
-			first := amiss % uint32(len(asamples))
-			for i, s := range asamples {
-				if i == 0 {
-					s.Duration -= first
+			} else if atotal > vtime {
+				amiss := atotal - vtime
+				each := amiss / uint32(len(asamples))
+				first := amiss % uint32(len(asamples))
+				for i, s := range asamples {
+					if i == 0 {
+						s.Duration -= first
+					}
+					s.Duration -= each
 				}
-				s.Duration -= each
 			}
-		}
+		*/
 
 		moof := &MoofBox{
 			BoxChildren: []Box{

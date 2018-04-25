@@ -314,7 +314,7 @@ func (muxer *Muxer) AddSampleData(sample *Sample, data []byte, typ uint8, slicet
 		muxer.VideoBuffer = append(muxer.VideoBuffer, &SampleData{Sample: sample, Data: data, SliceType: slicetyp})
 	}
 
-	if uint32(len(muxer.VideoBuffer)) >= muxer.FrameRate*muxer.Config.BufferSeconds {
+	if uint32(len(muxer.VideoBuffer)) > 0 && uint32(len(muxer.VideoBuffer)) >= muxer.FrameRate*muxer.Config.BufferSeconds {
 		vidx := 0
 		aidx := 0
 		data := make([]byte, 0)

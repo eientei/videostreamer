@@ -2,7 +2,6 @@ package mp4
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 )
 
@@ -474,7 +473,7 @@ func (muxer *Muxer) AddSampleData(sample *Sample, data []byte, typ uint8, slicet
 			h.MuxHandle(event)
 		}
 
-		fmt.Println(vidx, aidx)
+		//fmt.Println(vidx, aidx)
 		muxer.VideoBuffer = muxer.VideoBuffer[vidx:]
 		muxer.AudioBuffer = muxer.AudioBuffer[aidx:]
 	}

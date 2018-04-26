@@ -1,0 +1,15 @@
+mp4:
+  universaltime: true
+  timescale: 1000
+  bufferseconds: 1
+rtmp:
+  address: :1935
+  chunksize: 2048
+  acksize: 0xFFFFFF
+  bandwidth: 0xFFFFFF
+  limit:
+    publishers: -1
+    subscribers: -1
+web:
+  address: :8181
+  recaptcha: ReCaptcha private key

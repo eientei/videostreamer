@@ -1,7 +1,11 @@
 package main
 
 import (
+	"io/ioutil"
+	"os"
 	"runtime"
+
+	"gopkg.in/yaml.v2"
 
 	"./mp4"
 	"./rtmp"
@@ -9,6 +13,10 @@ import (
 )
 
 func main() {
+	conffile := "videostreamer.yaml"
+	if len(os.Args) > 1 {
+		conffile = os.Args[1]
+	}
 	runtime.GOMAXPROCS(32)
 
 	conf := &Config{
@@ -28,8 +36,17 @@ func main() {
 			},
 		},
 		Web: &web.Config{
-			Address: ":8181",
+			Address:   ":8181",
+			Recaptcha: "ReCaptcha private key",
 		},
+	}
+
+	if yamlFile, err := ioutil.ReadFile(conffile); err != nil {
+		return
+	} else {
+		if err := yaml.Unmarshal(yamlFile, conf); err != nil {
+			return
+		}
 	}
 
 	coordinator := &Coordinator{

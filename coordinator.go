@@ -73,29 +73,6 @@ func (stream *Stream) MuxHandle(event *mp4.MuxEvent) {
 		}
 		c.Send(data)
 		c.Advance(1, uint64(atime), uint64(vtime))
-		/*
-			abuf := make([]byte, 8)
-			vbuf := make([]byte, 8)
-			sbuf := make([]byte, 4)
-
-			WriteB64(abuf, c.Atime())
-			WriteB64(vbuf, c.Vtime())
-			WriteB32(sbuf, c.Sequence())
-
-			b := make([]byte, 0)
-			b = append(b, mux.PrePresent...)
-			b = append(b, vbuf...)
-			b = append(b, mux.PreSequence...)
-			b = append(b, sbuf...)
-			b = append(b, mux.PreTrack1...)
-			b = append(b, vbuf...)
-			b = append(b, mux.PreTrack2...)
-			b = append(b, abuf...)
-			b = append(b, mux.Trailer...)
-
-			go c.Send(b)
-
-		*/
 	}
 }
 

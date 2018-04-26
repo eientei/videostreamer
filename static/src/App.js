@@ -12,6 +12,7 @@ import Howto from './Howto';
 import Signup from './Signup';
 import Player from './Player';
 import NotFound from './NotFound';
+import './App.css';
 
 const theme = createMuiTheme({
 
@@ -22,11 +23,10 @@ const history = createHistory();
 export default class App extends Component {
     render() {
         return (
-            <div>
-                <CssBaseline />
                 <MuiThemeProvider theme={theme}>
                     <Router history={history}>
-                        <div>
+                        <div style={{display: 'flex', flexDirection: 'column', height: }}>
+                            <CssBaseline />
                             <Header/>
                             <Switch>
                                 <Route exact path='/' component={Main}/>
@@ -39,7 +39,6 @@ export default class App extends Component {
                         </div>
                     </Router>
                 </MuiThemeProvider>
-            </div>
         );
     }
 }

@@ -3,11 +3,17 @@ package web
 import (
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/json"
+	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
+	"os"
+	"strings"
+	"time"
 )
 
-const livePrefix = "/live/"
+const livePrefix = "/api/live/"
 const wssSuffix = ".wss"
 const mp4Suffix = ".mp4"
 
@@ -59,7 +65,7 @@ func (client *WssClient) Source() string {
 	if ip != "" {
 		return ip
 	}
-	return client.Conn.RemoteAddr().String()
+	return client.Conn.RemoteAddr().String()[:strings.Index(client.Conn.RemoteAddr().String(), ":")]
 }
 
 func (client *WssClient) Send(data []byte) {
@@ -123,7 +129,7 @@ func (client *Mp4Client) Source() string {
 	if ip != "" {
 		return ip
 	}
-	return client.Req.RemoteAddr
+	return client.Req.RemoteAddr[:strings.Index(client.Req.RemoteAddr, ":")]
 }
 
 func (client *Mp4Client) Send(data []byte) {
@@ -167,15 +173,10 @@ func (server *Server) Subscribe(handler ClientHandler) {
 }
 
 func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, name string) {
-	if conn, _, err := resp.(http.Hijacker).Hijack(); err != nil {
+	if conn, err := WsHandshake(resp, req); err != nil {
 		http.Error(resp, err.Error(), http.StatusInternalServerError)
+		return
 	} else {
-		header := req.Header.Get("Sec-WebSocket-Key")
-		concat := header + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-		sum := sha1.Sum([]byte(concat))
-		accept := base64.StdEncoding.EncodeToString(sum[:])
-		conn.Write([]byte("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + accept + "\r\n\r\n"))
-
 		client := &WssClient{
 			Conn:   conn,
 			Req:    req,
@@ -214,8 +215,89 @@ func (server *Server) ServeMp4(resp http.ResponseWriter, req *http.Request, name
 	}
 }
 
+type Signup struct {
+	Username       string `json:"username"`
+	Email          string `json:"email"`
+	Password       string `json:"password"`
+	PasswordRepeat string `json:"passwordrepeat"`
+	Captcha        string `json:"captcha"`
+}
+
+type RecaptchaResponse struct {
+	Success     bool      `json:"success"`
+	ChallengeTS time.Time `json:"challenge_ts"`
+	Hostname    string    `json:"hostname"`
+	ErrorCodes  []string  `json:"error-codes"`
+}
+
+func (server *Server) Signup(resp http.ResponseWriter, req *http.Request) {
+	if data, err := ioutil.ReadAll(req.Body); err != nil {
+		http.Error(resp, err.Error(), http.StatusInternalServerError)
+		return
+	} else {
+		signup := &Signup{}
+		if err := json.Unmarshal(data, signup); err != nil {
+			http.Error(resp, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		ip := req.Header.Get("X-Real-IP")
+		if ip == "" {
+			ip = req.RemoteAddr[:strings.Index(req.RemoteAddr, ":")]
+		}
+		if ip == "127.0.0.1" {
+			return
+		}
+
+		res := &RecaptchaResponse{}
+		if r, err := http.PostForm("https://www.google.com/recaptcha/api/siteverify", url.Values{"secret": {server.Config.Recaptcha}, "remoteip": {ip}, "response": {signup.Captcha}}); err != nil {
+			http.Error(resp, err.Error(), http.StatusInternalServerError)
+			return
+		} else {
+			defer r.Body.Close()
+			if body, err := ioutil.ReadAll(r.Body); err != nil {
+				http.Error(resp, err.Error(), http.StatusInternalServerError)
+				return
+			} else {
+				if err := json.Unmarshal(body, res); err != nil {
+					http.Error(resp, err.Error(), http.StatusInternalServerError)
+					return
+				}
+			}
+		}
+
+		if !res.Success {
+			http.Error(resp, "Invalid captcha", http.StatusBadRequest)
+			return
+		}
+	}
+}
+
+func WsHandshake(resp http.ResponseWriter, req *http.Request) (net.Conn, error) {
+	if conn, _, err := resp.(http.Hijacker).Hijack(); err != nil {
+		return nil, err
+	} else {
+		header := req.Header.Get("Sec-WebSocket-Key")
+		concat := header + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+		sum := sha1.Sum([]byte(concat))
+		accept := base64.StdEncoding.EncodeToString(sum[:])
+		conn.Write([]byte("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + accept + "\r\n\r\n"))
+		return conn, nil
+	}
+}
+
+func (server *Server) ServeEvent(resp http.ResponseWriter, req *http.Request) {
+	if conn, err := WsHandshake(resp, req); err != nil {
+		http.Error(resp, err.Error(), http.StatusInternalServerError)
+		return
+	} else {
+
+	}
+}
+
 func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	switch req.URL.Path {
+	case "/api/event":
+		server.ServeEvent(resp, req)
 	default:
 		if len(req.URL.Path) > len(livePrefix) && req.URL.Path[:len(livePrefix)] == livePrefix {
 			next := req.URL.Path[len(livePrefix):]
@@ -225,6 +307,13 @@ func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 			} else if len(next) > len(mp4Suffix) && next[len(next)-len(mp4Suffix):] == mp4Suffix {
 				name := next[:len(next)-len(mp4Suffix)]
 				server.ServeMp4(resp, req, name)
+			}
+		} else {
+			name := "./static/build/" + req.URL.Path
+			if _, err := os.Stat(name); os.IsNotExist(err) {
+				http.ServeFile(resp, req, "./static/build/index.html")
+			} else {
+				http.ServeFile(resp, req, name)
 			}
 		}
 	}

@@ -77,15 +77,6 @@ type Muxer struct {
 type MuxEvent struct {
 	AudioBuffer []*SampleData
 	VideoBuffer []*SampleData
-	/*
-		Atime       uint64
-		Vtime       uint64
-		PrePresent  []byte
-		PreSequence []byte
-		PreTrack1   []byte
-		PreTrack2   []byte
-		Trailer     []byte
-	*/
 }
 
 type MuxHandler interface {
@@ -349,30 +340,6 @@ func (muxer *Muxer) RenderEvent(event *MuxEvent, seq uint32, astart uint64, vsta
 
 	vtime := uint32(len(vsamples)) * 1000 * muxer.Config.TimeScale / muxer.FrameRate
 	atime := vtime
-	/*
-		atotal := uint32(len(asamples)) * 1000 * muxer.Config.TimeScale * 1024 / muxer.AudioRate
-		if atotal < vtime {
-			amiss := vtime - atotal
-			each := amiss / uint32(len(asamples))
-			first := amiss % uint32(len(asamples))
-			for i, s := range asamples {
-				if i == 0 {
-					s.Duration += first
-				}
-				s.Duration += each
-			}
-		} else if atotal > vtime {
-			amiss := atotal - vtime
-			each := amiss / uint32(len(asamples))
-			first := amiss % uint32(len(asamples))
-			for i, s := range asamples {
-				if i == 0 {
-					s.Duration -= first
-				}
-				s.Duration -= each
-			}
-		}
-	*/
 
 	moof := &MoofBox{
 		BoxChildren: []Box{
@@ -463,17 +430,6 @@ func (muxer *Muxer) AddSampleData(sample *Sample, data []byte, typ uint8, slicet
 		vidx := muxer.FrameRate * muxer.Config.BufferSeconds
 		aidx := len(muxer.AudioBuffer)
 
-		/*
-			event := &MuxEvent{
-				Atime:       uint64(atime),
-				Vtime:       uint64(vtime),
-				PrePresent:  segment[:sidxPresentOffset],
-				PreSequence: segment[sidxPresentOffset+8 : len(sidxdata)+mfhdSequenceOffset],
-				PreTrack1:   segment[len(sidxdata)+mfhdSequenceOffset+4 : len(sidxdata)+track1TimeOff],
-				PreTrack2:   segment[len(sidxdata)+track1TimeOff+8 : len(sidxdata)+track1TimeOff+track1End2TimeOff+len(vsamples)*12],
-				Trailer:     segment[len(sidxdata)+track1TimeOff+len(vsamples)*12+track1End2TimeOff+8:],
-			}
-		*/
 		event := &MuxEvent{
 			AudioBuffer: make([]*SampleData, aidx),
 			VideoBuffer: make([]*SampleData, vidx),

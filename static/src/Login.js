@@ -1,19 +1,8 @@
 import React, { Component } from 'react';
 import {Button, FormControl, FormHelperText, Grid, Paper, SvgIcon, TextField} from 'material-ui';
-import Recaptcha from 'react-recaptcha';
-
 import sha1 from 'sha1';
 
-export default class Signup extends Component {
-    recaptcha = null;
-
-    verify = (captcha) => {
-        const {username, email, password, passwordrepeat} = this.state.values;
-        this.props.api.signup(username, email, sha1(password), passwordrepeat, captcha);
-        localStorage.setItem('username', username);
-        localStorage.setItem('password', sha1(password));
-    };
-
+export default class Login extends Component {
     send = () => {
         const error = {};
         let err = false;
@@ -31,17 +20,14 @@ export default class Signup extends Component {
                 error[v] = null;
             }
         }
-
-        if (this.state.values.password !== this.state.values.passwordrepeat) {
-            err = true;
-            error.passwordrepeat = 'Must match the password';
-        }
         this.setState({error});
         if (err) {
             return;
         }
-        this.recaptcha.execute();
         this.setState({sendclicked: true});
+        localStorage.setItem('username', this.state.values.username);
+        localStorage.setItem('password', sha1(this.state.values.password));
+        this.props.api.auth(this.state.values.username, sha1(this.state.values.password));
     };
 
     onChange = (n) => (v) => this.setState({values: {...this.state.values, [n]: v.target.value}});
@@ -50,27 +36,13 @@ export default class Signup extends Component {
         sendclicked: false,
         values: {
             username: '',
-            email: '',
             password: '',
-            passwordrepeat: '',
         },
         error: {
             username: null,
-            email: null,
             password: null,
-            passwordrepeat: null,
         }
     };
-
-    static getDerivedStateFromProps(nextProps, prevState) {
-        if (nextProps.status === 'Signup success') {
-            const username = localStorage.getItem('username');
-            const password = localStorage.getItem('password');
-            nextProps.api.auth(username, password);
-            nextProps.history.push('/profile');
-        }
-        return null;
-    }
 
     render() {
         return (
@@ -85,19 +57,10 @@ export default class Signup extends Component {
                                 <TextField disabled={this.state.sendclicked} id='username' label='Username' autoComplete='username' style={{marginBottom: '1em', marginTop: '1em'}} onChange={this.onChange('username')}/>
                                 <FormHelperText>{this.state.error.username}</FormHelperText>
                             </FormControl>
-                            <FormControl fullWidth error={this.state.error.email != null}>
-                                <TextField disabled={this.state.sendclicked} id='email' label='E-Mail' autoComplete='email' style={{marginBottom: '1em'}} onChange={this.onChange('email')}/>
-                                <FormHelperText>{this.state.error.email}</FormHelperText>
-                            </FormControl>
                             <FormControl fullWidth error={this.state.error.password != null}>
-                                <TextField disabled={this.state.sendclicked} id='password' label='Password' type='password' autoComplete='new-password' style={{marginBottom: '1em'}} onChange={this.onChange('password')}/>
+                                <TextField disabled={this.state.sendclicked} id='password' label='Password' type='password' autoComplete='current-password' style={{marginBottom: '1em'}} onChange={this.onChange('password')}/>
                                 <FormHelperText>{this.state.error.password}</FormHelperText>
                             </FormControl>
-                            <FormControl fullWidth error={this.state.error.passwordrepeat != null}>
-                                <TextField disabled={this.state.sendclicked} id='passwordrepeat' label='Repeat password' type='password' autoComplete='new-password' style={{marginBottom: '1em'}} onChange={this.onChange('passwordrepeat')}/>
-                                <FormHelperText>{this.state.error.passwordrepeat}</FormHelperText>
-                            </FormControl>
-                            <Recaptcha ref={e => this.recaptcha = e} sitekey="6LcJhVUUAAAAAIpZUh3yy5h_ZvAFPlpdqKotGLtr" size="invisible" render="explicit" verifyCallback={this.verify}/>
                             <div style={{marginTop: '1em', textAlign: 'center'}}>
                                 <Button style={{display: this.state.sendclicked ? 'none' : 'block', width: '100%'}} onClick={this.send}>Send</Button>
                                 <SvgIcon style={{display: this.state.sendclicked ? 'inline-block' : 'none', marginTop: '8px', height: '24px'}} className='spinner'>

@@ -7,6 +7,7 @@ import (
 
 	"gopkg.in/yaml.v2"
 
+	"./db"
 	"./mp4"
 	"./rtmp"
 	"./web"
@@ -39,6 +40,13 @@ func main() {
 			Address:   ":8181",
 			Recaptcha: "ReCaptcha private key",
 		},
+		DB: &db.Config{
+			Hostname: "127.0.0.1:5432",
+			Username: "videostreamer",
+			Password: "videostreamer",
+			Database: "videostreamer",
+			SSL:      "disable",
+		},
 	}
 
 	if yamlFile, err := ioutil.ReadFile(conffile); err != nil {
@@ -58,6 +66,7 @@ func main() {
 		Events:      make(chan *Event, 64),
 	}
 
+	db.Connect(conf.DB)
 	coordinator.RtmpServer.Subscribe(coordinator)
 	coordinator.WebServer.Subscribe(coordinator)
 	go coordinator.RtmpServer.ListenAndServe()

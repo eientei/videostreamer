@@ -240,7 +240,7 @@ func (muxer *Muxer) Init(width uint32, height uint32, framerate uint32, audiorat
 				BoxChildren: []Box{
 					&TrexBox{
 						TrackId: 1,
-						Defdur:  1000 * muxer.Config.TimeScale / framerate,
+						Defdur:  (1000 * muxer.Config.TimeScale) / framerate,
 					},
 					&TrexBox{
 						TrackId: 2,
@@ -251,9 +251,9 @@ func (muxer *Muxer) Init(width uint32, height uint32, framerate uint32, audiorat
 		},
 	}
 
-	if video[1] != 66 {
-		return nil
-	}
+	//if video[1] != 66 {
+	//	return nil
+	//}
 
 	muxer.LengthSize = uint32(video[4]&3) + 1
 
@@ -429,6 +429,10 @@ func (muxer *Muxer) AddSampleData(sample *Sample, data []byte, typ uint8, slicet
 	if uint32(len(muxer.VideoBuffer)) > 0 && uint32(len(muxer.VideoBuffer)) >= muxer.FrameRate*muxer.Config.BufferSeconds {
 		vidx := muxer.FrameRate * muxer.Config.BufferSeconds
 		aidx := len(muxer.AudioBuffer)
+
+		if vidx == 0 {
+			vidx = uint32(len(muxer.VideoBuffer))
+		}
 
 		event := &MuxEvent{
 			AudioBuffer: make([]*SampleData, aidx),

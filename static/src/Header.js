@@ -11,11 +11,14 @@ class Header extends Component {
             default:
                 return {tabSelect: 0};
             case "/profile":
+            case "/login":
                 return {tabSelect: 1};
             case "/howto":
                 return {tabSelect: 2};
         }
     }
+
+    logout = () => this.props.api.logout();
 
     state = {
         tabSelect: 0,
@@ -27,13 +30,23 @@ class Header extends Component {
             <Toolbar>
                 <Tabs value={tabSelect} onChange={this.handleTabSelect} style={{flexGrow: 1}}>
                     <Tab label="Home" component={Link} to='/'/>
-                    <Tab label="Profile" component={Link} to='/profile'/>
+                    {this.props.user != null && this.props.user.username !== 'anonymous' ?
+                        <Tab label="Profile" component={Link} to='/profile'/>
+                        :
+                        <Tab label="Login" component={Link} to='/login'/>
+                    }
                     <Tab label="Howto" component={Link} to='/howto'/>
                 </Tabs>
-                <Badge size={32}/>
-                <Button color='inherit' component={Link} to='/signup'>
-                    Signup
-                </Button>
+                {this.props.user.username !== 'anonymous' ?
+                    <Button color='inherit' onClick={this.logout}>
+                        Logout
+                    </Button>
+                    :
+                    <Button color='inherit' component={Link} to='/signup'>
+                        Signup
+                    </Button>
+                }
+                <Badge size={48} hash={this.props.user.gravatar} text={this.props.user.username} style={{marginLeft: '1em'}}/>
             </Toolbar>
         );
     }

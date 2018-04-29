@@ -13,3 +13,9 @@ rtmp:
 web:
   address: :8181
   recaptcha: ReCaptcha private key
+db:
+  hostname: localhost:5432
+  username: videostreamer
+  password: videostreamer
+  database: videostreamer
+  ssl: disable

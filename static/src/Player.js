@@ -15,12 +15,12 @@ class Player extends Component {
         const current = wsvid.currentTime;
         const end = wsvid.buffered.end(wsvid.buffered.length - 1);
         const diff = end - current;
-        if (diff > 0.500) {
+        if (diff > 1.000) {
             if (wsvid.paused) {
                 wsvid.play();
                 console.log('play');
             }
-        } else if (diff < 0.100) {
+        } else if (diff < 0.500) {
             if (!wsvid.paused) {
                 wsvid.pause();
                 console.log('pause');

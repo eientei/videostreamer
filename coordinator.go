@@ -66,7 +66,6 @@ type Coordinator struct {
 func (stream *Stream) MuxHandle(event *mp4.MuxEvent) {
 	for _, c := range stream.Clients {
 		if c.Sequence() == 0 {
-			c.Init(0, 0)
 			vfirst := 0
 			tskip := uint32(0)
 			waskey := false
@@ -79,7 +78,14 @@ func (stream *Stream) MuxHandle(event *mp4.MuxEvent) {
 				tskip += c.Sample.Duration
 			}
 			if !waskey {
-				return
+				continue
+			} else {
+				if c.Vtime() == 0 {
+					c.Init(0, 1)
+					continue
+				} else {
+					c.Init(0, 0)
+				}
 			}
 			aacc := uint32(0)
 			afirst := 0

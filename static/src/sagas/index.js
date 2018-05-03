@@ -408,6 +408,10 @@ function vidonmessage(event) {
 
 function vidrespawn(e) {
     store.dispatch(actions.ws.streamStatus('offline'));
+    const wsvid = document.querySelector('#wsvid');
+    if (wsvid !== null) {
+        wsvid.src = '';
+    }
     if (vidsocket != null) {
         vidsocket.close();
     }

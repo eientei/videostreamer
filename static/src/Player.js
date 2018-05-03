@@ -64,7 +64,6 @@ class Player extends Component {
         if (!ws.info || !ws.info.stream) {
             return null;
         }
-        console.log(ws.status);
         const stream = ws.info.stream;
         const container = document.querySelector('#playercontainer');
         const videowidth = (!this.state.chathidden && container) ? (container.clientWidth - this.state.width) + 'px' : '100%';

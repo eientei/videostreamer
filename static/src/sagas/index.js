@@ -386,7 +386,6 @@ function viddrain() {
     try {
         vidsourceBuffer.appendBuffer(next);
     } catch (e) {
-        console.log(e, next.length);
         vidrespawn();
     }
 }
@@ -431,9 +430,11 @@ function vidreconnect() {
 
     vidsocket = new WebSocket((window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host + '/video/' + path + '.wss');
     vidsocket.onopen = () => {
-        store.dispatch(actions.ws.streamStatus('online'));
         const ms = new MediaSource();
         ms.onsourceopen = () => {
+            console.log('connected');
+            store.dispatch(actions.ws.streamStatus('online'));
+            vidsocket.onmessage = vidonmessage;
             vidsourceBuffer = ms.addSourceBuffer('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
             vidsourceBuffer.onupdate = viddrain;
             viddrain();
@@ -442,7 +443,6 @@ function vidreconnect() {
     };
     vidsocket.onerror = vidrespawn;
     vidsocket.onclose = vidrespawn;
-    vidsocket.onmessage = vidonmessage;
 }
 
 function* locationHandler({payload: e}) {

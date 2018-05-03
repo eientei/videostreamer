@@ -971,6 +971,14 @@ func (webclient *WebClient) MessageSend(msg *web.MessageSendMessage) {
 		return
 	}
 
+	if len(msg.Text) == 0 {
+		return
+	}
+
+	if b, _ := regexp.Match("^[ ]+$", []byte(msg.Text)); b {
+		return
+	}
+
 	mid := db.PostCreate(db.Message{
 		User:     webclient.User.Id,
 		Stream:   stream.Id,

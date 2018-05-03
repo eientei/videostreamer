@@ -394,6 +394,7 @@ function vidonmessage(event) {
     if (!history.location.pathname.startsWith('/live/')) {
         return;
     }
+    console.log(event);
     const fileReader = new FileReader();
     fileReader.onload = () => {
         const uint8ArrayNew = new Uint8Array(fileReader.result);
@@ -429,20 +430,20 @@ function vidreconnect() {
     }
 
     vidsocket = new WebSocket((window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host + '/video/' + path + '.wss');
+    vidsocket.onmessage = vidonmessage;
+    vidsocket.onerror = vidrespawn;
+    vidsocket.onclose = vidrespawn;
     vidsocket.onopen = () => {
         const ms = new MediaSource();
         ms.onsourceopen = () => {
             console.log('connected');
             store.dispatch(actions.ws.streamStatus('online'));
-            vidsocket.onmessage = vidonmessage;
             vidsourceBuffer = ms.addSourceBuffer('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
             vidsourceBuffer.onupdate = viddrain;
             viddrain();
         };
         wsvid.src = window.URL.createObjectURL(ms);
     };
-    vidsocket.onerror = vidrespawn;
-    vidsocket.onclose = vidrespawn;
 }
 
 function* locationHandler({payload: e}) {

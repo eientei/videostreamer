@@ -27,7 +27,6 @@ class PlayerChat extends Component {
             setTimeout(() => {
                 let height = 0;
                 messages.childNodes.forEach(c => height += c.clientHeight);
-                console.log(messages.scrollTop, height - messages.clientHeight - 100);
                 if (messages.scrollTop >= height - messages.clientHeight - 100 || this.was === -1) {
                     this.was = 0;
                     messages.scrollTop = height;

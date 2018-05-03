@@ -600,6 +600,7 @@ func (webclient *WebClient) UserSignup(msg *web.UserSignupMessage) {
 		s := db.GetStreamByOwnerNameAndName(owner, name)
 		db.Subscribe(uid, s.Id)
 	}
+
 	webclient.User = db.GetUserByName(msg.Username)
 	webclient.Client.Send(MakeUserInfo(webclient))
 }

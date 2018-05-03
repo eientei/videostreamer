@@ -110,6 +110,7 @@ func (stream *Stream) Close() {
 	for _, c := range stream.Clients {
 		c.Close()
 	}
+	stream.Clients = nil
 }
 
 func MakeStreamName(path string, name string) string {

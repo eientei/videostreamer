@@ -406,7 +406,8 @@ function vidonmessage(event) {
     fileReader.readAsArrayBuffer(event.data);
 }
 
-function vidrespawn() {
+function vidrespawn(e) {
+    console.log(e);
     store.dispatch(actions.ws.streamStatus('offline'));
     if (vidsocket != null) {
         vidsocket.close();

@@ -118,7 +118,7 @@ func MakeStreamName(path string, name string) string {
 	return n
 }
 
-func (coordinator *Coordinator) ClientConnect(client web.Client, path string, name string) bool {
+func (coordinator *Coordinator) ClientOk(path string, name string) bool {
 	if stream, ok := coordinator.Streams[MakeStreamName(path, name)]; !ok {
 		return false
 	} else {
@@ -128,11 +128,15 @@ func (coordinator *Coordinator) ClientConnect(client web.Client, path string, na
 		if stream.Metadata == nil {
 			return false
 		}
-		stream.Clients = append(stream.Clients, client)
-		client.Send(stream.ContainerInit)
 	}
 
 	return true
+}
+
+func (coordinator *Coordinator) ClientConnect(client web.Client, path string, name string) {
+	stream := coordinator.Streams[MakeStreamName(path, name)]
+	stream.Clients = append(stream.Clients, client)
+	client.Send(stream.ContainerInit)
 }
 
 func (coordinator *Coordinator) ClientDisconnect(client web.Client, path string, name string) {

@@ -413,7 +413,8 @@ func (client *WsEventeer) Ip() string {
 }
 
 type ClientHandler interface {
-	ClientConnect(client Client, path string, name string) bool
+	ClientOk(path string, name string) bool
+	ClientConnect(client Client, path string, name string)
 	ClientDisconnect(client Client, path string, name string)
 	EventeerConnect(client EventClient)
 	EventeerDisconnect(client EventClient)
@@ -469,9 +470,10 @@ func (server *Server) ServeMp4(resp http.ResponseWriter, req *http.Request, name
 		}
 	}
 	for _, h := range server.ClientHandlers {
-		if !h.ClientConnect(client, path, name) {
+		if !h.ClientOk(path, name) {
 			return
 		}
+		h.ClientConnect(client, path, name)
 	}
 	<-client.Closer
 	for _, h := range server.ClientHandlers {
@@ -542,10 +544,11 @@ func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 					Closer: make(chan struct{}),
 				}
 				for _, h := range server.ClientHandlers {
-					if !h.ClientConnect(client, path, name) {
+					if !h.ClientOk(path, name) {
 						req.Body.Close()
 						return
 					}
+					h.ClientConnect(client, path, name)
 				}
 
 				server.ServeWss(resp, req, client, path, name)

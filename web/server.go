@@ -441,6 +441,9 @@ func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, clie
 		return
 	} else {
 		client.Conn = conn
+		for _, h := range server.ClientHandlers {
+			h.ClientConnect(client, path, name)
+		}
 		<-client.Closer
 		for _, h := range server.ClientHandlers {
 			h.ClientDisconnect(client, path, name)
@@ -548,7 +551,6 @@ func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 						req.Body.Close()
 						return
 					}
-					h.ClientConnect(client, path, name)
 				}
 
 				server.ServeWss(resp, req, client, path, name)

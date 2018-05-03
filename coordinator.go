@@ -40,6 +40,7 @@ type Stream struct {
 	Muxer         *mp4.Muxer
 	Closed        bool
 	Coordinator   *Coordinator
+	Inited        bool
 }
 
 type WebClient struct {
@@ -66,6 +67,7 @@ type Coordinator struct {
 func (stream *Stream) MuxHandle(event *mp4.MuxEvent) {
 	for _, c := range stream.Clients {
 		if c.Sequence() == 0 {
+			c.Init(0, 0)
 			vfirst := 0
 			tskip := uint32(0)
 			waskey := false
@@ -80,11 +82,9 @@ func (stream *Stream) MuxHandle(event *mp4.MuxEvent) {
 			if !waskey {
 				continue
 			} else {
-				if c.Vtime() == 0 {
-					c.Init(0, 1)
+				if !stream.Inited {
+					stream.Inited = true
 					continue
-				} else {
-					c.Init(0, 0)
 				}
 			}
 			aacc := uint32(0)
@@ -114,6 +114,7 @@ func (stream *Stream) Close() {
 		return
 	}
 	stream.Closed = true
+	stream.Inited = false
 	close(stream.AudioBuffer)
 	close(stream.VideoBuffer)
 	stream.ContainerInit = make([]byte, 0)

@@ -409,6 +409,10 @@ func (client *WsEventeer) Send(message EventMessage) {
 }
 
 func (client *WsEventeer) Ip() string {
+	ip := client.Req.Header.Get("X-Real-IP")
+	if ip != "" {
+		return ip
+	}
 	return client.Conn.RemoteAddr().String()
 }
 

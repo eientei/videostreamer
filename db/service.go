@@ -325,7 +325,7 @@ func GetPost(mid uint64) *Message {
 }
 
 func PostHistory(streamid uint64, count uint64, before uint64) []*Message {
-	if rows, err := db.Query("select * from messages where id <= $2 order by id desc limit $1", count, before); err != nil {
+	if rows, err := db.Query("select * from messages where id <= $2 and streamid = $3 order by id desc limit $1", count, before, streamid); err != nil {
 		return nil
 	} else {
 		msgs := make([]*Message, 0)

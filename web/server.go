@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -529,8 +528,8 @@ func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		if len(req.URL.Path) > len(livePrefix) && req.URL.Path[:len(livePrefix)] == livePrefix {
 			next := req.URL.Path[len(livePrefix):]
 			if len(next) > len(wssSuffix) && next[len(next)-len(wssSuffix):] == wssSuffix {
-				name := ""
 				path := ""
+				name := ""
 				n := 0
 				full := next[:len(next)-len(wssSuffix)]
 				for i, c := range full {
@@ -545,7 +544,9 @@ func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 						}
 					}
 				}
-				fmt.Println(name, path)
+				if n == 0 {
+					path = full
+				}
 				client := &WssClient{
 					Req:    req,
 					Closer: make(chan struct{}),

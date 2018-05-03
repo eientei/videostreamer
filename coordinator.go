@@ -173,7 +173,7 @@ func (coordinator *Coordinator) ClientDisconnect(client web.Client, path string,
 		}
 
 		str := db.GetStreamByOwnerNameAndName(path, name)
-		user := db.GetUserById(str.Id)
+		user := db.GetUserById(str.Owner)
 		for _, c := range stream.WebClients {
 			c.Client.Send(&web.StreamInfoMessage{Stream: MakeStreamInfo(user, str, stream)})
 		}

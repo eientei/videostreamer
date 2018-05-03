@@ -386,7 +386,7 @@ function viddrain() {
     try {
         vidsourceBuffer.appendBuffer(next);
     } catch (e) {
-        console.log(e);
+        console.log(e, next.length);
         vidrespawn();
     }
 }

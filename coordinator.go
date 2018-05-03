@@ -135,15 +135,19 @@ func MakeStreamName(path string, name string) string {
 
 func (coordinator *Coordinator) ClientOk(path string, name string) bool {
 	if stream, ok := coordinator.Streams[MakeStreamName(path, name)]; !ok {
+		fmt.Println("nostream")
 		return false
 	} else {
 		if stream.Closed {
+			fmt.Println("closed")
 			return false
 		}
 		if stream.Metadata == nil {
+			fmt.Println("notmeta")
 			return false
 		}
 		if len(stream.ContainerInit) == 0 {
+			fmt.Println("noinit")
 			return false
 		}
 	}

@@ -386,6 +386,7 @@ function viddrain() {
     try {
         vidsourceBuffer.appendBuffer(next);
     } catch (e) {
+        console.log(e);
         vidrespawn();
     }
 }
@@ -407,7 +408,6 @@ function vidonmessage(event) {
 }
 
 function vidrespawn(e) {
-    console.log(e);
     store.dispatch(actions.ws.streamStatus('offline'));
     if (vidsocket != null) {
         vidsocket.close();

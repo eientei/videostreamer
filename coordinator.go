@@ -956,9 +956,6 @@ func (webclient *WebClient) StreamInfoReq(msg *web.StreamInfoReqMessage) {
 
 func BroadcastMessage(running *Stream, mid uint64) {
 	post := db.GetPost(mid)
-	if post == nil {
-		fmt.Println(post, mid)
-	}
 	webpost := &web.MessageAddMessage{
 		Id:       post.Id,
 		Author:   post.User,
@@ -999,7 +996,6 @@ func (webclient *WebClient) MessageSend(msg *web.MessageSendMessage) {
 		Body:     msg.Text,
 		Edited:   false,
 	})
-	fmt.Println(mid)
 	BroadcastMessage(running, mid)
 }
 

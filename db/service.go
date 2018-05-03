@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"time"
 
@@ -286,7 +287,8 @@ func Unsubscribe(userid uint64, streamid uint64) error {
 func PostCreate(message Message) uint64 {
 	res := db.QueryRow("insert into messages(id, userid, streamid, gravatar, body, edited, created, updated) values (default, $1, $2, $3, $4, false, now(), now()) returning id", message.User, message.Stream, message.Gravatar, message.Body)
 	id := uint64(0)
-	res.Scan(&id)
+	err := res.Scan(&id)
+	fmt.Println(err)
 	return id
 }
 

@@ -31,7 +31,7 @@ class PlayerChat extends Component {
                     this.was = 0;
                     messages.scrollTop = height;
                 }
-            }, 100);
+            }, 250);
         }
         return nextProps.message.serial !== this.state.serial || nextProps.message.text.value !== this.state.text || nextProps.style !== this.state.style;
     }

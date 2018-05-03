@@ -25,6 +25,7 @@ class Howto extends Component {
                 </Switch>
 
                 <p>P.S: the source for streaming service available at github: <a href="https://github.com/eientei/videostreamer">https://github.com/eientei/videostreamer</a></p>
+                <p>P.P.S: Official discord server: <a href="https://discord.gg/csp2f6u">https://discord.gg/csp2f6u</a></p>
             </div>
         );
     }

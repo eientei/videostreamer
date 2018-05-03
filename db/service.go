@@ -2,7 +2,6 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"time"
 
@@ -232,8 +231,7 @@ func GetStreamByOwnerNameAndName(owner string, name string) *Stream {
 func CreateStream(stream Stream) uint64 {
 	res := db.QueryRow("insert into streams(id, name, title, owner, key, logourl, privated, created, updated) values (default, $1, $2, $3, $4, $5, $6, now(), now()) returning id", stream.Name, stream.Title, stream.Owner, stream.Key, stream.Logourl, stream.Privated)
 	id := uint64(0)
-	err := res.Scan(&id)
-	fmt.Println(err)
+	res.Scan(&id)
 	return id
 }
 

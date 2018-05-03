@@ -9,7 +9,7 @@ create table users (
 
 create table streams (
   id bigserial primary key,
-  name text unique not null,
+  name text not null,
   title text,
   owner bigint references users(id) not null,
   key text,

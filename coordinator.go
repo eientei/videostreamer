@@ -996,7 +996,7 @@ func (webclient *WebClient) MessageSend(msg *web.MessageSendMessage) {
 		Body:     msg.Text,
 		Edited:   false,
 	})
-
+	fmt.Println(mid)
 	BroadcastMessage(running, mid)
 }
 

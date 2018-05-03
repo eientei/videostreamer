@@ -70,7 +70,7 @@ class Player extends Component {
         return (
             <div className={classes.flexgrow + ' ' + classes.flexcolumn}>
                 <div className={classes.relative + ' ' + classes.playerrow + ' ' + classes.flexgrow} id='playercontainer'>
-                    <video id='wsvid' onProgress={this.onprogress} className={classes.maxwidth} style={{width: videowidth}} controls>
+                    <video id='wsvid' onProgress={this.onprogress} className={classes.maxwidth} style={{width: videowidth, backgroundRepeat: 'no-repeat', backgroundPosition: 'center', backgroundImage: ws.status === 'offline' ? stream.logourl : ''}} controls>
                     </video>
                     <div style={{cursor: 'ew-resize', userSelect: 'none', display: this.state.chathidden ? 'none' : 'flex'}} className={classes.flexrownopaddall} onMouseDown={this.handleDown} id='handle'>
                         <SvgIcon>

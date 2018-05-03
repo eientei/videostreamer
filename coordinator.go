@@ -135,8 +135,8 @@ func (coordinator *Coordinator) ClientOk(path string, name string) bool {
 
 func (coordinator *Coordinator) ClientConnect(client web.Client, path string, name string) {
 	stream := coordinator.Streams[MakeStreamName(path, name)]
-	stream.Clients = append(stream.Clients, client)
 	client.Send(stream.ContainerInit)
+	stream.Clients = append(stream.Clients, client)
 }
 
 func (coordinator *Coordinator) ClientDisconnect(client web.Client, path string, name string) {

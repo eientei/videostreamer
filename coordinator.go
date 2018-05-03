@@ -105,6 +105,8 @@ func (stream *Stream) Close() {
 	stream.Closed = true
 	close(stream.AudioBuffer)
 	close(stream.VideoBuffer)
+	stream.ContainerInit = make([]byte, 0)
+	stream.Metadata = nil
 	for _, c := range stream.Clients {
 		c.Close()
 	}
@@ -126,6 +128,9 @@ func (coordinator *Coordinator) ClientOk(path string, name string) bool {
 			return false
 		}
 		if stream.Metadata == nil {
+			return false
+		}
+		if len(stream.ContainerInit) == 0 {
 			return false
 		}
 	}

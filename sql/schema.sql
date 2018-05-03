@@ -29,7 +29,7 @@ create table subscriptions (
 
 create table messages (
   id bigserial primary key,
-  userid bigint references users(id) not null,
+  userid bigint not null,
   streamid bigint references streams(id) not null,
   gravatar text not null,
   body text not null,

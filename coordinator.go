@@ -1001,7 +1001,7 @@ func (webclient *WebClient) MessageSend(msg *web.MessageSendMessage) {
 
 func (webclient *WebClient) MessageEdit(msg *web.MessageEditMessage) {
 	post := db.GetPost(msg.Id)
-	if post == nil || post.User != webclient.User.Id {
+	if post == nil || post.User != webclient.User.Id || post.User == 0 {
 		return
 	}
 	db.PostUpdate(msg.Id, msg.Text)

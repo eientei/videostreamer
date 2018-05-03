@@ -23,6 +23,8 @@ class Howto extends Component {
                     <Route path='/howto/obs' component={ObsHowto}/>
                     <Route path='/howto/ffmpeg' component={FfmpegHowto}/>
                 </Switch>
+
+                <p>P.S: the source for streaming service available at github: <a href="https://github.com/eientei/videostreamer">https://github.com/eientei/videostreamer</a></p>
             </div>
         );
     }

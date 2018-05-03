@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -544,6 +545,7 @@ func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 						}
 					}
 				}
+				fmt.Println(name, path)
 				client := &WssClient{
 					Req:    req,
 					Closer: make(chan struct{}),

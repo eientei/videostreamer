@@ -33,9 +33,9 @@ class Main extends Component {
                         }
                         <Tab label='Howto' onClick={() => dispatch(actions.navigation.howto('obs'))}/>
                     </Tabs>
-                    <Typography className={classes.flexgrow}>
+                    <Typography className={classes.flexgrow + ' ' + classes.textcenter}>
                         {(history.location.pathname.startsWith('/live/') || history.location.pathname.startsWith('/chat/')) && navigation.path !== '/notfound' &&
-                        <span className={classes.textcenter}>{ws.info && ws.info.stream && ws.info.stream.title && ws.info.stream.title.length > 0 ? ws.info.stream.title : ''}<em>{!ws.info || !ws.info.stream || !ws.info.stream.title || ws.info.stream.title.length === 0 ? '(No title)' : ''}</em></span>
+                        <span>{ws.info && ws.info.stream && ws.info.stream.title && ws.info.stream.title.length > 0 ? ws.info.stream.title : ''}<em>{!ws.info || !ws.info.stream || !ws.info.stream.title || ws.info.stream.title.length === 0 ? '(No title)' : ''}</em></span>
                         }
                     </Typography>
                     <div className={classes.flexspace}>

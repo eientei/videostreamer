@@ -76,6 +76,7 @@ func (stream *Stream) MuxHandle(event *mp4.MuxEvent) {
 				}
 				tskip += c.Sample.Duration
 			}
+			fmt.Println(vfirst, len(event.VideoBuffer))
 			aacc := uint32(0)
 			afirst := 0
 			for i, c := range event.AudioBuffer {

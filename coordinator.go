@@ -142,6 +142,12 @@ func (coordinator *Coordinator) ClientConnect(client web.Client, path string, na
 	stream := coordinator.Streams[MakeStreamName(path, name)]
 	client.Send(stream.ContainerInit)
 	stream.Clients = append(stream.Clients, client)
+
+	str := db.GetStreamByOwnerNameAndName(path, name)
+	user := db.GetUserById(str.Id)
+	for _, c := range stream.WebClients {
+		c.Client.Send(&web.StreamPublishedMessage{Stream: MakeStreamInfo(user, str, stream)})
+	}
 }
 
 func (coordinator *Coordinator) ClientDisconnect(client web.Client, path string, name string) {
@@ -151,6 +157,12 @@ func (coordinator *Coordinator) ClientDisconnect(client web.Client, path string,
 				stream.Clients = append(stream.Clients[:i], stream.Clients[i+1:]...)
 				break
 			}
+		}
+
+		str := db.GetStreamByOwnerNameAndName(path, name)
+		user := db.GetUserById(str.Id)
+		for _, c := range stream.WebClients {
+			c.Client.Send(&web.StreamPublishedMessage{Stream: MakeStreamInfo(user, str, stream)})
 		}
 	}
 }

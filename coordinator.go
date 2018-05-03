@@ -224,7 +224,7 @@ func (coordinator *Coordinator) PublishEvent(client rtmp.ID, path string, stream
 		return false
 	} else {
 		if !ok {
-			owner := db.GetUserById(str.Id)
+			owner := db.GetUserById(str.Owner)
 			s = &Stream{
 				AudioBuffer: make(chan *rtmp.TimestampBuf),
 				VideoBuffer: make(chan *rtmp.TimestampBuf),

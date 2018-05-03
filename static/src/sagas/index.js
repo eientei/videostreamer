@@ -394,7 +394,6 @@ function vidonmessage(event) {
     if (!history.location.pathname.startsWith('/live/')) {
         return;
     }
-    console.log(event);
     const fileReader = new FileReader();
     fileReader.onload = () => {
         const uint8ArrayNew = new Uint8Array(fileReader.result);

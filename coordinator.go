@@ -942,6 +942,7 @@ func (webclient *WebClient) StreamInfoReq(msg *web.StreamInfoReqMessage) {
 
 	running := webclient.Coordinator.Streams[MakeStreamName(owner.Username, stream.Name)]
 
+	fmt.Println(running, owner.Username, stream.Name, MakeStreamName(owner.Username, stream.Name))
 	if running == nil {
 		running = &Stream{
 			Owner:       owner.Username,

@@ -70,8 +70,8 @@ func (stream *Stream) MuxHandle(event *mp4.MuxEvent) {
 			vfirst := 0
 			tskip := uint32(0)
 			for i, c := range event.VideoBuffer {
+				vfirst = i
 				if c.SliceType == 7 {
-					vfirst = i
 					break
 				}
 				tskip += c.Sample.Duration

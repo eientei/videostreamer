@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -15,17 +14,6 @@ import (
 const livePrefix = "/video/"
 const wssSuffix = ".wss"
 const mp4Suffix = ".mp4"
-
-const (
-	Disconnect  = 1
-	Error       = 2
-	Status      = 3
-	Signup      = 4
-	Published   = 5
-	Auth        = 6
-	UserDetails = 7
-	Logout      = 8
-)
 
 type Client interface {
 	Sequence() uint32
@@ -168,98 +156,10 @@ func (client *Mp4Client) Close() {
 	client.Closed = true
 }
 
-type EventMessage interface {
-	Type() uint32
-}
-
-type TypedBytes struct {
-	Type uint32          `json:"type"`
-	Data json.RawMessage `json:"data"`
-}
-
-type ErrorMessage struct {
-	Error string `json:"error"`
-}
-
-func (*ErrorMessage) Type() uint32 {
-	return Error
-}
-
-type StatusMessage struct {
-	Status string `json:"status"`
-}
-
-func (*StatusMessage) Type() uint32 {
-	return Status
-}
-
-type DisconnectMessage struct {
-}
-
-func (*DisconnectMessage) Type() uint32 {
-	return Disconnect
-}
-
-type SignupMessage struct {
-	Username       string `json:"username"`
-	Email          string `json:"email"`
-	Password       string `json:"password"`
-	PasswordRepeat string `json:"passwordrepeat"`
-	Captcha        string `json:"captcha"`
-	Ip             string `json:"-"`
-}
-
-func (*SignupMessage) Type() uint32 {
-	return Signup
-}
-
-type PublishedMessage struct {
-	Stream string `json:"stream"`
-}
-
-func (*PublishedMessage) Type() uint32 {
-	return Published
-}
-
-type AuthMessage struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Ip       string `json:"-"`
-}
-
-func (*AuthMessage) Type() uint32 {
-	return Auth
-}
-
-type Stream struct {
-	Name    string `json:"name"`
-	Title   string `json:"title"`
-	Key     string `json:"key"`
-	Logourl string `json:"logourl"`
-}
-
-type UserDetailsMessage struct {
-	Username      string    `json:"username"`
-	Email         string    `json:"email"`
-	Gravatar      string    `json:"gravatar"`
-	Streams       []*Stream `json:"streams"`
-	Notifications []string  `json:"notifications"`
-}
-
-func (*UserDetailsMessage) Type() uint32 {
-	return UserDetails
-}
-
-type LogoutMessage struct {
-}
-
-func (*LogoutMessage) Type() uint32 {
-	return Logout
-}
-
 type EventClient interface {
 	Read() EventMessage
 	Send(message EventMessage)
+	Ip() string
 }
 
 type WsEventeer struct {
@@ -275,57 +175,56 @@ func (client *WsEventeer) Close() {
 
 func (client *WsEventeer) Read() EventMessage {
 	if client.Closed {
-		fmt.Println("closed")
-		return &DisconnectMessage{}
+		return nil
 	}
 	data := make([]byte, 0)
 	basic := make([]byte, 2)
 	if _, err := io.ReadFull(client.Conn, basic); err != nil {
-		fmt.Println("ra", err)
+		client.Conn.Write([]byte{1<<7 | 8, 0})
 		close(client.Closer)
 		client.Closed = true
-		return &DisconnectMessage{}
+		return nil
 	}
 	if basic[0]&0xf != 1 || (basic[1]>>7)&1 == 0 {
-		fmt.Println("rb")
+		client.Conn.Write([]byte{1<<7 | 8, 0})
 		close(client.Closer)
 		client.Closed = true
-		return &DisconnectMessage{}
+		return nil
 	}
 	l := uint64(basic[1] & 0x7f)
 	if l == 126 {
 		lenbuf := make([]byte, 2)
 		if _, err := io.ReadFull(client.Conn, lenbuf); err != nil {
-			fmt.Println("rc")
+			client.Conn.Write([]byte{1<<7 | 8, 0})
 			close(client.Closer)
 			client.Closed = true
-			return &DisconnectMessage{}
+			return nil
 		}
 		l = uint64(lenbuf[0])<<8 | uint64(lenbuf[1])
 	} else if l == 127 {
 		lenbuf := make([]byte, 8)
 		if _, err := io.ReadFull(client.Conn, lenbuf); err != nil {
-			fmt.Println("rh")
+			client.Conn.Write([]byte{1<<7 | 8, 0})
 			close(client.Closer)
 			client.Closed = true
-			return &DisconnectMessage{}
+			return nil
 		}
 		l = uint64(lenbuf[0])<<56 | uint64(lenbuf[1])<<48 | uint64(lenbuf[2])<<40 | uint64(lenbuf[3])<<32 | uint64(lenbuf[4])<<24 | uint64(lenbuf[5])<<16 | uint64(lenbuf[6])<<8 | uint64(lenbuf[7])
 	}
 	mask := make([]byte, 4)
 	if _, err := io.ReadFull(client.Conn, mask); err != nil {
-		fmt.Println("rj")
+		client.Conn.Write([]byte{1<<7 | 8, 0})
 		close(client.Closer)
 		client.Closed = true
-		return &DisconnectMessage{}
+		return nil
 	}
 	fin := (basic[0] >> 7) == 1
 	ndata := make([]byte, l)
 	if _, err := io.ReadFull(client.Conn, ndata); err != nil {
-		fmt.Println("rk")
+		client.Conn.Write([]byte{1<<7 | 8, 0})
 		close(client.Closer)
 		client.Closed = true
-		return &DisconnectMessage{}
+		return nil
 	}
 	for i, c := range ndata {
 		ndata[i] = c ^ mask[i%4]
@@ -333,50 +232,50 @@ func (client *WsEventeer) Read() EventMessage {
 	data = append(data, ndata...)
 	for !fin {
 		if _, err := io.ReadFull(client.Conn, basic); err != nil {
-			fmt.Println("rl")
+			client.Conn.Write([]byte{1<<7 | 8, 0})
 			close(client.Closer)
 			client.Closed = true
-			return &DisconnectMessage{}
+			return nil
 		}
 		if basic[0]&0xf != 0 || (basic[1]>>7)&1 == 0 {
-			fmt.Println("rm")
+			client.Conn.Write([]byte{1<<7 | 8, 0})
 			close(client.Closer)
 			client.Closed = true
-			return &DisconnectMessage{}
+			return nil
 		}
 		l = uint64(basic[1] & 0x7f)
 		if l == 126 {
 			lenbuf := make([]byte, 2)
 			if _, err := io.ReadFull(client.Conn, lenbuf); err != nil {
-				fmt.Println("rn")
+				client.Conn.Write([]byte{1<<7 | 8, 0})
 				close(client.Closer)
 				client.Closed = true
-				return &DisconnectMessage{}
+				return nil
 			}
 			l = uint64(lenbuf[0])<<8 | uint64(lenbuf[1])
 		} else if l == 127 {
 			lenbuf := make([]byte, 8)
-			fmt.Println("ro")
 			if _, err := io.ReadFull(client.Conn, lenbuf); err != nil {
+				client.Conn.Write([]byte{1<<7 | 8, 0})
 				close(client.Closer)
 				client.Closed = true
-				return &DisconnectMessage{}
+				return nil
 			}
 			l = uint64(lenbuf[0])<<56 | uint64(lenbuf[1])<<48 | uint64(lenbuf[2])<<40 | uint64(lenbuf[3])<<32 | uint64(lenbuf[4])<<24 | uint64(lenbuf[5])<<16 | uint64(lenbuf[6])<<8 | uint64(lenbuf[7])
 		}
 		if _, err := io.ReadFull(client.Conn, mask); err != nil {
-			fmt.Println("rp")
+			client.Conn.Write([]byte{1<<7 | 8, 0})
 			close(client.Closer)
 			client.Closed = true
-			return &DisconnectMessage{}
+			return nil
 		}
 		fin = (basic[0] >> 7) == 1
 		ndata := make([]byte, l)
 		if _, err := io.ReadFull(client.Conn, ndata); err != nil {
-			fmt.Println("rq")
+			client.Conn.Write([]byte{1<<7 | 8, 0})
 			close(client.Closer)
 			client.Closed = true
-			return &DisconnectMessage{}
+			return nil
 		}
 		for i, c := range ndata {
 			ndata[i] = c ^ mask[i%4]
@@ -386,56 +285,62 @@ func (client *WsEventeer) Read() EventMessage {
 
 	typed := &TypedBytes{}
 	if err := json.Unmarshal(data, typed); err != nil {
-		fmt.Println("rr", err)
+		client.Conn.Write([]byte{1<<7 | 8, 0})
 		close(client.Closer)
 		client.Closed = true
-		return &DisconnectMessage{}
+		return nil
 	}
+
+	var msg EventMessage
 	switch typed.Type {
-	case Signup:
-		signup := &SignupMessage{}
-		if err := json.Unmarshal(typed.Data, signup); err != nil {
-			fmt.Println(err, string(typed.Data))
-			fmt.Println("rs")
-			close(client.Closer)
-			client.Closed = true
-			return &DisconnectMessage{}
-		}
-		signup.Ip = client.Req.Header.Get("X-Real-IP")
-		if signup.Ip == "" {
-			signup.Ip = client.Req.RemoteAddr[:strings.Index(client.Req.RemoteAddr, ":")]
-		}
-		return signup
-	case Auth:
-		auth := &AuthMessage{}
-		if err := json.Unmarshal(typed.Data, auth); err != nil {
-			fmt.Println(err, string(typed.Data))
-			fmt.Println("rs")
-			close(client.Closer)
-			client.Closed = true
-			return &DisconnectMessage{}
-		}
-		auth.Ip = client.Req.Header.Get("X-Real-IP")
-		if auth.Ip == "" {
-			auth.Ip = client.Req.RemoteAddr[:strings.Index(client.Req.RemoteAddr, ":")]
-		}
-		return auth
-	case Logout:
-		logout := &LogoutMessage{}
-		if err := json.Unmarshal(typed.Data, logout); err != nil {
-			fmt.Println(err, string(typed.Data))
-			fmt.Println("rs")
-			close(client.Closer)
-			client.Closed = true
-			return &DisconnectMessage{}
-		}
-		return logout
-	default:
-		fmt.Println("rt")
+	case UserSignup:
+		msg = &UserSignupMessage{}
+	case UserLogin:
+		msg = &UserLoginMessage{}
+	case UserLogout:
+		msg = &UserLogoutMessage{}
+	case UserInfoUpdate:
+		msg = &UserInfoUpdateMessage{}
+	case StreamInfoUpdate:
+		msg = &StreamInfoUpdateMessage{}
+	case StreamKeyUpdate:
+		msg = &StreamKeyUpdateMessage{}
+	case StreamPrivatedUpdate:
+		msg = &StreamPrivatedUpdateMessage{}
+	case StreamDelete:
+		msg = &StreamDeleteMessage{}
+	case StreamAdd:
+		msg = &StreamAddMessage{}
+	case StreamSubscribe:
+		msg = &StreamSubscribeMessage{}
+	case StreamUnsubscribe:
+		msg = &StreamUnsubscribeMessage{}
+	case StreamList:
+		msg = &StreamListMessage{}
+	case StreamInfoReq:
+		msg = &StreamInfoReqMessage{}
+	case MessageSend:
+		msg = &MessageSendMessage{}
+	case MessageEdit:
+		msg = &MessageEditMessage{}
+	case MessageDelete:
+		msg = &MessageDeleteMessage{}
+	case MessageHistory:
+		msg = &MessageHistoryMessage{}
+	}
+
+	if msg == nil {
+		return nil
+	}
+
+	if err := json.Unmarshal(typed.Data, msg); err != nil {
+		client.Conn.Write([]byte{1<<7 | 8, 0})
 		close(client.Closer)
 		client.Closed = true
-		return &DisconnectMessage{}
+		return nil
 	}
+
+	return msg
 }
 
 func (client *WsEventeer) Send(message EventMessage) {
@@ -444,6 +349,7 @@ func (client *WsEventeer) Send(message EventMessage) {
 	}
 
 	if msgdata, err := json.Marshal(message); err != nil {
+		client.Conn.Write([]byte{1<<7 | 8, 0})
 		close(client.Closer)
 		client.Closed = true
 	} else {
@@ -452,6 +358,7 @@ func (client *WsEventeer) Send(message EventMessage) {
 			Data: msgdata,
 		}
 		if data, err := json.Marshal(typed); err != nil {
+			client.Conn.Write([]byte{1<<7 | 8, 0})
 			close(client.Closer)
 			client.Closed = true
 		} else {
@@ -477,6 +384,7 @@ func (client *WsEventeer) Send(message EventMessage) {
 				if client.Closed {
 					return
 				}
+				client.Conn.Write([]byte{1<<7 | 8, 0})
 				close(client.Closer)
 				client.Closed = true
 				return
@@ -485,6 +393,7 @@ func (client *WsEventeer) Send(message EventMessage) {
 				if client.Closed {
 					return
 				}
+				client.Conn.Write([]byte{1<<7 | 8, 0})
 				close(client.Closer)
 				client.Closed = true
 				return
@@ -492,10 +401,15 @@ func (client *WsEventeer) Send(message EventMessage) {
 		}
 	}
 	if message.Type() == Disconnect {
+		client.Conn.Write([]byte{1<<7 | 8, 0})
 		close(client.Closer)
 		client.Closed = true
 		return
 	}
+}
+
+func (client *WsEventeer) Ip() string {
+	return client.Conn.RemoteAddr().String()
 }
 
 type ClientHandler interface {
@@ -525,14 +439,15 @@ func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, name
 		http.Error(resp, err.Error(), http.StatusInternalServerError)
 		return
 	} else {
-		path := ""
-		for i, c := range name {
+		path := name
+		name = ""
+		for i, c := range path {
 			if c == '/' {
 				if path == "" {
-					path = name[:i]
-					name = name[i+1:]
+					path = path[:i]
+					name = path[i+1:]
 				} else {
-					name = name[:i]
+					name = path[:i]
 					break
 				}
 			}

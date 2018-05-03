@@ -57,20 +57,20 @@ func main() {
 		}
 	}
 
+	webServer := web.NewServer(conf.Web)
+	rtmpServer := rtmp.NewServer(conf.Rtmp)
 	coordinator := &Coordinator{
 		Config:      conf,
-		WebServer:   web.NewServer(conf.Web),
-		RtmpServer:  rtmp.NewServer(conf.Rtmp),
 		RtmpClients: make(map[rtmp.ID]*RtmpClient),
 		Streams:     make(map[string]*Stream),
-		Events:      make(chan *Event, 64),
 	}
 
 	db.Connect(conf.DB)
-	coordinator.RtmpServer.Subscribe(coordinator)
-	coordinator.WebServer.Subscribe(coordinator)
-	go coordinator.RtmpServer.ListenAndServe()
-	go coordinator.WebServer.ListenAndServe()
+	rtmpServer.Subscribe(coordinator)
+	webServer.Subscribe(coordinator)
+	go rtmpServer.ListenAndServe()
+	go webServer.ListenAndServe()
 
-	coordinator.Coordinate()
+	waiter := make(chan struct{})
+	<-waiter
 }

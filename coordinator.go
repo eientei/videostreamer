@@ -2,14 +2,16 @@ package main
 
 import (
 	"crypto/md5"
+	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
-	"os"
+	"regexp"
+	"sort"
 	"time"
 
 	"./db"
@@ -24,45 +26,46 @@ const (
 	SubscriberRole
 )
 
-const (
-	UnknownEvent = iota
-	PublishedEvent
-	UnpublishedEvent
-	SubscribedEvent
-	UnsubscribedEvent
-	InitEvent
-)
-
-type Eventeer struct {
-	Client        web.EventClient
-	Subscriptions []string
-	User          *db.User
-	Ip            string
-}
-
-type Event struct {
-	Source string
-	Type   uint8
-	Detail string
-}
-
 type Stream struct {
-	Path          string
+	Owner         string
 	Name          string
 	Metadata      *rtmp.Metadata
 	AudioInit     []byte
 	VideoInit     []byte
 	Clients       []web.Client
+	WebClients    []*WebClient
 	AudioBuffer   chan *rtmp.TimestampBuf
 	VideoBuffer   chan *rtmp.TimestampBuf
 	ContainerInit []byte
 	Muxer         *mp4.Muxer
+	Closed        bool
+	Coordinator   *Coordinator
+}
+
+type WebClient struct {
+	Stream        *Stream
+	Client        web.EventClient
+	Notifications []string
+	Coordinator   *Coordinator
+	User          *db.User
+}
+
+type RtmpClient struct {
+	Id     rtmp.ID
+	Role   uint8
+	Stream *Stream
+}
+
+type Coordinator struct {
+	Config      *Config
+	WebClients  []*WebClient
+	RtmpClients map[rtmp.ID]*RtmpClient
+	Streams     map[string]*Stream
 }
 
 func (stream *Stream) MuxHandle(event *mp4.MuxEvent) {
 	for _, c := range stream.Clients {
 		if c.Sequence() == 0 {
-			//t := uint64(time.Now().UnixNano()) / uint64(time.Millisecond)
 			c.Init(0, 0)
 			vfirst := 0
 			tskip := uint32(0)
@@ -96,31 +99,32 @@ func (stream *Stream) MuxHandle(event *mp4.MuxEvent) {
 }
 
 func (stream *Stream) Close() {
+	if stream.Closed {
+		return
+	}
+	stream.Closed = true
+	close(stream.AudioBuffer)
+	close(stream.VideoBuffer)
 	for _, c := range stream.Clients {
 		c.Close()
 	}
 }
 
-type RtmpClient struct {
-	Id     rtmp.ID
-	Role   uint8
-	Stream *Stream
-}
-
-type Coordinator struct {
-	Config      *Config
-	WebServer   *web.Server
-	RtmpServer  *rtmp.Server
-	RtmpClients map[rtmp.ID]*RtmpClient
-	Streams     map[string]*Stream
-	Events      chan *Event
-	Eventeers   []*Eventeer
+func MakeStreamName(path string, name string) string {
+	n := path
+	if len(name) > 0 {
+		n += "/" + name
+	}
+	return n
 }
 
 func (coordinator *Coordinator) ClientConnect(client web.Client, path string, name string) bool {
-	if stream, ok := coordinator.Streams[path+"/"+name]; !ok {
+	if stream, ok := coordinator.Streams[MakeStreamName(path, name)]; !ok {
 		return false
 	} else {
+		if stream.Closed {
+			return false
+		}
 		if stream.Metadata == nil {
 			return false
 		}
@@ -128,17 +132,11 @@ func (coordinator *Coordinator) ClientConnect(client web.Client, path string, na
 		client.Send(stream.ContainerInit)
 	}
 
-	coordinator.Events <- &Event{
-		Source: client.Source(),
-		Type:   SubscribedEvent,
-		Detail: path + "/" + name,
-	}
-
 	return true
 }
 
 func (coordinator *Coordinator) ClientDisconnect(client web.Client, path string, name string) {
-	if stream, ok := coordinator.Streams[path+"/"+name]; ok {
+	if stream, ok := coordinator.Streams[MakeStreamName(path, name)]; ok {
 		for i, c := range stream.Clients {
 			if c == client {
 				stream.Clients = append(stream.Clients[:i], stream.Clients[i+1:]...)
@@ -146,234 +144,80 @@ func (coordinator *Coordinator) ClientDisconnect(client web.Client, path string,
 			}
 		}
 	}
-
-	coordinator.Events <- &Event{
-		Source: client.Source(),
-		Type:   UnsubscribedEvent,
-		Detail: path + "/" + name,
-	}
-}
-
-type RecaptchaResponse struct {
-	Success     bool      `json:"success"`
-	ChallengeTS time.Time `json:"challenge_ts"`
-	Hostname    string    `json:"hostname"`
-	ErrorCodes  []string  `json:"error-codes"`
-}
-
-func (coordinator *Coordinator) ProcessEvents(eventeer *Eventeer) {
-	for {
-		msg := eventeer.Client.Read()
-		switch msg.Type() {
-		case web.Signup:
-			signup := msg.(*web.SignupMessage)
-			if signup.Ip != "127.0.0.1" {
-				res := &RecaptchaResponse{}
-				if r, err := http.PostForm("https://www.google.com/recaptcha/api/siteverify", url.Values{"secret": {coordinator.Config.Web.Recaptcha}, "remoteip": {signup.Ip}, "response": {signup.Captcha}}); err != nil {
-					eventeer.Client.Send(&web.ErrorMessage{"Invalid signup"})
-					continue
-				} else {
-					defer r.Body.Close()
-					if body, err := ioutil.ReadAll(r.Body); err != nil {
-						eventeer.Client.Send(&web.ErrorMessage{"Invalid signup"})
-						continue
-					} else {
-						fmt.Println(string(body))
-						if err := json.Unmarshal(body, res); err != nil {
-							eventeer.Client.Send(&web.ErrorMessage{"Invalid signup"})
-							continue
-						}
-					}
-				}
-				if !res.Success {
-					eventeer.Client.Send(&web.ErrorMessage{"Invalid captcha"})
-					continue
-				}
-			}
-
-			if len(signup.Username) < 3 || len(signup.Username) > 64 {
-				eventeer.Client.Send(&web.ErrorMessage{"Username must be of 3..64 symbols in length"})
-				continue
-			}
-
-			if len(signup.Password) < 3 || len(signup.Password) > 64 {
-				eventeer.Client.Send(&web.ErrorMessage{"Password must be of 3..64 symbols in length"})
-				continue
-			}
-
-			if signup.Password != signup.PasswordRepeat {
-				eventeer.Client.Send(&web.ErrorMessage{"Passwords must match"})
-				continue
-			}
-
-			if db.GetUserByName(signup.Username) != nil {
-				eventeer.Client.Send(&web.ErrorMessage{"User with such name exists"})
-				continue
-			}
-
-			if db.GetUserByEmail(signup.Email) != nil {
-				eventeer.Client.Send(&web.ErrorMessage{"User with such email exists"})
-				continue
-			}
-
-			db.CreateUser(db.User{
-				Username: signup.Username,
-				Email:    signup.Email,
-				Password: signup.Password,
-			})
-			eventeer.Client.Send(&web.StatusMessage{"Signup success"})
-		case web.Auth:
-			auth := msg.(*web.AuthMessage)
-			eventeer.Ip = auth.Ip
-			getAnon := func() *web.UserDetailsMessage {
-				user := db.GetUserByEmail(auth.Ip)
-				if user == nil {
-					user = &db.User{
-						Username: "anonymous",
-						Email:    auth.Ip,
-						Password: "",
-					}
-					db.CreateUser(*user)
-				}
-				gsum := md5.Sum([]byte(user.Email))
-				gravatar := hex.EncodeToString(gsum[:])
-				eventeer.User = user
-				anon := &web.UserDetailsMessage{
-					Username: user.Username,
-					Email:    user.Email,
-					Gravatar: gravatar,
-				}
-				return anon
-			}
-
-			if auth.Username == "anonymous" {
-				eventeer.Client.Send(getAnon())
-			} else {
-				fmt.Println(auth)
-				user := db.GetUserByName(auth.Username)
-				fmt.Println(user)
-				if user == nil {
-					eventeer.Client.Send(getAnon())
-					continue
-				}
-				if user.Password != auth.Password {
-					eventeer.Client.Send(getAnon())
-					continue
-				}
-				dbstreams := db.GetStreamsByOwner(user.Id)
-				streams := make([]*web.Stream, 0)
-				for _, s := range dbstreams {
-					streams = append(streams, &web.Stream{
-						Name:    s.Name,
-						Title:   s.Title,
-						Key:     s.Key,
-						Logourl: s.Logourl,
-					})
-				}
-				notifications := make([]string, 0)
-				subs := db.GetSubscriptionsByUser(user.Id)
-				for _, s := range subs {
-					notifications = append(notifications, user.Username+"/"+s)
-				}
-
-				gsum := md5.Sum([]byte(user.Email))
-				gravatar := hex.EncodeToString(gsum[:])
-				eventeer.User = user
-				eventeer.Client.Send(&web.UserDetailsMessage{
-					Username:      user.Username,
-					Email:         user.Email,
-					Gravatar:      gravatar,
-					Streams:       streams,
-					Notifications: notifications,
-				})
-			}
-
-		case web.Logout:
-			user := db.GetUserByEmail(eventeer.Ip)
-			if user == nil {
-				user = &db.User{
-					Username: "anonymous",
-					Email:    eventeer.Ip,
-					Password: "",
-				}
-				db.CreateUser(*user)
-			}
-			gsum := md5.Sum([]byte(user.Email))
-			gravatar := hex.EncodeToString(gsum[:])
-			eventeer.User = user
-			eventeer.Client.Send(&web.UserDetailsMessage{
-				Username: user.Username,
-				Email:    user.Email,
-				Gravatar: gravatar,
-			})
-		case web.Disconnect:
-			fmt.Println("disconnect")
-			return
-		}
-	}
 }
 
 func (coordinator *Coordinator) EventeerConnect(client web.EventClient) {
-	evt := &Eventeer{Client: client}
-	coordinator.Eventeers = append(coordinator.Eventeers, evt)
+	evt := &WebClient{Client: client, Coordinator: coordinator, User: &db.User{
+		Id:       0,
+		Username: "anonymous",
+		Email:    "",
+		Password: "",
+	}}
+	coordinator.WebClients = append(coordinator.WebClients, evt)
 	go coordinator.ProcessEvents(evt)
 }
 
 func (coordinator *Coordinator) EventeerDisconnect(client web.EventClient) {
-	for i, c := range coordinator.Eventeers {
+	for i, c := range coordinator.WebClients {
 		if c.Client == client {
-			coordinator.Eventeers = append(coordinator.Eventeers[:i], coordinator.Eventeers[i+1:]...)
+			coordinator.WebClients = append(coordinator.WebClients[:i], coordinator.WebClients[i+1:]...)
+			if c.Stream != nil {
+				for n, s := range c.Stream.WebClients {
+					if s.Client == client {
+						c.Stream.WebClients = append(c.Stream.WebClients[:n], c.Stream.WebClients[n+1:]...)
+						break
+					}
+				}
+			}
+			break
 		}
 	}
 }
 
 func (coordinator *Coordinator) ConnectEvent(client rtmp.ID) {
-	c := &RtmpClient{
+	coordinator.RtmpClients[client] = &RtmpClient{
 		Id: client,
 	}
-	coordinator.RtmpClients[client] = c
 }
 
 func (coordinator *Coordinator) DisconnectEvent(client rtmp.ID) {
-	switch coordinator.RtmpClients[client].Role {
+	s, ok := coordinator.RtmpClients[client]
+	if !ok {
+		return
+	}
+	switch s.Role {
 	case PublisherRole:
-		coordinator.Events <- &Event{
-			Source: client.String(),
-			Type:   UnpublishedEvent,
-			Detail: coordinator.RtmpClients[client].Stream.Path + "/" + coordinator.RtmpClients[client].Stream.Name,
-		}
-		close(coordinator.RtmpClients[client].Stream.AudioBuffer)
-		close(coordinator.RtmpClients[client].Stream.VideoBuffer)
-		delete(coordinator.Streams, coordinator.RtmpClients[client].Stream.Path+"/"+coordinator.RtmpClients[client].Stream.Name)
+		s.Stream.Close()
 	case SubscriberRole:
-		coordinator.Events <- &Event{
-			Source: client.String(),
-			Type:   UnsubscribedEvent,
-			Detail: coordinator.RtmpClients[client].Stream.Path + "/" + coordinator.RtmpClients[client].Stream.Name,
-		}
 	}
 	delete(coordinator.RtmpClients, client)
 }
 
 func (coordinator *Coordinator) PublishEvent(client rtmp.ID, path string, stream string) bool {
-	if _, ok := coordinator.Streams[path+"/"+stream]; ok {
+	str := db.GetStreamByOwnerNameAndKey(path, stream)
+	if str == nil {
+		return false
+	}
+	if s, ok := coordinator.Streams[MakeStreamName(path, str.Name)]; ok && !s.Closed {
 		return false
 	} else {
-		s := &Stream{
-			Path:        path,
-			Name:        stream,
-			AudioBuffer: make(chan *rtmp.TimestampBuf),
-			VideoBuffer: make(chan *rtmp.TimestampBuf),
+		if !ok {
+			owner := db.GetUserById(str.Id)
+			s = &Stream{
+				AudioBuffer: make(chan *rtmp.TimestampBuf),
+				VideoBuffer: make(chan *rtmp.TimestampBuf),
+				Owner:       owner.Username,
+				Name:        str.Name,
+				Coordinator: coordinator,
+			}
+			coordinator.Streams[MakeStreamName(path, str.Name)] = s
+		} else {
+			s.Closed = false
+			s.AudioBuffer = make(chan *rtmp.TimestampBuf)
+			s.VideoBuffer = make(chan *rtmp.TimestampBuf)
 		}
-		coordinator.Streams[path+"/"+stream] = s
 		coordinator.RtmpClients[client].Role = PublisherRole
 		coordinator.RtmpClients[client].Stream = s
-
-		coordinator.Events <- &Event{
-			Source: client.String(),
-			Type:   PublishedEvent,
-			Detail: path + "/" + stream,
-		}
 		return true
 	}
 }
@@ -391,21 +235,93 @@ func (coordinator *Coordinator) InitEvent(client rtmp.ID, data *rtmp.Metadata, a
 		return false
 	}
 
-	coordinator.Events <- &Event{
-		Source: client.String(),
-		Type:   InitEvent,
-		Detail: coordinator.RtmpClients[client].Stream.Path + "/" + coordinator.RtmpClients[client].Stream.Name,
+	stream := coordinator.RtmpClients[client].Stream
+	user := db.GetUserByName(stream.Owner)
+
+	str := db.GetStreamByOwnerNameAndName(stream.Owner, stream.Name)
+
+	n := MakeStreamName(stream.Owner, stream.Name)
+
+	for _, c := range coordinator.WebClients {
+		for _, s := range c.Notifications {
+			if s == n {
+				c.Client.Send(&web.StreamPublishedMessage{Stream: MakeStreamInfo(user, str, stream)})
+				break
+			}
+		}
 	}
+
 	return true
 }
 
 func (coordinator *Coordinator) AudioEvent(client rtmp.ID, data *rtmp.TimestampBuf) bool {
-	coordinator.RtmpClients[client].Stream.AudioBuffer <- data
+	s, ok := coordinator.RtmpClients[client]
+	if !ok {
+		return false
+	}
+	if s.Stream.Closed {
+		return false
+	}
+	s.Stream.AudioBuffer <- data
 	return true
 }
 
 func (coordinator *Coordinator) VideoEvent(client rtmp.ID, data *rtmp.TimestampBuf) bool {
-	coordinator.RtmpClients[client].Stream.VideoBuffer <- data
+	s, ok := coordinator.RtmpClients[client]
+	if !ok {
+		return false
+	}
+	if s.Stream.Closed {
+		return false
+	}
+	s.Stream.VideoBuffer <- data
+	return true
+}
+
+func (coordinator *Coordinator) Remux(stream *Stream) bool {
+	stream.Muxer = mp4.NewMuxer(coordinator.Config.Mp4)
+
+	aptr := 0
+	format := stream.AudioInit[aptr] >> 4
+	aptr += 1
+	if format != 10 {
+		return false
+	}
+	aptr += 1
+
+	vptr := 0
+	frame := (stream.VideoInit[vptr] >> 4) & 0xF
+	codec := stream.VideoInit[vptr] & 0xF
+	vptr += 1
+	avctype := -1
+	if codec == 7 {
+		avctype = int(stream.VideoInit[vptr])
+		vptr += 1
+		vptr += 3
+	}
+	if frame == 5 {
+		return false
+	} else {
+		switch codec {
+		case 7:
+			switch avctype {
+			case 0:
+			case 1:
+				return false
+			default:
+				return false
+			}
+		default:
+			return false
+		}
+	}
+
+	stream.ContainerInit = stream.Muxer.Init(stream.Metadata.Width, stream.Metadata.Height, stream.Metadata.FrameRate, stream.Metadata.AudioRate, stream.AudioInit[aptr:], stream.VideoInit[vptr:])
+	if len(stream.ContainerInit) == 0 {
+		return false
+	}
+	stream.Muxer.Subscribe(stream)
+	go Dispatch(stream)
 	return true
 }
 
@@ -465,75 +381,633 @@ func Dispatch(stream *Stream) {
 	}
 }
 
-func (coordinator *Coordinator) Remux(stream *Stream) bool {
-	stream.Muxer = mp4.NewMuxer(coordinator.Config.Mp4)
-
-	aptr := 0
-	format := stream.AudioInit[aptr] >> 4
-	aptr += 1
-	if format != 10 {
-		return false
-	}
-	aptr += 1
-
-	vptr := 0
-	frame := (stream.VideoInit[vptr] >> 4) & 0xF
-	codec := stream.VideoInit[vptr] & 0xF
-	vptr += 1
-	avctype := -1
-	if codec == 7 {
-		avctype = int(stream.VideoInit[vptr])
-		vptr += 1
-		vptr += 3
-	}
-	if frame == 5 {
-		return false
-	} else {
-		switch codec {
-		case 7:
-			switch avctype {
-			case 0:
-			case 1:
-				return false
-			default:
-				return false
-			}
-		default:
-			return false
+func (coordinator *Coordinator) ProcessEvents(eventeer *WebClient) {
+	for {
+		msg := eventeer.Client.Read()
+		if msg == nil {
+			break
+		}
+		switch msg.Type() {
+		case web.UserSignup:
+			eventeer.UserSignup(msg.(*web.UserSignupMessage))
+		case web.UserLogin:
+			eventeer.UserLogin(msg.(*web.UserLoginMessage))
+		case web.UserLogout:
+			eventeer.UserLogout(msg.(*web.UserLogoutMessage))
+		case web.UserInfoUpdate:
+			eventeer.UserInfoUpdate(msg.(*web.UserInfoUpdateMessage))
+		case web.StreamInfoUpdate:
+			eventeer.StreamInfoUpdate(msg.(*web.StreamInfoUpdateMessage))
+		case web.StreamKeyUpdate:
+			eventeer.StreamKeyUpdate(msg.(*web.StreamKeyUpdateMessage))
+		case web.StreamPrivatedUpdate:
+			eventeer.StreamPrivatedUpdate(msg.(*web.StreamPrivatedUpdateMessage))
+		case web.StreamDelete:
+			eventeer.StreamDelete(msg.(*web.StreamDeleteMessage))
+		case web.StreamAdd:
+			eventeer.StreamAdd(msg.(*web.StreamAddMessage))
+		case web.StreamSubscribe:
+			eventeer.StreamSubscribe(msg.(*web.StreamSubscribeMessage))
+		case web.StreamUnsubscribe:
+			eventeer.StreamUnsubscribe(msg.(*web.StreamUnsubscribeMessage))
+		case web.StreamList:
+			eventeer.StreamList(msg.(*web.StreamListMessage))
+		case web.StreamInfoReq:
+			eventeer.StreamInfoReq(msg.(*web.StreamInfoReqMessage))
+		case web.MessageSend:
+			eventeer.MessageSend(msg.(*web.MessageSendMessage))
+		case web.MessageEdit:
+			eventeer.MessageEdit(msg.(*web.MessageEditMessage))
+		case web.MessageDelete:
+			eventeer.MessageDelete(msg.(*web.MessageDeleteMessage))
+		case web.MessageHistory:
+			eventeer.MessageHistory(msg.(*web.MessageHistoryMessage))
 		}
 	}
-
-	stream.ContainerInit = stream.Muxer.Init(stream.Metadata.Width, stream.Metadata.Height, stream.Metadata.FrameRate, stream.Metadata.AudioRate, stream.AudioInit[aptr:], stream.VideoInit[vptr:])
-	if len(stream.ContainerInit) == 0 {
-		return false
-	}
-	stream.Muxer.Subscribe(stream)
-	go Dispatch(stream)
-	return true
 }
 
-func (coordinator *Coordinator) Coordinate() {
-	logger := log.New(os.Stdout, "", log.LstdFlags)
-	for event := range coordinator.Events {
-		switch event.Type {
-		case PublishedEvent:
-			logger.Println("[", event.Detail, "] Published", event.Source)
-		case UnpublishedEvent:
-			logger.Println("[", event.Detail, "] Unpublished", event.Source)
-		case SubscribedEvent:
-			logger.Println("[", event.Detail, "] Subscribed", event.Source)
-		case UnsubscribedEvent:
-			logger.Println("[", event.Detail, "] Unsubscribed", event.Source)
-		case InitEvent:
-			logger.Println("[", event.Detail, "] Ready")
-			for _, c := range coordinator.Eventeers {
-				for _, s := range c.Subscriptions {
-					if s == event.Detail {
-						c.Client.Send(&web.PublishedMessage{Stream: event.Detail})
-						break
-					}
+type RecaptchaResponse struct {
+	Success     bool      `json:"success"`
+	ChallengeTS time.Time `json:"challenge_ts"`
+	Hostname    string    `json:"hostname"`
+	ErrorCodes  []string  `json:"error-codes"`
+}
+
+func GenerateKey() string {
+	t := time.Now().UnixNano()
+	b := make([]byte, 20)
+	WriteB64(b, uint64(t))
+	rand.Read(b[4:])
+	sum := sha1.Sum(b)
+	return hex.EncodeToString(sum[:])
+}
+
+func MakeGravatar(eventeer *WebClient) string {
+	if eventeer.User.Username != "anonymous" {
+		gsum := md5.Sum([]byte(eventeer.User.Email))
+		return hex.EncodeToString(gsum[:])
+	} else {
+		ip := eventeer.Client.Ip()
+		for i, c := range ip {
+			if c == ':' {
+				ip = ip[:i]
+				break
+			}
+		}
+		gsum := md5.Sum([]byte(ip))
+		return hex.EncodeToString(gsum[:])
+	}
+}
+
+type UserDetailsStreamsArr []*web.UserDetailsStreams
+
+func (s UserDetailsStreamsArr) Len() int {
+	return len(s)
+}
+
+func (s UserDetailsStreamsArr) Less(i, j int) bool {
+	return s[i].Name < s[j].Name
+}
+
+func (s UserDetailsStreamsArr) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func MakeStreamInfo(owner *db.User, stream *db.Stream, running *Stream) *web.UserDetailsStreams {
+	gsum := md5.Sum([]byte(owner.Email))
+	gravatar := hex.EncodeToString(gsum[:])
+
+	clients := 0
+	users := make([]string, 0)
+	if running != nil {
+		for _, c := range running.WebClients {
+			users = append(users, MakeGravatar(c))
+		}
+		clients = len(running.Clients)
+	}
+	oldest := db.GetOldestMessage(stream.Id)
+	return &web.UserDetailsStreams{
+		Id:       stream.Id,
+		Gravatar: gravatar,
+		Owner:    owner.Username,
+		Name:     stream.Name,
+		Title:    stream.Title,
+		Logourl:  stream.Logourl,
+		Key:      stream.Key,
+		Privated: stream.Privated,
+		Clients:  clients,
+		Users:    users,
+		Oldest:   oldest,
+	}
+}
+
+func MakeUserInfo(eventeer *WebClient) *web.UserDetailsMessage {
+	gravatar := MakeGravatar(eventeer)
+
+	dbstreams := db.GetStreamsByOwner(eventeer.User.Id)
+	streams := make([]*web.UserDetailsStreams, 0)
+	for _, s := range dbstreams {
+		streams = append(streams, MakeStreamInfo(eventeer.User, s, eventeer.Coordinator.Streams[MakeStreamName(eventeer.User.Username, s.Name)]))
+	}
+	sort.Sort(UserDetailsStreamsArr(streams))
+	return &web.UserDetailsMessage{
+		Name:          eventeer.User.Username,
+		Email:         eventeer.User.Email,
+		Gravatar:      gravatar,
+		Streams:       streams,
+		Notifications: eventeer.Notifications,
+	}
+}
+
+func (webclient *WebClient) UserSignup(msg *web.UserSignupMessage) {
+	if len(msg.Username) < 3 || len(msg.Username) > 64 {
+		webclient.Client.Send(&web.SignupErrorMessage{"Username must be of 3..64 symbols in length"})
+		return
+	}
+	if len(msg.Email) < 3 || len(msg.Email) > 64 {
+		webclient.Client.Send(&web.SignupErrorMessage{"Email must be of 3..64 symbols in length"})
+		return
+	}
+	if len(msg.Password) < 3 || len(msg.Password) > 64 {
+		webclient.Client.Send(&web.SignupErrorMessage{"Password must be of 3..64 symbols in length"})
+		return
+	}
+	if b, _ := regexp.Match("^[a-zA-Z0-9]+$", []byte(msg.Username)); !b {
+		webclient.Client.Send(&web.SignupErrorMessage{"Username must be alphanumeric"})
+		return
+	}
+	ip := webclient.Client.Ip()
+	for i, c := range ip {
+		if c == ':' {
+			ip = ip[:i]
+			break
+		}
+	}
+	res := &RecaptchaResponse{}
+	if r, err := http.PostForm("https://www.google.com/recaptcha/api/siteverify", url.Values{"secret": {webclient.Coordinator.Config.Web.Recaptcha}, "remoteip": {ip}, "response": {msg.Captcha}}); err != nil {
+		webclient.Client.Send(&web.SignupErrorMessage{"Invalid signup"})
+		return
+	} else {
+		defer r.Body.Close()
+		if body, err := ioutil.ReadAll(r.Body); err != nil {
+			webclient.Client.Send(&web.SignupErrorMessage{"Invalid signup"})
+			return
+		} else {
+			if err := json.Unmarshal(body, res); err != nil {
+				webclient.Client.Send(&web.SignupErrorMessage{"Invalid signup"})
+				return
+			}
+		}
+	}
+	if !res.Success {
+		webclient.Client.Send(&web.SignupErrorMessage{"Invalid captcha"})
+		return
+	}
+
+	if db.GetUserByName(msg.Username) != nil {
+		webclient.Client.Send(&web.SignupErrorMessage{"Name already taken"})
+		return
+	}
+
+	if db.GetUserByEmail(msg.Email) != nil {
+		webclient.Client.Send(&web.SignupErrorMessage{"Email already taken"})
+		return
+	}
+
+	uid := db.CreateUser(db.User{
+		Username: msg.Username,
+		Email:    msg.Email,
+		Password: msg.Password,
+	})
+	db.CreateStream(db.Stream{
+		Name:     "",
+		Title:    "Changeme",
+		Owner:    uid,
+		Key:      GenerateKey(),
+		Privated: false,
+		Logourl:  "",
+	})
+	for _, n := range webclient.Notifications {
+		owner := n
+		name := ""
+		for i, c := range n {
+			if c == '/' {
+				owner = n[:i]
+				name = n[i+1:]
+				break
+			}
+		}
+		s := db.GetStreamByOwnerNameAndName(owner, name)
+		db.Subscribe(uid, s.Id)
+	}
+	webclient.User = db.GetUserByName(msg.Username)
+	webclient.Client.Send(MakeUserInfo(webclient))
+}
+
+func (webclient *WebClient) UserLogin(msg *web.UserLoginMessage) {
+	if msg.Username == "anonymous" {
+		webclient.User = &db.User{
+			Id:       0,
+			Username: "anonymous",
+			Email:    "",
+			Password: "",
+		}
+		webclient.Client.Send(MakeUserInfo(webclient))
+		return
+	}
+	user := db.GetUserByName(msg.Username)
+	if user == nil {
+		webclient.Client.Send(&web.LoginErrorMessage{"No such user"})
+		return
+	}
+	if user.Password != msg.Password {
+		webclient.Client.Send(&web.LoginErrorMessage{"Invalid credentials"})
+		return
+	}
+	webclient.User = user
+	webclient.Notifications = make([]string, 0)
+	subs := db.GetSubscriptionsByUser(webclient.User.Id)
+	for _, s := range subs {
+		webclient.Notifications = append(webclient.Notifications, s)
+	}
+	webclient.Client.Send(MakeUserInfo(webclient))
+}
+
+func (webclient *WebClient) UserLogout(msg *web.UserLogoutMessage) {
+	webclient.User = &db.User{
+		Id:       0,
+		Username: "anonymous",
+		Email:    "",
+		Password: "",
+	}
+	webclient.Notifications = make([]string, 0)
+	webclient.Client.Send(MakeUserInfo(webclient))
+}
+
+func (webclient *WebClient) UserInfoUpdate(msg *web.UserInfoUpdateMessage) {
+	if webclient.User.Username == "anonymous" {
+		webclient.Client.Send(&web.ProfileErrorMessage{"Not logged in"})
+		return
+	}
+
+	if webclient.User.Password != msg.Password && msg.Password != "" {
+		db.UpdateUserPassword(webclient.User.Id, msg.Password)
+		webclient.User.Password = msg.Password
+	}
+
+	if webclient.User.Email != msg.Email {
+		usr := db.GetUserByEmail(msg.Email)
+		if usr != nil {
+			if usr.Id != webclient.User.Id {
+				webclient.Client.Send(&web.ProfileErrorMessage{"Email already taken"})
+			}
+			return
+		}
+		db.UpdateUserEmail(webclient.User.Id, msg.Email)
+		webclient.User.Email = msg.Email
+	}
+
+	webclient.Client.Send(MakeUserInfo(webclient))
+}
+
+func (webclient *WebClient) StreamInfoUpdate(msg *web.StreamInfoUpdateMessage) {
+	stream := db.GetStreamById(msg.Id)
+	if stream == nil {
+		webclient.Client.Send(&web.StreamErrorMessage{"Not such stream"})
+		return
+	}
+	if stream.Owner != webclient.User.Id {
+		webclient.Client.Send(&web.StreamErrorMessage{"Stream not owned"})
+		return
+	}
+
+	if stream.Title != msg.Title {
+		db.UpdateStreamTitle(msg.Id, msg.Title)
+		stream.Title = msg.Title
+	}
+
+	if stream.Logourl != msg.Logourl {
+		db.UpdateStreamLogourl(msg.Id, msg.Logourl)
+		stream.Logourl = msg.Logourl
+	}
+
+	if stream.Name != msg.Name {
+		if b, _ := regexp.Match("^[a-zA-Z0-9]*$", []byte(msg.Name)); !b {
+			webclient.Client.Send(&web.StreamErrorMessage{"Name must be alphanumeric"})
+			return
+		}
+		str := db.GetStreamByOwnerAndName(webclient.User.Id, msg.Name)
+		if str != nil {
+			if str.Id != msg.Id {
+				webclient.Client.Send(&web.StreamErrorMessage{"Stream name already exists"})
+			}
+			return
+		}
+		db.UpdateStreamName(msg.Id, msg.Name)
+
+		n := MakeStreamName(webclient.User.Username, stream.Name)
+
+		running := webclient.Coordinator.Streams[n]
+
+		for _, c := range webclient.Coordinator.WebClients {
+			for i, nm := range c.Notifications {
+				if nm == n {
+					c.Notifications[i] = MakeStreamName(webclient.User.Username, msg.Name)
+					break
 				}
 			}
 		}
+
+		if running != nil {
+			for _, c := range running.WebClients {
+				c.Client.Send(&web.StreamRedirectMessage{Owner: webclient.User.Username, Stream: msg.Name})
+			}
+			delete(webclient.Coordinator.Streams, n)
+			running.Close()
+		}
+
+		webclient.Client.Send(MakeUserInfo(webclient))
+		return
+	}
+
+	running := webclient.Coordinator.Streams[MakeStreamName(webclient.User.Username, stream.Name)]
+
+	if running != nil {
+		for _, c := range running.WebClients {
+			c.Client.Send(&web.StreamInfoMessage{Stream: MakeStreamInfo(webclient.User, stream, running)})
+		}
+	}
+
+	webclient.Client.Send(MakeUserInfo(webclient))
+}
+
+func (webclient *WebClient) StreamKeyUpdate(msg *web.StreamKeyUpdateMessage) {
+	stream := db.GetStreamById(msg.Id)
+	if stream == nil {
+		webclient.Client.Send(&web.StreamErrorMessage{"Not such stream"})
+		return
+	}
+	if stream.Owner != webclient.User.Id {
+		webclient.Client.Send(&web.StreamErrorMessage{"Stream not owned"})
+		return
+	}
+
+	key := GenerateKey()
+	db.UpdateStreamKey(msg.Id, key)
+	webclient.Client.Send(MakeUserInfo(webclient))
+
+	running := webclient.Coordinator.Streams[MakeStreamName(webclient.User.Username, stream.Name)]
+
+	if running != nil {
+		running.Close()
+	}
+}
+
+func (webclient *WebClient) StreamPrivatedUpdate(msg *web.StreamPrivatedUpdateMessage) {
+	stream := db.GetStreamById(msg.Id)
+	if stream == nil {
+		webclient.Client.Send(&web.StreamErrorMessage{"Not such stream"})
+		return
+	}
+	if stream.Owner != webclient.User.Id {
+		webclient.Client.Send(&web.StreamErrorMessage{"Stream not owned"})
+		return
+	}
+
+	db.UpdateStreamPrivated(msg.Id, msg.Privated)
+	webclient.Client.Send(MakeUserInfo(webclient))
+}
+
+func (webclient *WebClient) StreamDelete(msg *web.StreamDeleteMessage) {
+	stream := db.GetStreamById(msg.Id)
+	if stream == nil {
+		webclient.Client.Send(&web.StreamErrorMessage{"Not such stream"})
+		return
+	}
+	if stream.Owner != webclient.User.Id {
+		webclient.Client.Send(&web.StreamErrorMessage{"Stream not owned"})
+		return
+	}
+
+	db.DeleteStreamById(msg.Id)
+	webclient.Client.Send(MakeUserInfo(webclient))
+
+	n := MakeStreamName(webclient.User.Username, stream.Name)
+
+	running := webclient.Coordinator.Streams[n]
+
+	for _, c := range webclient.Coordinator.WebClients {
+		for i, nm := range c.Notifications {
+			if nm == n {
+				c.Notifications = append(c.Notifications[:i], c.Notifications[i+1:]...)
+				break
+			}
+		}
+	}
+
+	if running != nil {
+		for _, c := range running.WebClients {
+			c.Client.Send(&web.StreamRedirectMessage{Owner: "", Stream: ""})
+		}
+		delete(webclient.Coordinator.Streams, MakeStreamName(webclient.User.Username, stream.Name))
+		running.Close()
+	}
+}
+
+func (webclient *WebClient) StreamAdd(msg *web.StreamAddMessage) {
+	name := ""
+	for i := 0; ; i++ {
+		name = fmt.Sprintf("stream%02d", i)
+		stream := db.GetStreamByOwnerAndName(webclient.User.Id, name)
+		if stream == nil {
+			break
+		}
+	}
+	db.CreateStream(db.Stream{
+		Name:     name,
+		Title:    "",
+		Owner:    webclient.User.Id,
+		Key:      GenerateKey(),
+		Logourl:  "",
+		Privated: false,
+	})
+	webclient.Client.Send(MakeUserInfo(webclient))
+}
+
+func (webclient *WebClient) StreamSubscribe(msg *web.StreamSubscribeMessage) {
+	stream := db.GetStreamById(msg.Id)
+	if stream == nil {
+		webclient.Client.Send(&web.SubErrorMessage{"Not such stream"})
+		return
+	}
+	owner := db.GetUserById(stream.Owner)
+	webclient.Notifications = append(webclient.Notifications, MakeStreamName(owner.Username, stream.Name))
+	if webclient.User.Username != "anonymous" {
+		db.Subscribe(webclient.User.Id, stream.Id)
+	}
+	webclient.Client.Send(MakeUserInfo(webclient))
+}
+
+func (webclient *WebClient) StreamUnsubscribe(msg *web.StreamUnsubscribeMessage) {
+	stream := db.GetStreamById(msg.Id)
+	if stream == nil {
+		webclient.Client.Send(&web.SubErrorMessage{"Not such stream"})
+		return
+	}
+	owner := db.GetUserById(stream.Owner)
+	n := MakeStreamName(owner.Username, stream.Name)
+	for i, nm := range webclient.Notifications {
+		if nm == n {
+			webclient.Notifications = append(webclient.Notifications[:i], webclient.Notifications[i+1:]...)
+			break
+		}
+	}
+
+	if webclient.User.Username != "anonymous" {
+		db.Unsubscribe(webclient.User.Id, stream.Id)
+	}
+	webclient.Client.Send(MakeUserInfo(webclient))
+}
+
+func (webclient *WebClient) StreamList(msg *web.StreamListMessage) {
+	streams := make([]*web.UserDetailsStreams, 0)
+	for _, s := range webclient.Coordinator.Streams {
+		if s.Closed {
+			continue
+		}
+		stream := db.GetStreamByOwnerNameAndName(s.Owner, s.Name)
+		owner := db.GetUserById(stream.Owner)
+		streams = append(streams, MakeStreamInfo(owner, stream, s))
+	}
+	webclient.Client.Send(&web.StreamListMessage{Streams: streams})
+}
+
+func (webclient *WebClient) StreamInfoReq(msg *web.StreamInfoReqMessage) {
+	if webclient.Stream != nil {
+		for i, c := range webclient.Stream.WebClients {
+			if c == webclient {
+				webclient.Stream.WebClients = append(webclient.Stream.WebClients[:i], webclient.Stream.WebClients[i+1:]...)
+			}
+		}
+		webclient.Stream = nil
+	}
+
+	stream := db.GetStreamByOwnerNameAndName(msg.Owner, msg.Stream)
+	if stream == nil {
+		if msg.Owner != "" || msg.Stream != "" {
+			webclient.Client.Send(&web.InfoErrorMessage{"No such stream"})
+		}
+		return
+	}
+	owner := db.GetUserById(stream.Owner)
+
+	running := webclient.Coordinator.Streams[MakeStreamName(owner.Username, stream.Name)]
+
+	if running == nil {
+		running = &Stream{
+			Owner:       owner.Username,
+			Name:        stream.Name,
+			Coordinator: webclient.Coordinator,
+			Closed:      true,
+		}
+		webclient.Coordinator.Streams[MakeStreamName(owner.Username, stream.Name)] = running
+	}
+
+	webclient.Stream = running
+	webclient.Stream.WebClients = append(webclient.Stream.WebClients, webclient)
+	webclient.Client.Send(&web.StreamInfoMessage{Stream: MakeStreamInfo(owner, stream, running)})
+
+	msgs := db.PostHistory(stream.Id, 32, db.GetNewestMessage(stream.Id))
+	for _, m := range msgs {
+		webpost := &web.MessageAddMessage{
+			Id:       m.Id,
+			Author:   m.User,
+			Gravatar: m.Gravatar,
+			Edited:   m.Edited,
+			Text:     m.Body,
+			Posted:   uint64(m.Created.Unix()),
+		}
+		webclient.Client.Send(webpost)
+	}
+}
+
+func BroadcastMessage(running *Stream, mid uint64) {
+	post := db.GetPost(mid)
+	webpost := &web.MessageAddMessage{
+		Id:       post.Id,
+		Author:   post.User,
+		Gravatar: post.Gravatar,
+		Edited:   post.Edited,
+		Text:     post.Body,
+		Posted:   uint64(post.Created.Unix()),
+	}
+
+	for _, c := range running.WebClients {
+		c.Client.Send(webpost)
+	}
+}
+
+func (webclient *WebClient) MessageSend(msg *web.MessageSendMessage) {
+	stream := db.GetStreamById(msg.Streamid)
+	if stream == nil {
+		return
+	}
+	owner := db.GetUserById(stream.Owner)
+	running := webclient.Coordinator.Streams[MakeStreamName(owner.Username, stream.Name)]
+	if running == nil {
+		return
+	}
+
+	mid := db.PostCreate(db.Message{
+		User:     webclient.User.Id,
+		Stream:   stream.Id,
+		Gravatar: MakeGravatar(webclient),
+		Body:     msg.Text,
+		Edited:   false,
+	})
+
+	BroadcastMessage(running, mid)
+}
+
+func (webclient *WebClient) MessageEdit(msg *web.MessageEditMessage) {
+	post := db.GetPost(msg.Id)
+	if post == nil || post.User != webclient.User.Id {
+		return
+	}
+	db.PostUpdate(msg.Id, msg.Text)
+	stream := db.GetStreamById(post.Stream)
+	owner := db.GetUserById(stream.Owner)
+	running := webclient.Coordinator.Streams[MakeStreamName(owner.Username, stream.Name)]
+	if running == nil {
+		return
+	}
+	BroadcastMessage(running, msg.Id)
+}
+
+func (webclient *WebClient) MessageDelete(msg *web.MessageDeleteMessage) {
+	post := db.GetPost(msg.Id)
+	if post == nil || post.User != webclient.User.Id {
+		return
+	}
+	db.PostDelete(msg.Id)
+}
+
+func (webclient *WebClient) MessageHistory(msg *web.MessageHistoryMessage) {
+	stream := db.GetStreamById(msg.Streamid)
+	if stream == nil {
+		return
+	}
+
+	msgs := db.PostHistory(stream.Id, 32, msg.Before-1)
+	for _, m := range msgs {
+		webpost := &web.MessageAddMessage{
+			Id:       m.Id,
+			Author:   m.User,
+			Gravatar: m.Gravatar,
+			Edited:   m.Edited,
+			Text:     m.Body,
+			Posted:   uint64(m.Created.Unix()),
+		}
+		webclient.Client.Send(webpost)
 	}
 }

@@ -4,8 +4,7 @@ create table users (
   email text unique,
   password text not null,
   created timestamp with time zone not null,
-  updated timestamp with time zone not null,
-  deleted timestamp with time zone
+  updated timestamp with time zone not null
 );
 
 create table streams (
@@ -15,9 +14,9 @@ create table streams (
   owner bigint references users(id) not null,
   key text,
   logourl text,
+  privated boolean,
   created timestamp with time zone not null,
-  updated timestamp with time zone not null,
-  deleted timestamp with time zone
+  updated timestamp with time zone not null
 );
 
 create table subscriptions (
@@ -25,15 +24,16 @@ create table subscriptions (
   streamid bigint references streams(id) not null,
   created timestamp with time zone not null,
   updated timestamp with time zone not null,
-  deleted timestamp with time zone
+  primary key(userid, streamid)
 );
 
 create table messages (
   id bigserial primary key,
   userid bigint references users(id) not null,
   streamid bigint references streams(id) not null,
+  gravatar text not null,
   body text not null,
+  edited boolean,
   created timestamp with time zone not null,
-  updated timestamp with time zone not null,
-  deleted timestamp with time zone
+  updated timestamp with time zone not null
 );

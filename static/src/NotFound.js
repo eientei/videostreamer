@@ -1,12 +1,14 @@
 import React, { Component } from 'react';
-import {Typography} from 'material-ui';
+import {Typography, withStyles} from 'material-ui';
+import {styles} from './styles';
 
-export default class NotFound extends Component {
+class NotFound extends Component {
     render() {
+        const {classes} = this.props;
         return (
-            <Typography variant='display1'>
-                Not found
-            </Typography>
+            <Typography className={classes.textcenter + ' ' + classes.maxwidth} variant='headline'>Not found</Typography>
         );
     }
 }
+
+export default withStyles(styles)(NotFound);

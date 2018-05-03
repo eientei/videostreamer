@@ -135,19 +135,15 @@ func MakeStreamName(path string, name string) string {
 
 func (coordinator *Coordinator) ClientOk(path string, name string) bool {
 	if stream, ok := coordinator.Streams[MakeStreamName(path, name)]; !ok {
-		fmt.Println("nostream")
 		return false
 	} else {
 		if stream.Closed {
-			fmt.Println("closed")
 			return false
 		}
 		if stream.Metadata == nil {
-			fmt.Println("notmeta")
 			return false
 		}
 		if len(stream.ContainerInit) == 0 {
-			fmt.Println("noinit")
 			return false
 		}
 	}
@@ -942,7 +938,6 @@ func (webclient *WebClient) StreamInfoReq(msg *web.StreamInfoReqMessage) {
 
 	running := webclient.Coordinator.Streams[MakeStreamName(owner.Username, stream.Name)]
 
-	fmt.Println(running, owner.Username, stream.Name, MakeStreamName(owner.Username, stream.Name))
 	if running == nil {
 		running = &Stream{
 			Owner:       owner.Username,

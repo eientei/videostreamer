@@ -434,35 +434,12 @@ func (server *Server) Subscribe(handler ClientHandler) {
 	server.ClientHandlers = append(server.ClientHandlers, handler)
 }
 
-func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, name string) {
+func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, client *WssClient, path string, name string) {
 	if conn, err := WsHandshake(resp, req); err != nil {
 		http.Error(resp, err.Error(), http.StatusInternalServerError)
 		return
 	} else {
-		path := name
-		name = ""
-		for i, c := range path {
-			if c == '/' {
-				if path == "" {
-					path = path[:i]
-					name = path[i+1:]
-				} else {
-					name = path[:i]
-					break
-				}
-			}
-		}
-		client := &WssClient{
-			Conn:   conn,
-			Req:    req,
-			Closer: make(chan struct{}),
-		}
-		for _, h := range server.ClientHandlers {
-			if !h.ClientConnect(client, path, name) {
-				conn.Close()
-				return
-			}
-		}
+		client.Conn = conn
 		<-client.Closer
 		for _, h := range server.ClientHandlers {
 			h.ClientDisconnect(client, path, name)
@@ -547,7 +524,31 @@ func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 			next := req.URL.Path[len(livePrefix):]
 			if len(next) > len(wssSuffix) && next[len(next)-len(wssSuffix):] == wssSuffix {
 				name := next[:len(next)-len(wssSuffix)]
-				server.ServeWss(resp, req, name)
+				path := name
+				name = ""
+				for i, c := range path {
+					if c == '/' {
+						if path == "" {
+							path = path[:i]
+							name = path[i+1:]
+						} else {
+							name = path[:i]
+							break
+						}
+					}
+				}
+				client := &WssClient{
+					Req:    req,
+					Closer: make(chan struct{}),
+				}
+				for _, h := range server.ClientHandlers {
+					if !h.ClientConnect(client, path, name) {
+						req.Body.Close()
+						return
+					}
+				}
+
+				server.ServeWss(resp, req, client, path, name)
 			} else if len(next) > len(mp4Suffix) && next[len(next)-len(mp4Suffix):] == mp4Suffix {
 				name := next[:len(next)-len(mp4Suffix)]
 				server.ServeMp4(resp, req, name)

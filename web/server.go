@@ -528,16 +528,18 @@ func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		if len(req.URL.Path) > len(livePrefix) && req.URL.Path[:len(livePrefix)] == livePrefix {
 			next := req.URL.Path[len(livePrefix):]
 			if len(next) > len(wssSuffix) && next[len(next)-len(wssSuffix):] == wssSuffix {
-				name := next[:len(next)-len(wssSuffix)]
-				path := name
-				name = ""
-				for i, c := range path {
+				name := ""
+				path := ""
+				n := 0
+				full := next[:len(next)-len(wssSuffix)]
+				for i, c := range full {
 					if c == '/' {
 						if path == "" {
-							path = path[:i]
-							name = path[i+1:]
+							path = full[:i]
+							name = full[i+1:]
+							n = i + 1
 						} else {
-							name = path[:i]
+							name = full[n:i]
 							break
 						}
 					}

@@ -35,7 +35,7 @@ class Main extends Component {
                     </Tabs>
                     <Typography className={classes.flexgrow}>
                         {(history.location.pathname.startsWith('/live/') || history.location.pathname.startsWith('/chat/')) && navigation.path !== '/notfound' &&
-                        <span>{ws.info && ws.info.stream && ws.info.stream.title && ws.info.stream.title.length > 0 ? ws.info.stream.title : ''}<em>{!ws.info || !ws.info.stream || !ws.info.stream.title || ws.info.stream.title.length === 0 ? '(No title)' : ''}</em></span>
+                        <span className={classes.textcenter}>{ws.info && ws.info.stream && ws.info.stream.title && ws.info.stream.title.length > 0 ? ws.info.stream.title : ''}<em>{!ws.info || !ws.info.stream || !ws.info.stream.title || ws.info.stream.title.length === 0 ? '(No title)' : ''}</em></span>
                         }
                     </Typography>
                     <div className={classes.flexspace}>

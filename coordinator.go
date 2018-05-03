@@ -846,8 +846,7 @@ func (webclient *WebClient) StreamAdd(msg *web.StreamAddMessage) {
 			break
 		}
 	}
-	fmt.Println(name)
-	id := db.CreateStream(db.Stream{
+	db.CreateStream(db.Stream{
 		Name:     name,
 		Title:    "",
 		Owner:    webclient.User.Id,
@@ -855,7 +854,6 @@ func (webclient *WebClient) StreamAdd(msg *web.StreamAddMessage) {
 		Logourl:  "",
 		Privated: false,
 	})
-	fmt.Println(id)
 	webclient.Client.Send(MakeUserInfo(webclient))
 }
 

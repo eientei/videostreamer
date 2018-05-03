@@ -66,6 +66,7 @@ type Coordinator struct {
 func (stream *Stream) MuxHandle(event *mp4.MuxEvent) {
 	for _, c := range stream.Clients {
 		if c.Sequence() == 0 {
+			fmt.Println("zero")
 			c.Init(0, 0)
 			vfirst := 0
 			tskip := uint32(0)
@@ -91,6 +92,7 @@ func (stream *Stream) MuxHandle(event *mp4.MuxEvent) {
 				c.Advance(1, uint64(atime), uint64(vtime))
 			}
 		} else {
+			fmt.Println("next")
 			data, atime, vtime := stream.Muxer.RenderEvent(event, c.Sequence(), c.Atime(), c.Vtime())
 			c.Send(data)
 			c.Advance(1, uint64(atime), uint64(vtime))
@@ -142,6 +144,7 @@ func (coordinator *Coordinator) ClientConnect(client web.Client, path string, na
 	stream := coordinator.Streams[MakeStreamName(path, name)]
 	client.Send(stream.ContainerInit)
 	stream.Clients = append(stream.Clients, client)
+	fmt.Println("init")
 }
 
 func (coordinator *Coordinator) ClientDisconnect(client web.Client, path string, name string) {

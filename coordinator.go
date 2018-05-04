@@ -911,6 +911,9 @@ func (webclient *WebClient) StreamList(msg *web.StreamListMessage) {
 			continue
 		}
 		stream := db.GetStreamByOwnerNameAndName(s.Owner, s.Name)
+		if stream.Privated {
+			continue
+		}
 		owner := db.GetUserById(stream.Owner)
 		streams = append(streams, MakeStreamInfo(owner, stream, s))
 	}

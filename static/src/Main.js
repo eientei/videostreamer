@@ -23,7 +23,7 @@ class Main extends Component {
         return (
             <div className={classes.root}>
                 <CssBaseline/>
-                <Toolbar>
+                <Toolbar style={{background: '#fff'}}>
                     <Tabs value={navigation.tab}>
                         <Tab label='Home' onClick={() => dispatch(actions.navigation.home())}/>
                         {user.name === 'anonymous' ?

@@ -336,10 +336,10 @@ func (client *WsEventeer) Read() EventMessage {
 	return msg
 }
 
-func WssPing(client *WssClient) {
+func WssPing(client *WsEventeer) {
 	for {
 		time.Sleep(20 * time.Second)
-		_, err := client.Conn.Write([]byte{1<<7 | 1, 2, '[', ']'})
+		_, err := client.Conn.Write([]byte{1<<7 | 9, 0})
 		if err != nil {
 			fmt.Println("ping")
 			client.Close()
@@ -542,7 +542,6 @@ func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, clie
 			h.ClientConnect(client, path, name)
 		}
 		go WssRead(client)
-		go WssPing(client)
 
 		<-client.Closer
 		/*
@@ -632,6 +631,7 @@ func (server *Server) ServeEvent(resp http.ResponseWriter, req *http.Request) {
 			h.EventeerConnect(client)
 		}
 
+		go WssPing(client)
 		<-client.Closer
 		client.Close()
 		client.Conn.Close()

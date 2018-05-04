@@ -3,7 +3,8 @@ import { take, put, takeLatest, all, call } from 'redux-saga/effects';
 import {actions} from '../actions';
 import {history, store} from '../App.js';
 
-function reconnect() {
+function reconnect(e) {
+    console.log(e);
     if (t != null) {
         clearTimeout(t);
     }
@@ -396,7 +397,7 @@ function vidonmessage(event) {
     const fileReader = new FileReader();
     fileReader.onload = () => {
         const uint8ArrayNew = new Uint8Array(fileReader.result);
-        console.log('recv bytes', uint8ArrayNew.length);
+        //console.log('recv bytes', uint8ArrayNew.length);
         vidqueue.push(uint8ArrayNew);
         if (vidsourceBuffer != null) {
             viddrain();

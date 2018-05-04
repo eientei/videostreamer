@@ -4,11 +4,13 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 const livePrefix = "/video/"
@@ -345,6 +347,7 @@ func WssRead(client *WssClient) {
 		return
 	}
 	if basic[0]&0xf != 1 || (basic[1]>>7)&1 == 0 {
+		fmt.Println("RECV", basic[0]&0xf)
 		client.Close()
 		return
 	}
@@ -527,7 +530,15 @@ func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, clie
 			h.ClientConnect(client, path, name)
 		}
 		go WssRead(client)
-		<-client.Closer
+
+		for {
+			select {
+			case <-client.Closer:
+				break
+			case <-time.After(20 * time.Second):
+				conn.Write([]byte{1<<7 | 9, 0})
+			}
+		}
 		for _, h := range server.ClientHandlers {
 			h.ClientDisconnect(client, path, name)
 		}

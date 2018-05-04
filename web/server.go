@@ -583,6 +583,10 @@ func (server *Server) ServeMp4(resp http.ResponseWriter, req *http.Request, name
 	}
 	path := ""
 	for i, c := range name {
+		if c == '?' {
+			path = name[:i]
+			break
+		}
 		if c == '/' {
 			if path == "" {
 				path = name[:i]
@@ -655,6 +659,10 @@ func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 				n := 0
 				full := next[:len(next)-len(wssSuffix)]
 				for i, c := range full {
+					if c == '?' {
+						path = full[:i]
+						break
+					}
 					if c == '/' {
 						if path == "" {
 							path = full[:i]

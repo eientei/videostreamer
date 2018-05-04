@@ -94,21 +94,11 @@ func (client *WssClient) Send(data []byte) {
 		}
 	}
 	if _, err := client.Conn.Write(header); err != nil {
-		if client.Closed {
-			return
-		}
-		client.Conn.Close()
-		close(client.Closer)
-		client.Closed = true
+		client.Close()
 		return
 	}
 	if _, err := client.Conn.Write(data); err != nil {
-		if client.Closed {
-			return
-		}
-		client.Conn.Close()
-		close(client.Closer)
-		client.Closed = true
+		client.Close()
 		return
 	}
 }
@@ -344,6 +334,93 @@ func (client *WsEventeer) Read() EventMessage {
 	return msg
 }
 
+func WssRead(client *WssClient) {
+	if client.Closed {
+		return
+	}
+	data := make([]byte, 0)
+	basic := make([]byte, 2)
+	if _, err := io.ReadFull(client.Conn, basic); err != nil {
+		client.Close()
+		return
+	}
+	if basic[0]&0xf != 1 || (basic[1]>>7)&1 == 0 {
+		client.Close()
+		return
+	}
+	l := uint64(basic[1] & 0x7f)
+	if l == 126 {
+		lenbuf := make([]byte, 2)
+		if _, err := io.ReadFull(client.Conn, lenbuf); err != nil {
+			client.Close()
+			return
+		}
+		l = uint64(lenbuf[0])<<8 | uint64(lenbuf[1])
+	} else if l == 127 {
+		lenbuf := make([]byte, 8)
+		if _, err := io.ReadFull(client.Conn, lenbuf); err != nil {
+			client.Close()
+			return
+		}
+		l = uint64(lenbuf[0])<<56 | uint64(lenbuf[1])<<48 | uint64(lenbuf[2])<<40 | uint64(lenbuf[3])<<32 | uint64(lenbuf[4])<<24 | uint64(lenbuf[5])<<16 | uint64(lenbuf[6])<<8 | uint64(lenbuf[7])
+	}
+	mask := make([]byte, 4)
+	if _, err := io.ReadFull(client.Conn, mask); err != nil {
+		client.Close()
+		return
+	}
+	fin := (basic[0] >> 7) == 1
+	ndata := make([]byte, l)
+	if _, err := io.ReadFull(client.Conn, ndata); err != nil {
+		client.Close()
+		return
+	}
+	for i, c := range ndata {
+		ndata[i] = c ^ mask[i%4]
+	}
+	data = append(data, ndata...)
+	for !fin {
+		if _, err := io.ReadFull(client.Conn, basic); err != nil {
+			client.Close()
+			return
+		}
+		if basic[0]&0xf != 0 || (basic[1]>>7)&1 == 0 {
+			client.Close()
+			return
+		}
+		l = uint64(basic[1] & 0x7f)
+		if l == 126 {
+			lenbuf := make([]byte, 2)
+			if _, err := io.ReadFull(client.Conn, lenbuf); err != nil {
+				client.Close()
+				return
+			}
+			l = uint64(lenbuf[0])<<8 | uint64(lenbuf[1])
+		} else if l == 127 {
+			lenbuf := make([]byte, 8)
+			if _, err := io.ReadFull(client.Conn, lenbuf); err != nil {
+				client.Close()
+				return
+			}
+			l = uint64(lenbuf[0])<<56 | uint64(lenbuf[1])<<48 | uint64(lenbuf[2])<<40 | uint64(lenbuf[3])<<32 | uint64(lenbuf[4])<<24 | uint64(lenbuf[5])<<16 | uint64(lenbuf[6])<<8 | uint64(lenbuf[7])
+		}
+		if _, err := io.ReadFull(client.Conn, mask); err != nil {
+			client.Close()
+			return
+		}
+		fin = (basic[0] >> 7) == 1
+		ndata := make([]byte, l)
+		if _, err := io.ReadFull(client.Conn, ndata); err != nil {
+			client.Close()
+			return
+		}
+		for i, c := range ndata {
+			ndata[i] = c ^ mask[i%4]
+		}
+		data = append(data, ndata...)
+	}
+}
+
 func (client *WsEventeer) Send(message EventMessage) {
 	if client.Closed {
 		return
@@ -449,6 +526,7 @@ func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, clie
 		for _, h := range server.ClientHandlers {
 			h.ClientConnect(client, path, name)
 		}
+		go WssRead(client)
 		<-client.Closer
 		for _, h := range server.ClientHandlers {
 			h.ClientDisconnect(client, path, name)

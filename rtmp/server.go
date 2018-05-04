@@ -3,6 +3,7 @@ package rtmp
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -641,7 +642,9 @@ func (server *Server) Send(conn net.Conn, client *Client) {
 func Watchdog(conn net.Conn, client *Client) {
 	for {
 		time.Sleep(20 * time.Second)
-		if time.Now().Sub(client.LastSeen).Seconds() > 30 {
+		secs := time.Now().Sub(client.LastSeen).Seconds()
+		fmt.Println(secs)
+		if secs > 30 {
 			conn.Close()
 			break
 		}

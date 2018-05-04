@@ -18,8 +18,8 @@ class StreamList extends Component {
                                 <Typography className={classes.textcenter} variant='headline'>{stream.owner + (stream.name.length === 0 ? '' : ('/' + stream.name))} - {stream.title}</Typography>
                                 <Button className={classes.maxwidth} onClick={() => dispatch(actions.navigation.play(stream.owner, stream.name))}>Watch</Button>
                             </div>
-                            <div>
-                                <div className={classes.flexrow}>
+                            <div style={{width: '150px'}}>
+                                <div className={classes.flexrownopaddall}>
                                     <SvgIcon>
                                         <path fill="#000000" d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z" />
                                     </SvgIcon>

@@ -18,7 +18,7 @@ function errorhandler(e) {
 }
 
 function auth() {
-    const useename = localStorage.getItem('username') || 'anonymous';
+    const username = localStorage.getItem('username') || 'anonymous';
     const password = localStorage.getItem('password');
     store.dispatch(actions.ws.ready());
     store.dispatch(actions.ws.userLogin(username, password));

@@ -14,11 +14,11 @@ function reconnect() {
 }
 
 function errorhandler(e) {
-    reconnect();
+    console.log(e);
 }
 
 function auth() {
-    const username = localStorage.getItem('username') || 'anonymous';
+    const useename = localStorage.getItem('username') || 'anonymous';
     const password = localStorage.getItem('password');
     store.dispatch(actions.ws.ready());
     store.dispatch(actions.ws.userLogin(username, password));
@@ -73,6 +73,8 @@ function handler(event) {
                     body: data.stream.title,
                     icon: 'https://www.gravatar.com/avatar/' + data.stream.gravatar + '?d=identicon&s=' + 64,
                 });
+            } else if (history.location.pathname === '/live/' + n) {
+                vidreconnect();
             }
             break;
         case 'stream_list':
@@ -337,17 +339,14 @@ function* wsStreamInforeq({payload: {owner, stream}}) {
     const response = yield take(['WS/STREAM_INFO', 'WS/ERROR_INFO']);
     switch (response.type) {
         case 'WS/STREAM_INFO':
-            vidrespawn();
+            if (vidsocket == null) {
+                vidreconnect();
+            }
             break;
         case 'WS/ERROR_INFO':
             if (vidsocket != null) {
                 vidsocket.close();
             }
-            vidsocket = null;
-            vidtimeout = null;
-            vidsocket = null;
-            vidsourceBuffer = null;
-            vidqueue = [];
             yield put(actions.navigation.notfound());
             break;
         default:
@@ -373,7 +372,6 @@ function* wsMessageHistory({payload: {streamid, before}}) {
 let vidsocket = null;
 let vidqueue = [];
 let vidsourceBuffer = null;
-let vidtimeout = null;
 
 function viddrain() {
     if (vidqueue.length === 0) {
@@ -386,7 +384,8 @@ function viddrain() {
     try {
         vidsourceBuffer.appendBuffer(next);
     } catch (e) {
-        vidrespawn();
+        vidsocket.close();
+        vidreconnect();
     }
 }
 
@@ -406,19 +405,15 @@ function vidonmessage(event) {
     fileReader.readAsArrayBuffer(event.data);
 }
 
-function vidrespawn(e) {
+function vidclose() {
     store.dispatch(actions.ws.streamStatus('offline'));
     const wsvid = document.querySelector('#wsvid');
     if (wsvid !== null) {
         wsvid.src = '';
     }
-    if (vidsocket != null) {
-        vidsocket.close();
-    }
-    if (vidtimeout != null) {
-        clearTimeout(vidtimeout);
-    }
-    vidtimeout = setTimeout(vidreconnect, 1000);
+    vidsocket = null;
+    vidsourceBuffer = null;
+    vidqueue = [];
 }
 
 function vidreconnect() {
@@ -434,8 +429,8 @@ function vidreconnect() {
 
     vidsocket = new WebSocket((window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host + '/video/' + path + '.wss');
     vidsocket.onmessage = vidonmessage;
-    vidsocket.onerror = vidrespawn;
-    vidsocket.onclose = vidrespawn;
+    vidsocket.onerror = errorhandler;
+    vidsocket.onclose = vidclose;
     vidsocket.onopen = () => {
         const ms = new MediaSource();
         ms.onsourceopen = () => {

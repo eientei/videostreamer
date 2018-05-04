@@ -173,12 +173,14 @@ func (client *WsEventeer) Read() EventMessage {
 	data := make([]byte, 0)
 	basic := make([]byte, 2)
 	if _, err := io.ReadFull(client.Conn, basic); err != nil {
+		fmt.Println(err)
 		client.Conn.Write([]byte{1<<7 | 8, 0})
 		close(client.Closer)
 		client.Closed = true
 		return nil
 	}
 	if basic[0]&0xf != 1 || (basic[1]>>7)&1 == 0 {
+		fmt.Println(err)
 		client.Conn.Write([]byte{1<<7 | 8, 0})
 		close(client.Closer)
 		client.Closed = true
@@ -188,6 +190,7 @@ func (client *WsEventeer) Read() EventMessage {
 	if l == 126 {
 		lenbuf := make([]byte, 2)
 		if _, err := io.ReadFull(client.Conn, lenbuf); err != nil {
+			fmt.Println(err)
 			client.Conn.Write([]byte{1<<7 | 8, 0})
 			close(client.Closer)
 			client.Closed = true
@@ -197,6 +200,7 @@ func (client *WsEventeer) Read() EventMessage {
 	} else if l == 127 {
 		lenbuf := make([]byte, 8)
 		if _, err := io.ReadFull(client.Conn, lenbuf); err != nil {
+			fmt.Println(err)
 			client.Conn.Write([]byte{1<<7 | 8, 0})
 			close(client.Closer)
 			client.Closed = true
@@ -206,6 +210,7 @@ func (client *WsEventeer) Read() EventMessage {
 	}
 	mask := make([]byte, 4)
 	if _, err := io.ReadFull(client.Conn, mask); err != nil {
+		fmt.Println(err)
 		client.Conn.Write([]byte{1<<7 | 8, 0})
 		close(client.Closer)
 		client.Closed = true
@@ -214,6 +219,7 @@ func (client *WsEventeer) Read() EventMessage {
 	fin := (basic[0] >> 7) == 1
 	ndata := make([]byte, l)
 	if _, err := io.ReadFull(client.Conn, ndata); err != nil {
+		fmt.Println(err)
 		client.Conn.Write([]byte{1<<7 | 8, 0})
 		close(client.Closer)
 		client.Closed = true
@@ -225,12 +231,14 @@ func (client *WsEventeer) Read() EventMessage {
 	data = append(data, ndata...)
 	for !fin {
 		if _, err := io.ReadFull(client.Conn, basic); err != nil {
+			fmt.Println(err)
 			client.Conn.Write([]byte{1<<7 | 8, 0})
 			close(client.Closer)
 			client.Closed = true
 			return nil
 		}
 		if basic[0]&0xf != 0 || (basic[1]>>7)&1 == 0 {
+			fmt.Println(err)
 			client.Conn.Write([]byte{1<<7 | 8, 0})
 			close(client.Closer)
 			client.Closed = true
@@ -240,6 +248,7 @@ func (client *WsEventeer) Read() EventMessage {
 		if l == 126 {
 			lenbuf := make([]byte, 2)
 			if _, err := io.ReadFull(client.Conn, lenbuf); err != nil {
+				fmt.Println(err)
 				client.Conn.Write([]byte{1<<7 | 8, 0})
 				close(client.Closer)
 				client.Closed = true
@@ -249,6 +258,7 @@ func (client *WsEventeer) Read() EventMessage {
 		} else if l == 127 {
 			lenbuf := make([]byte, 8)
 			if _, err := io.ReadFull(client.Conn, lenbuf); err != nil {
+				fmt.Println(err)
 				client.Conn.Write([]byte{1<<7 | 8, 0})
 				close(client.Closer)
 				client.Closed = true
@@ -257,6 +267,7 @@ func (client *WsEventeer) Read() EventMessage {
 			l = uint64(lenbuf[0])<<56 | uint64(lenbuf[1])<<48 | uint64(lenbuf[2])<<40 | uint64(lenbuf[3])<<32 | uint64(lenbuf[4])<<24 | uint64(lenbuf[5])<<16 | uint64(lenbuf[6])<<8 | uint64(lenbuf[7])
 		}
 		if _, err := io.ReadFull(client.Conn, mask); err != nil {
+			fmt.Println(err)
 			client.Conn.Write([]byte{1<<7 | 8, 0})
 			close(client.Closer)
 			client.Closed = true
@@ -265,6 +276,7 @@ func (client *WsEventeer) Read() EventMessage {
 		fin = (basic[0] >> 7) == 1
 		ndata := make([]byte, l)
 		if _, err := io.ReadFull(client.Conn, ndata); err != nil {
+			fmt.Println(err)
 			client.Conn.Write([]byte{1<<7 | 8, 0})
 			close(client.Closer)
 			client.Closed = true
@@ -278,6 +290,7 @@ func (client *WsEventeer) Read() EventMessage {
 
 	typed := &TypedBytes{}
 	if err := json.Unmarshal(data, typed); err != nil {
+		fmt.Println(err)
 		client.Conn.Write([]byte{1<<7 | 8, 0})
 		close(client.Closer)
 		client.Closed = true
@@ -327,6 +340,7 @@ func (client *WsEventeer) Read() EventMessage {
 	}
 
 	if err := json.Unmarshal(typed.Data, msg); err != nil {
+		fmt.Println(err)
 		client.Conn.Write([]byte{1<<7 | 8, 0})
 		close(client.Closer)
 		client.Closed = true

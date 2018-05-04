@@ -336,6 +336,16 @@ func (client *WsEventeer) Read() EventMessage {
 	return msg
 }
 
+func WssPing(client *WssClient) {
+	for {
+		time.Sleep(20 * time.Second)
+		_, err := client.Conn.Write([]byte{1<<7 | 9, 0})
+		if err != nil {
+			return
+		}
+	}
+}
+
 func WssRead(client *WssClient) {
 	if client.Closed {
 		return
@@ -530,8 +540,9 @@ func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, clie
 			h.ClientConnect(client, path, name)
 		}
 		go WssRead(client)
+		go WssPing(client)
 
-		//<-client.Closer
+		<-client.Closer
 		/*
 			for {
 				select {
@@ -542,15 +553,17 @@ func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, clie
 				}
 			}
 		*/
-		for {
-			fmt.Println("next")
-			select {
-			case <-client.Closer:
-				break
-			case <-time.After(20 * time.Second):
-				conn.Write([]byte{1<<7 | 9, 0})
+		/*
+			for {
+				fmt.Println("next")
+				select {
+				case <-client.Closer:
+					break
+				case <-time.After(20 * time.Second):
+					conn.Write([]byte{1<<7 | 9, 0})
+				}
 			}
-		}
+		*/
 		for _, h := range server.ClientHandlers {
 			h.ClientDisconnect(client, path, name)
 		}

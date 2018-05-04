@@ -339,7 +339,7 @@ func (client *WsEventeer) Read() EventMessage {
 func WssPing(client *WssClient) {
 	for {
 		time.Sleep(20 * time.Second)
-		_, err := client.Conn.Write([]byte{1<<7 | 1, 0})
+		_, err := client.Conn.Write([]byte{1<<7 | 1, 2, '[', ']'})
 		if err != nil {
 			fmt.Println("ping")
 			client.Close()

@@ -287,6 +287,10 @@ func (client *WsEventeer) Read() EventMessage {
 		data = append(data, ndata...)
 	}
 
+	if basic[0]&0xf == 10 {
+		return &PongMessage{}
+	}
+
 	typed := &TypedBytes{}
 	if err := json.Unmarshal(data, typed); err != nil {
 		fmt.Println(err)

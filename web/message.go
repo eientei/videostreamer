@@ -3,6 +3,7 @@ package web
 import "encoding/json"
 
 const (
+	Pong                 = "pong"
 	Disconnect           = "disconnect"
 	SignupError          = "error_signup"
 	LoginError           = "error_login"
@@ -307,4 +308,11 @@ type MessageHistoryMessage struct {
 
 func (message *MessageHistoryMessage) Type() string {
 	return MessageHistory
+}
+
+type PongMessage struct {
+}
+
+func (message *PongMessage) Type() string {
+	return Pong
 }

@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"time"
 
 	"./amf"
 )
@@ -95,6 +96,7 @@ type Client struct {
 	AudioBuf     []*TimestampBuf
 	VideoBuf     []*TimestampBuf
 	Pathname     string
+	LastSeen     time.Time
 }
 
 type Chunked struct {
@@ -485,6 +487,7 @@ func (server *Server) ProcessMessage(message *Chunked, client *Client) error {
 			}
 		}
 	}
+	client.LastSeen = time.Now()
 	return nil
 }
 
@@ -635,6 +638,16 @@ func (server *Server) Send(conn net.Conn, client *Client) {
 	}
 }
 
+func Watchdog(conn net.Conn, client *Client) {
+	for {
+		time.Sleep(20 * time.Second)
+		if time.Now().Sub(client.LastSeen).Seconds() > 30 {
+			conn.Close()
+			break
+		}
+	}
+}
+
 func (server *Server) Serve(conn net.Conn, id ID) {
 	defer conn.Close()
 	if err := Handshake(conn); err != nil {
@@ -649,6 +662,7 @@ func (server *Server) Serve(conn net.Conn, id ID) {
 		Acklimit:     0,
 		Unacked:      0,
 		Outbound:     make(chan Message),
+		LastSeen:     time.Now(),
 	}
 
 	go server.Send(conn, client)
@@ -656,6 +670,7 @@ func (server *Server) Serve(conn net.Conn, id ID) {
 	for _, h := range server.ConnectHandlers {
 		h.ConnectEvent(id)
 	}
+	go Watchdog(conn, client)
 	server.Converse(conn, client, server)
 	close(client.Outbound)
 	for _, h := range server.DisconnectHandlers {

@@ -179,8 +179,7 @@ func (client *WsEventeer) Read() EventMessage {
 		client.Closed = true
 		return nil
 	}
-	if basic[0]&0xf != 1 || (basic[1]>>7)&1 == 0 {
-		fmt.Println("zero", basic[0]&0xf)
+	if (basic[0]&0xf != 1 && basic[0]&0xf != 10) || (basic[1]>>7)&1 == 0 {
 		client.Conn.Write([]byte{1<<7 | 8, 0})
 		close(client.Closer)
 		client.Closed = true

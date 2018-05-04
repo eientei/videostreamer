@@ -180,7 +180,7 @@ func (client *WsEventeer) Read() EventMessage {
 		return nil
 	}
 	if basic[0]&0xf != 1 || (basic[1]>>7)&1 == 0 {
-		fmt.Println(err)
+		fmt.Println("zero")
 		client.Conn.Write([]byte{1<<7 | 8, 0})
 		close(client.Closer)
 		client.Closed = true
@@ -238,7 +238,7 @@ func (client *WsEventeer) Read() EventMessage {
 			return nil
 		}
 		if basic[0]&0xf != 0 || (basic[1]>>7)&1 == 0 {
-			fmt.Println(err)
+			fmt.Println("nonzero")
 			client.Conn.Write([]byte{1<<7 | 8, 0})
 			close(client.Closer)
 			client.Closed = true

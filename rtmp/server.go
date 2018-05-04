@@ -643,8 +643,8 @@ func Watchdog(conn net.Conn, client *Client) {
 	for {
 		time.Sleep(20 * time.Second)
 		secs := time.Now().Sub(client.LastSeen).Seconds()
-		fmt.Println(secs)
 		if secs > 30 {
+			fmt.Println(secs)
 			conn.Close()
 			break
 		}

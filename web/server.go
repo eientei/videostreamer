@@ -117,9 +117,10 @@ func (client *WssClient) Close() {
 	if client.Closed {
 		return
 	}
+	client.Closed = true
+	client.Conn.Write([]byte{1<<7 | 8, 0})
 	client.Conn.Close()
 	close(client.Closer)
-	client.Closed = true
 }
 
 type Mp4Client struct {

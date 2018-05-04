@@ -572,7 +572,7 @@ func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, clie
 	}
 }
 
-func (server *Server) ServeMp4(resp http.ResponseWriter, req *http.Request, name string) {
+func (server *Server) ServeMp4(resp http.ResponseWriter, req *http.Request, full string) {
 	resp.Header().Add("Content-Type", "video/mp4")
 	client := &Mp4Client{
 		Resp: resp,
@@ -582,25 +582,34 @@ func (server *Server) ServeMp4(resp http.ResponseWriter, req *http.Request, name
 		},
 	}
 	path := ""
-	for i, c := range name {
+	name := ""
+	n := 0
+	for i, c := range full {
 		if c == '?' {
-			path = name[:i]
+			path = full[:i]
+			n = i + 1
 			break
 		}
 		if c == '/' {
 			if path == "" {
-				path = name[:i]
-				name = name[i+1:]
+				path = full[:i]
+				name = full[i+1:]
+				n = i + 1
 			} else {
-				name = name[:i]
+				name = full[n:i]
 				break
 			}
 		}
+	}
+	if n == 0 {
+		path = full
 	}
 	for _, h := range server.ClientHandlers {
 		if !h.ClientOk(path, name) {
 			return
 		}
+	}
+	for _, h := range server.ClientHandlers {
 		h.ClientConnect(client, path, name)
 	}
 	<-client.Closer
@@ -661,6 +670,7 @@ func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 				for i, c := range full {
 					if c == '?' {
 						path = full[:i]
+						n = i + 1
 						break
 					}
 					if c == '/' {

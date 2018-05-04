@@ -341,6 +341,8 @@ func WssPing(client *WssClient) {
 		time.Sleep(20 * time.Second)
 		_, err := client.Conn.Write([]byte{1<<7 | 9, 0})
 		if err != nil {
+			fmt.Println("ping")
+			client.Close()
 			return
 		}
 	}

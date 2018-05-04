@@ -451,6 +451,9 @@ func (server *Server) ProcessMessage(message *Chunked, client *Client) error {
 		if !client.Initialized {
 			values := amf.ReadAll(bytes.NewReader(message.Data))
 			client.Metadata = &Metadata{}
+			if (values[2]).Type() != amf.Array {
+				return DisconnectError
+			}
 			client.Metadata.Height = uint32(values[2].(*amf.ArrayValue).Data["height"].(*amf.NumberValue).Data)
 			client.Metadata.Width = uint32(values[2].(*amf.ArrayValue).Data["width"].(*amf.NumberValue).Data)
 			client.Metadata.FrameRate = uint32(values[2].(*amf.ArrayValue).Data["framerate"].(*amf.NumberValue).Data)

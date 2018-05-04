@@ -346,7 +346,7 @@ func WssRead(client *WssClient) {
 		client.Close()
 		return
 	}
-	if basic[0]&0xf != 1 || (basic[1]>>7)&1 == 0 {
+	if (basic[0]&0xf != 1 && basic[0]&0xf != 10) || (basic[1]>>7)&1 == 0 {
 		fmt.Println("RECV", basic[0]&0xf)
 		client.Close()
 		return

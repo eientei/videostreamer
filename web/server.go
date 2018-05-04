@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 const livePrefix = "/video/"
@@ -530,7 +531,7 @@ func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, clie
 		}
 		go WssRead(client)
 
-		<-client.Closer
+		//<-client.Closer
 		/*
 			for {
 				select {
@@ -541,6 +542,15 @@ func (server *Server) ServeWss(resp http.ResponseWriter, req *http.Request, clie
 				}
 			}
 		*/
+		for {
+			fmt.Println("next")
+			select {
+			case <-client.Closer:
+				break
+			case <-time.After(20 * time.Second):
+				conn.Write([]byte{1<<7 | 9, 0})
+			}
+		}
 		for _, h := range server.ClientHandlers {
 			h.ClientDisconnect(client, path, name)
 		}

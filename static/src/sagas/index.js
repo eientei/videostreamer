@@ -385,7 +385,9 @@ function viddrain() {
     try {
         vidsourceBuffer.appendBuffer(next);
     } catch (e) {
-        vidsocket.close();
+        if (vidsocket != null) {
+            vidsocket.close();
+        }
         vidreconnect();
     }
 }

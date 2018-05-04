@@ -445,6 +445,9 @@ function vidreconnect() {
 }
 
 function* locationHandler({payload: e}) {
+    if (vidsocket != null) {
+        vidsocket.close();
+    }
     if (e.pathname.startsWith('/live/') || e.pathname.startsWith('/chat/')) {
         const path = e.pathname.replace(/^\/(live|chat)\//, '');
         const arr = path.split('/');

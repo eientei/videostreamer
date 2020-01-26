@@ -1,7 +1,10 @@
 package connection
 
 import (
+	"bytes"
 	"context"
+	"io"
+	"io/ioutil"
 	"testing"
 	"time"
 
@@ -64,5 +67,45 @@ func TestNewConnection(t *testing.T) {
 	assert.Error(t, err)
 
 	msg, err = cona.Recv(context.Background())
+	assert.Error(t, err)
+}
+
+func TestNewConnection_RecvCancel(t *testing.T) {
+	a, b := rwpipe.New()
+	now := time.Now()
+	cona := NewConnection(context.Background(), a, now, 0, nil)
+	conb := NewConnection(context.Background(), b, now, 0, nil)
+	err := cona.Send(context.Background(), &message.Raw{
+		Data: []byte{'a', 'b', 'c'},
+	})
+	assert.NoError(t, err)
+
+	err = cona.Send(context.Background(), &message.Raw{
+		Data: []byte{'a', 'b', 'c'},
+	})
+	assert.NoError(t, err)
+
+	err = conb.Close()
+	assert.NoError(t, err)
+
+	_, err = conb.Recv(context.Background())
+	assert.Error(t, err)
+}
+
+func TestNewConnection_SendCancel(t *testing.T) {
+	closer := &struct {
+		bytes.Buffer
+		io.Closer
+	}{
+		Closer: ioutil.NopCloser(nil),
+	}
+
+	now := time.Now()
+	cona := NewConnection(context.Background(), closer, now, 0, nil)
+
+	err := cona.Close()
+	assert.NoError(t, err)
+
+	_, err = cona.Recv(context.Background())
 	assert.Error(t, err)
 }

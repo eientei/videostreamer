@@ -250,7 +250,7 @@ func (chs *Chunks) writeHeaderShort(header []byte, delta uint32) []byte {
 	return header[:3]
 }
 
-func (chs *Chunks) writeHeader(w io.Writer, message *message.Raw) (basic []byte, err error) {
+func (chs *Chunks) sanitizeMessage(message *message.Raw) (format byte, timestamp, delta uint32) {
 	if message.ChunkID == 0 {
 		message.ChunkID = 2
 	}
@@ -279,9 +279,9 @@ func (chs *Chunks) writeHeader(w io.Writer, message *message.Raw) (basic []byte,
 		message.Timestamp = chs.Timestamp.Add(time.Duration(ch.Timestamp)*time.Millisecond + message.Delta)
 	}
 
-	delta := uint32(message.Delta.Milliseconds())
-	timestamp := uint32(message.Timestamp.Sub(chs.Timestamp).Milliseconds())
-	format := HeaderFormatFull
+	delta = uint32(message.Delta.Milliseconds())
+	timestamp = uint32(message.Timestamp.Sub(chs.Timestamp).Milliseconds())
+	format = HeaderFormatFull
 
 	if !newchunk {
 		switch {
@@ -295,6 +295,12 @@ func (chs *Chunks) writeHeader(w io.Writer, message *message.Raw) (basic []byte,
 			format = HeaderFormatNone
 		}
 	}
+
+	return
+}
+
+func (chs *Chunks) writeHeader(w io.Writer, message *message.Raw) (basic []byte, err error) {
+	format, timestamp, delta := chs.sanitizeMessage(message)
 
 	var header []byte
 

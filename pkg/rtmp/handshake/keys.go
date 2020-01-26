@@ -104,16 +104,10 @@ type keys struct {
 func (impl *keys) Handshake(rw io.ReadWriter) (timestamp time.Time, peerDelta uint32, err error) {
 	timestamp = time.Now()
 	buf := make([]byte, 1537)
-	l0 := buf[:1]
-	l1 := buf[1:]
-	l1time := l1[:4]
-	l1ver := l1[4:8]
-	l1data := l1[8:]
+	l0, l1 := buf[:1], buf[1:]
+	l1time, l1ver, l1data := l1[:4], l1[4:8], l1[8:]
 	l0[0] = 0x03
-	l1ver[0] = 0x04
-	l1ver[1] = 0x00
-	l1ver[2] = 0x00
-	l1ver[3] = 0x01
+	l1ver[0], l1ver[1], l1ver[2], l1ver[3] = 0x04, 0x00, 0x00, 0x01
 
 	byteorder.BigEndian.PutUint32(l1time, 0)
 	rand.Seed(time.Now().UnixNano())
@@ -139,8 +133,7 @@ func (impl *keys) Handshake(rw io.ReadWriter) (timestamp time.Time, peerDelta ui
 	}
 
 	r1 := buf[1:]
-	r1time := r1[:4]
-	r1ver := r1[4:8]
+	r1time, r1ver := r1[:4], r1[4:8]
 
 	hver := byteorder.BigEndian.Uint32(r1ver)
 	peerDelta = byteorder.BigEndian.Uint32(r1time)

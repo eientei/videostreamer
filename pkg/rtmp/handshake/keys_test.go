@@ -4,6 +4,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/eientei/videostreamer/internal/rwpipe"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,7 +15,7 @@ func TestKeys_Alt(t *testing.T) {
 	s := NewServerKeysHandshake(&KeysConfig{
 		Algorithm: 0,
 	})
-	crw, srw := newRWPipe()
+	crw, srw := rwpipe.New()
 
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
@@ -39,7 +40,7 @@ func TestKeys_Default(t *testing.T) {
 	c := NewClientKeysHandshake(nil)
 	s := NewServerKeysHandshake(nil)
 
-	crw, srw := newRWPipe()
+	crw, srw := rwpipe.New()
 
 	wg := &sync.WaitGroup{}
 	wg.Add(2)

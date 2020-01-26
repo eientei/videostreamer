@@ -22,7 +22,7 @@ func TestReadChunk_FullSimple(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, ch.Complete())
 	assert.EqualValues(t, 0x03, ch.ID)
-	assert.EqualValues(t, []byte{'b', 'a', 'k', 'a'}, ch.Bytes())
+	assert.EqualValues(t, []byte{'b', 'a', 'k', 'a'}, ch.Data.Bytes())
 	assert.EqualValues(t, 0x12, ch.Timestamp)
 	assert.EqualValues(t, 0x11, ch.Delta)
 	assert.EqualValues(t, 0x04, ch.Length)
@@ -45,7 +45,7 @@ func TestReadChunk_FullExtended(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, ch.Complete())
 	assert.EqualValues(t, 0x03, ch.ID)
-	assert.EqualValues(t, []byte{'b', 'a', 'k', 'a'}, ch.Bytes())
+	assert.EqualValues(t, []byte{'b', 'a', 'k', 'a'}, ch.Data.Bytes())
 	assert.EqualValues(t, 0x1000000, ch.Timestamp)
 	assert.EqualValues(t, 0xFFFFFF, ch.Delta)
 	assert.EqualValues(t, 0x04, ch.Length)
@@ -66,7 +66,7 @@ func TestReadChunk_MediumSimple(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, ch.Complete())
 	assert.EqualValues(t, 0x03, ch.ID)
-	assert.EqualValues(t, []byte{'b', 'a', 'k', 'a'}, ch.Bytes())
+	assert.EqualValues(t, []byte{'b', 'a', 'k', 'a'}, ch.Data.Bytes())
 	assert.EqualValues(t, 0x13, ch.Timestamp)
 	assert.EqualValues(t, 0x12, ch.Delta)
 	assert.EqualValues(t, 0x04, ch.Length)
@@ -88,7 +88,7 @@ func TestReadChunk_MediumExtended(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, ch.Complete())
 	assert.EqualValues(t, 0x03, ch.ID)
-	assert.EqualValues(t, []byte{'b', 'a', 'k', 'a'}, ch.Bytes())
+	assert.EqualValues(t, []byte{'b', 'a', 'k', 'a'}, ch.Data.Bytes())
 	assert.EqualValues(t, 0x1000001, ch.Timestamp)
 	assert.EqualValues(t, 0x1000000, ch.Delta)
 	assert.EqualValues(t, 0x04, ch.Length)
@@ -237,7 +237,7 @@ func TestReadChunk_Multichunk(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x15,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16,
-	}, ch.Bytes())
+	}, ch.Data.Bytes())
 	assert.EqualValues(t, 0x12, ch.Timestamp)
 	assert.EqualValues(t, 0x11, ch.Delta)
 	assert.EqualValues(t, 0x90, ch.Length)
@@ -248,7 +248,7 @@ func TestReadChunk_Multichunk(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, ch.Complete())
 	assert.EqualValues(t, 0x04, ch.ID)
-	assert.EqualValues(t, []byte{'b', 'a', 'k', 'a'}, ch.Bytes())
+	assert.EqualValues(t, []byte{'b', 'a', 'k', 'a'}, ch.Data.Bytes())
 	assert.EqualValues(t, 0x11, ch.Timestamp)
 	assert.EqualValues(t, 0x10, ch.Delta)
 	assert.EqualValues(t, 0x04, ch.Length)
@@ -278,7 +278,7 @@ func TestReadChunk_Multichunk(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x17,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18,
-	}, ch.Bytes())
+	}, ch.Data.Bytes())
 	assert.EqualValues(t, 0x12, ch.Timestamp)
 	assert.EqualValues(t, 0x11, ch.Delta)
 	assert.EqualValues(t, 0x90, ch.Length)

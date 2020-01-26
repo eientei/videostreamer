@@ -12,18 +12,6 @@ import (
 	"github.com/eientei/videostreamer/internal/byteorder"
 )
 
-// Signed handshake halves and offsets
-const (
-	Stage0Len       = 1
-	Stage12Len      = 1536
-	StageHeaderLen  = 8
-	StageHashLen    = 4
-	HalfStageLen    = (Stage12Len - StageHeaderLen) / 2
-	HalfStageOffset = HalfStageLen + StageHeaderLen
-	AlgorithmFirst  = 0
-	AlgorithmLast   = 1
-)
-
 // This is key exchange handshake variant
 
 var (
@@ -72,7 +60,7 @@ type KeysConfig struct {
 	PrivateKey    []byte // local party private key
 	PublicKey     []byte // local party public key
 	PeerPublicKey []byte // remote part public key
-	Algorithm     int    // signing algorithm, can be either AlgorithmFirst or AlgorithmLast
+	Algorithm     int    // signing algorithm, can be either 0 or 1
 }
 
 // NewServerKeysHandshake returns server-side keyed handshake
@@ -115,7 +103,7 @@ type keys struct {
 
 func (impl *keys) Handshake(rw io.ReadWriter) (timestamp time.Time, peerDelta uint32, err error) {
 	timestamp = time.Now()
-	buf := make([]byte, Stage0Len+Stage12Len)
+	buf := make([]byte, 1537)
 	l0 := buf[:1]
 	l1 := buf[1:]
 	l1time := l1[:4]
@@ -193,16 +181,16 @@ func (impl *keys) calculateDigest(offset int, data, pubkey []byte) []byte {
 }
 
 func (impl *keys) findDHOffset(peerData []byte, sumOffset int) (offset int, err error) {
-	sumdata := peerData[sumOffset : sumOffset+StageHashLen]
+	sumdata := peerData[sumOffset : sumOffset+4]
 	sum := 0
 
-	for i := 0; i < StageHashLen; i++ {
+	for i := 0; i < 4; i++ {
 		sum += int(sumdata[i])
 	}
 
-	offset = (sum % (HalfStageLen - sha256.Size - StageHashLen)) + sumOffset + StageHashLen
+	offset = (sum % 728) + sumOffset + 4
 
-	if sha256.Size+offset >= sumOffset+HalfStageLen {
+	if sha256.Size+offset >= sumOffset+764 {
 		return 0, ErrInvalidDigestOffset
 	}
 
@@ -213,10 +201,10 @@ func (impl *keys) imprintDigest(data []byte) (err error) {
 	var offset int
 
 	switch impl.config.Algorithm {
-	case AlgorithmLast:
-		offset, err = impl.findDHOffset(data, HalfStageOffset)
+	case 1:
+		offset, err = impl.findDHOffset(data, 772)
 	default:
-		offset, err = impl.findDHOffset(data, StageHeaderLen)
+		offset, err = impl.findDHOffset(data, 8)
 	}
 
 	if err != nil {
@@ -230,13 +218,13 @@ func (impl *keys) imprintDigest(data []byte) (err error) {
 }
 
 func (impl *keys) imprintSignature(data, key, peerPubKey []byte) error {
-	peerOffset, err := impl.findDHOffset(data, StageHeaderLen)
+	peerOffset, err := impl.findDHOffset(data, 8)
 	if err != nil {
 		return err
 	}
 
 	if !impl.verifyDigest(peerOffset, data, peerPubKey) {
-		peerOffset, err = impl.findDHOffset(data, HalfStageOffset)
+		peerOffset, err = impl.findDHOffset(data, 772)
 
 		if err != nil {
 			return err

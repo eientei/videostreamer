@@ -30,13 +30,13 @@ func (srv *Server) handshake(conn io.ReadWriteCloser) {
 
 	rw := contextio.ReadWriter(srv.Context, conn)
 
-	srv.Options.Connection.Timestamp, srv.Options.Connection.PeerDelta, err = srv.Options.Handshaker.Handshake(rw)
+	timestamp, peerDelta, err := srv.Options.Handshaker.Handshake(rw)
 	if err != nil {
 		_ = conn.Close()
 		return
 	}
 
-	c := connection.NewConnection(srv.Context, conn, srv.Options.Connection)
+	c := connection.NewConnection(srv.Context, conn, timestamp, peerDelta, srv.Options.Connection)
 
 	select {
 	case srv.Connections <- c:

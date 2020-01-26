@@ -4,6 +4,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/eientei/videostreamer/internal/rwpipe"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -11,7 +12,7 @@ func TestEcho_Default(t *testing.T) {
 	c := NewEchoHandshake()
 	s := NewEchoHandshake()
 
-	crw, srw := newRWPipe()
+	crw, srw := rwpipe.New()
 
 	wg := &sync.WaitGroup{}
 	wg.Add(2)

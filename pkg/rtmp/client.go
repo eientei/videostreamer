@@ -32,12 +32,12 @@ func Dial(parent context.Context, remote string, options *ClientOptions) (conn C
 
 	rw := contextio.ReadWriter(parent, socket)
 
-	options.Connection.Timestamp, options.Connection.PeerDelta, err = options.Handshaker.Handshake(rw)
+	timestamp, peerDelta, err := options.Handshaker.Handshake(rw)
 	if err != nil {
 		return nil, err
 	}
 
-	conn = connection.NewConnection(parent, socket, options.Connection)
+	conn = connection.NewConnection(parent, socket, timestamp, peerDelta, options.Connection)
 
 	return
 }
